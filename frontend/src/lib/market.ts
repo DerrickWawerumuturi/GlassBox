@@ -77,8 +77,13 @@ export function gapPriority(gap: SkillStat): GapPriority {
  * The backend compares skills case-insensitively, so anything matching skills
  * across the two sides of the response has to do the same.
  */
+/**
+ * One spelling per skill for comparisons. The backend's canonical names carry
+ * a qualifier ("Python (Programming Language)", "React.js") that a CV's free
+ * text never has, so both are dropped before comparing.
+ */
 export function skillKey(skill: string): string {
-    return skill.trim().toLowerCase();
+    return skill.trim().toLowerCase().replace(/\s*\(.*\)$/, "").replace(/\.js$/, "").trim();
 }
 
 export function toSkillKeys(skills: SkillStat[]): Set<string> {

@@ -1,12 +1,10 @@
 from datetime import datetime
-from typing import Literal, TypedDict
+from typing import Literal
 
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, field_validator
 from dataclasses import field
 from dataclasses import dataclass
-
-from torch import Tensor
 
 
 class ParsedQuery(BaseModel):
@@ -57,7 +55,6 @@ class Job(BaseModel):
     experience_level: str | None = None
     employment_type: str | None = None
     url: str | None = None
-    source: str | None = None
     posted_at: str | None = None
     # The provider's own absolute publication time, where it offers one.
     # `posted_at` stays whatever the provider called it, which for JSearch is a
@@ -89,10 +86,45 @@ class Job(BaseModel):
 
 @dataclass
 class SearchQuery:
-    primary_role: str
-    remote: bool | None = None
+    """
+    What the job providers search on, mapped field by field from a ParsedQuery.
+
+    Build it with `from_parsed`. Location is read with getattr defaults further
+    down, so a wrongly-shaped query does not fail — it silently searches with no
+    location. The type check below turns that into an immediate error.
+    """
+    primary_role: str | None
+    secondary_roles: list[str] = field(default_factory=list)
+    category: str | None = None
+    skills: list[str] = field(default_factory=list)
     experience_level: str | None = None
     job_requirements: str | None = None
+    location: str | None = None
+    country_code: str | None = None
+    city: str | None = None
+    remote: bool | None = None
+
+    def __post_init__(self):
+        if self.primary_role is not None and not isinstance(self.primary_role, str):
+            raise TypeError(
+                f"SearchQuery.primary_role must be a string, got {type(self.primary_role).__name__}; "
+                "use SearchQuery.from_parsed(parsed_query)"
+            )
+
+    @classmethod
+    def from_parsed(cls, parsed: "ParsedQuery") -> "SearchQuery":
+        return cls(
+            primary_role=parsed.primary_role,
+            secondary_roles=list(parsed.secondary_roles),
+            category=parsed.category,
+            skills=list(parsed.skills),
+            experience_level=parsed.experience_level,
+            job_requirements=parsed.job_requirements,
+            location=parsed.location,
+            country_code=parsed.country_code,
+            city=parsed.city,
+            remote=parsed.remote,
+        )
 
 @dataclass
 class ProcessedJob:
@@ -100,12 +132,6 @@ class ProcessedJob:
     skills: list[str]
 
 @dataclass
-class SentenceEmbs(TypedDict):
-    title: Tensor
-    skills: list[Tensor]
-    experience : Tensor
-    location : Tensor
-
 @dataclass(frozen=True)
 class SearchScope:
     """One leg of a search: where to look and under what arrangement."""
@@ -171,6 +197,42 @@ class ManualApplicationRequest(BaseModel):
     url: str | None = None
     location: str | None = None
     status: Literal["saved", "applied"] = "applied"
+    cv_snapshot: dict | None = None
+
+
+class LocationPreferencesRequest(BaseModel):
+    """null order means the default tier order; see location.TIERS."""
+    country_code: str = Field(min_length=2, max_length=2)
+    city: str | None = Field(default=None, max_length=100)
+    order: list[Literal[
+        "local", "remote_country", "remote_region", "remote_emea",
+        "remote_global", "remote_unspecified", "international",
+    ]] | None = None
+
+    @field_validator("order")
+    @classmethod
+    def _unique(cls, value):
+        if value is not None and len(set(value)) != len(value):
+            raise ValueError("each tier may appear once")
+        return value
+
+
+class ExtractJobRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+
+
+class UrlApplicationRequest(BaseModel):
+    """What the user confirmed on the review screen."""
+    url: str = Field(min_length=1, max_length=2048)
+    title: str = Field(min_length=1, max_length=300)
+    job_id: int | None = None
+    company: str | None = Field(default=None, max_length=300)
+    location: str | None = Field(default=None, max_length=300)
+    workplace: Literal["remote", "hybrid", "onsite"] | None = None
+    employment_type: str | None = Field(default=None, max_length=100)
+    salary: str | None = Field(default=None, max_length=200)
+    source: str | None = Field(default=None, max_length=50)
+    status: Literal["saved", "applied"] = "saved"
     cv_snapshot: dict | None = None
 
 

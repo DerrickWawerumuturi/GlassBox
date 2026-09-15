@@ -172,9 +172,9 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
                         )}
                     </div>
 
-                    {posting.source && (
+                    {posting.url && (
                         <a
-                            href={posting.source}
+                            href={posting.url}
                             target={"_blank"}
                             rel={"noreferrer noopener"}
                             className={"inline-flex w-fit items-center gap-1.5 text-xs font-medium text-primary hover:underline"}
@@ -230,7 +230,7 @@ const JobMatches = ({jobs, userSkills}: JobMatchesProps) => {
             <ul className={"flex flex-col gap-2"}>
                 {visible.map((job) => (
                     <JobRow
-                        key={job.job?.job?.id ?? job.job?.job?.source ?? job.job?.job?.title}
+                        key={job.job?.job?.id ?? job.job?.job?.url ?? job.job?.job?.title}
                         ranked={job}
                         userSkillKeys={userSkillKeys}
                         inertScores={inertScores}

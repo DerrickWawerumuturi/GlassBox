@@ -1,65 +1,90 @@
 # Backend architecture
 
-FastAPI service wrapping an agent pipeline. Entry point is `main.py`; the
-pipeline lives under `src/Agent/`.
+FastAPI service. `main.py` holds the routes; everything they call lives under
+`src/`, grouped by what it is about rather than by kind of code.
 
 ## Layout
 
 ```
-main.py                              FastAPI app, /health and /analyze
-pdf_inspector/                       PDF → text
-skill_db_relax_20.json               EMSI skill database (31,278 entries)
-src/Agent/
+main.py                              routes, auth, status codes — no business logic
+skill_db_relax_20.json               EMSI skill database, read by SkillNer from the working directory
+src/Agent/                           CV analysis
   Framework/
-    JobRadarAgent.py                 orchestrator + module-level singleton
-    QueryInterpreter.py              CV text → ParsedQuery (via LLM)
-    SearchEngine.py                  job providers, concurrent fetch
+    JobRadarAgent.py                 orchestrator; score_jobs is the one match score
+    SearchEngine.py                  search legs, dedupe, eligibility filter
+    providers.py                     JSearch, The Muse, Jooble, and the job pool
     SimilarityEngine.py              scoring + MarketAnalyzer
   utils/
+    llm_client.py                    GroqModel("user" | "cv"): text -> ParsedQuery / CVQuery
+    prompts.py                       prompts for both
+    location.py                      location resolution, eligibility, tiers, fit
     skill_extractor.py               SkillNer wrapper, canonical names
     extraction_pool.py               process pool for extraction
     embedder.py                      sentence-transformers
-    parser.py                        parsing/validation helpers
-    location.py                      location resolution + remote eligibility
-    llm_client.py                    Groq client
-    prompts.py                       system/user prompts
-    types.py                         pydantic + dataclass models
+    parser.py                        extract skills for a list of jobs
+    types.py                         pydantic + dataclass models, API request models
+src/jobpool/                         jobs from outside an analysis
+  sources.py                         every daily-fetch board adapter + fetch_all
+  posting.py                         reading a posting: HTML, dates, experience, workplace, skills
+  daily.py                           the scheduled pool refresh
+  extract.py                         a pasted URL -> job fields (SSRF-guarded fetch)
+  service.py                         extract + pool lookup + storing the posting
+  retention.py                       read-only lifecycle report
+src/cv/current_user.py               JWT -> claims (required and optional)
 src/database/
   session.py                         pooled connections (Neon)
   migrate.py                         SQL migration runner
-  fingerprint.py                     dedup fallback hash
+  fingerprint.py                     posting identity: resolve_identity, fingerprints
   migrations/*.sql                   schema, applied in filename order
   models/job.py                      row-shape dataclasses
-  repositories/                      SQL per table
-  services/ingestion.py              the pipeline's only storage entry point
-evals/                               eval harness and eval set
+  repositories/                      SQL, one module per table group
+  services/
+    ingestion.py                     pipeline storage (searches, jobs, skills)
+    users.py                         resolve_user_id + a user's CV, analysis, preferences
+    applications.py                  the application tracker
+tests/                               pytest; test_api_user_data needs DATABASE_URL
 ```
 
 ## Request lifecycle
 
-`main.py::analyze` writes the upload to a temp file, then:
+`main.py::analyze` reads the upload's text and runs the agent:
 
 ```python
 async with analysis_lock:
-    cv_text = await run_in_threadpool(pdf_inspector.extract_text, temp_path)
-    result  = await run_in_threadpool(job_radar_agent.run, cv_text)
+    cv_text = await _pdf_text(file)
+    return await run_in_threadpool(_agent().run, cv_text, preferences)
 ```
 
-The temp file is removed in a `finally`. Both calls are offloaded because they
-are synchronous and slow; running them inline pinned the event loop and made the
-whole API unreachable for the duration. The lock is required *because* of the
-offload — see `decisions/` and the changelog for detail.
+Both steps are offloaded because they are synchronous and slow; running them
+inline pinned the event loop and made the whole API unreachable. The lock is
+required *because* of the offload — see `decisions/` and the changelog.
+
+The analysis stack (spaCy, SkillNer, sentence-transformers) is **not** imported
+when `main.py` loads. `_agent()` imports it on first use and startup warms it in
+the background, so after a scale-from-zero every other route answers in under a
+second instead of waiting ~10s for models.
+
+Every signed-in request becomes a user through `services/users.py::resolve_user_id`,
+which refuses non-numeric (stale-session) subjects on every route. Unhandled
+errors become a generic 500 from a middleware registered inside CORS, so the
+browser gets a readable error and never the raw exception text.
 
 ## Pipeline stages
 
-### 1. QueryInterpreter → ParsedQuery
+### 1. GroqModel("user") → ParsedQuery
 
-`llm_client.GroqModel` calls Groq with `SYSTEM_PROMPT` + `USER_PROMPT`,
-`response_format={"type": "json_object"}` and `temperature=0`. The JSON is
-validated into `ParsedQuery` by `parser.parse_generated_query`.
+`llm_client.GroqModel("user").parse(cv_text)` calls Groq with `SYSTEM` +
+`USER_PROMPT`, `response_format={"type": "json_object"}`, `temperature=0`, and
+validates the reply into `ParsedQuery`. `GroqModel("cv")` is the same call with
+`ONBOARDING_PROMPT` and `CVQuery`, used by `/cv/parse`.
+
+Appending the full JSON schema to the system prompt was tried and removed: on a
+real CV it made `experience_level` flip between Mid and Senior and caused a JSON
+validation failure, for ~600 more tokens per call.
 
 `ParsedQuery` carries the role, skill list, experience level, location and
-several unused-but-parsed fields. Every field is optional.
+several unused-but-parsed fields. Every field is optional. The agent maps it
+field by field into a `SearchQuery` (`SearchQuery.from_parsed`) for the search.
 
 Model and key come from `GROQ_MODEL_NAME` / `GROQ_API_KEY`.
 
@@ -75,33 +100,34 @@ See `decisions/persistent-job-storage.md`, and the storage section below.
 
 ### 2. SearchEngine → list[Job]
 
-Five providers behind a `JOBPROVIDER` ABC. The search runs in **legs**
-(`SearchScope`), and each provider declares which legs it can serve:
+Four providers in `providers.py`. `JobProvider.search` owns timing, failure
+handling and the run-log entry; a provider only builds its request and maps
+fields. Each declares which search legs it serves:
 
 | Provider | Legs | Key |
 |---|---|---|
 | JSearch | local, remote, fallback | required |
 | The Muse | local, remote, fallback | required |
-| Remotive | remote | none |
-| RemoteOK | remote | none |
-| Jooble | local, fallback | free key, not yet set |
+| Jooble | local, fallback | optional |
+| Pool | local, remote, fallback | database |
+
+RemoteOK and Remotive are read through the pool: the daily fetch stores their
+whole boards, and their live search filters barely filter.
 
 A search resolves the user's location, then runs `local:<country>` and
-`remote:global` concurrently — every provider × every leg it supports. Below
-`MIN_JOBS_FLOOR = 15` usable postings it widens to `fallback:us` / `fallback:gb`.
-Every call carries `REQUEST_TIMEOUT = (5, 30)`.
+`remote:global` concurrently. Below `MIN_JOBS_FLOOR = 15` usable postings it
+widens to `fallback:us` / `fallback:gb`. Every call carries
+`REQUEST_TIMEOUT = (5, 30)`.
 
-Results are deduplicated on `(provider, external_id)` and remote postings that
-exclude the user's country are dropped. `get_jobs` returns a `SearchOutcome`
-carrying the jobs plus a coverage report.
+Results are deduplicated by the same identity storage uses (`resolve_identity`),
+and postings the user cannot hold are dropped by the same rule ranking uses
+(`location_tier(...) == "ineligible"`). `get_jobs` returns a `SearchOutcome`
+with the jobs and a coverage report.
 
 Adzuna stays out: it truncates descriptions to 500 characters, and its country
 list excludes Kenya.
 
 See `decisions/location-aware-search.md`.
-
-`normalize` maps each provider's payload onto the shared `Job` model, whose
-fields all default to `None`.
 
 ### 3. Skill extraction → list[ProcessedJob]
 
@@ -133,8 +159,10 @@ statistics, which weight every posting equally. See the 2026-08-21 changelog.
 
 ### 5. SimilarityEngine + MarketAnalyzer
 
-`SimilarityEngine.calculate` produces a weighted cosine score per job and
-returns them sorted descending. `MarketAnalyzer.analyze` aggregates skill
+`SimilarityEngine.calculate` scores each job: skills 0.45, title 0.25,
+experience 0.10 (embedding similarities) and location 0.20 (tier fit from the
+user's location preferences). Jobs the user cannot hold sort after every job
+they can. See `decisions/unified-matching.md`. `MarketAnalyzer.analyze` aggregates skill
 frequency, gaps, user presence and coverage across all jobs.
 
 See `decisions/similarity-engine.md` and `decisions/market-analyzer.md`.
@@ -169,13 +197,19 @@ fallback to full text when under 400 characters survive.
 
 ## Storage layer
 
-PostgreSQL on Neon. Six tables:
+PostgreSQL on Neon. The job pipeline's tables:
 
 ```
 searches ─1─n─ search_provider_runs
    │
    └─n─ job_observations ─1─ jobs ─n─ job_skills ─1─ skills
 ```
+
+and each user's data: `users` (with `location_preferences`) ─1─n─ `cvs`,
+`analyses`, `application` ─1─n─ `application_events`. `application.job_id`
+references `jobs` with `on delete restrict`. Job lifecycle signals
+(`last_shown_at`, `last_interaction_at`, `archived_at`) and the `job_retention`
+view are described in `decisions/job-retention.md`.
 
 `jobs` holds **source data only** — provider values verbatim plus the complete
 `raw_payload` as `jsonb`. Everything JobRadar derives lives in `job_skills`, so
@@ -221,27 +255,26 @@ and migrations use `DATABASE_URL_DIRECT` — the same host without `-pooler`.
 | `JOBRADAR_MAX_EXTRACTION_CHARS` | Per-posting ceiling sent to the annotator (default 4000) |
 | `JOBRADAR_SPACY_MODEL` | Path to `en_core_web_lg`. Tried first; otherwise `/app/en_core_web_lg` (the container layout), then the checkout's `en_core_web_lg/en_core_web_lg-3.8.0`, then the installed package |
 | `JOBRADAR_DB_POOL_SIZE` | Connection pool max size |
+| `API_JWT_SECRET` | Verifies the tokens the frontend mints. Required at import |
+| `JOBRADAR_DEFAULT_COUNTRY` | Home market when a CV names no location (default `ke`) |
+| `JOBRADAR_POOL_COUNTRIES` | Countries whose remote-eligible roles the daily fetch requests explicitly (default `KE,NG,ZA,GH,UG,RW,TZ,EG`) |
+| `JOBRADAR_POOL_REGIONAL_PAGES` | Pages per country for that fetch (default 5) |
 
 Loaded via `python-dotenv` from `.env`. Persistence disables itself when
 `DATABASE_URL` is unset. `.env` is in `.dockerignore`, so in a container every
-value must come from the platform's own environment or secrets; `GROQ_API_KEY` is
-the only one that is fatal when missing, because `Groq()` raises in its
-constructor (`llm_client.py:14`) during the import-time singleton build.
+value must come from the platform's environment or secrets. `API_JWT_SECRET` is
+read when `main.py` imports; a missing `GROQ_API_KEY` surfaces on the first
+analysis or CV parse, because `Groq()` raises in its constructor.
 
-Deployment sizing is a configuration concern of the same kind. Importing
-`main.py` loads `en_core_web_lg`, skillNer's 31k-entry matchers and MiniLM into
-the main process *before* uvicorn binds its port, which is ~2 GB before a single
-request arrives, and each extraction worker adds its own pipeline on top. See
-`docs/changelog/2026-08-25-container-oom.md`.
+Deployment sizing is a configuration concern of the same kind. The first
+analysis loads `en_core_web_lg`, skillNer's 31k-entry matchers and MiniLM into
+the main process — about 2 GB — and each extraction worker adds its own
+pipeline on top. See `docs/changelog/2026-08-25-container-oom.md`.
 
 ## Known limitations
 
 - Only The Muse supplies `experience_level`, so `experience_score` carries
-  little ranking signal. `location_score` now varies, since postings come from
-  more than one market, but its 0.10 weight has not been revisited.
-- Remotive's `search`/`category` filters are inert — it returns its whole
-  inventory regardless of query (measured: 5 of 17 postings technical). The
-  off-market filter compensates, but the wasted requests remain.
+  little ranking signal.
 - Skill extraction is **superlinear** in posting length: 46 postings / 85,900
   prepared characters took 434s on four workers, where a linear model predicted
   32s. Capping per-posting length would help more than trimming the corpus.

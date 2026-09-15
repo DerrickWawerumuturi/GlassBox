@@ -1,5 +1,11 @@
 """
-Turn the LLM's free-text location into parameters a provider will honour.
+Everything JobRadar knows about where a user is and where a job is.
+
+    resolve             the CV's free-text location -> a validated country/city
+    remote_eligibility  can someone in country X hold this remote job?
+    location_tier       where a job sits relative to the user (local, remote
+                        open to their country, ... ineligible)
+    location_fit        a tier -> 0..1 ranking score, by the user's preferences
 
 The model is asked for an ISO 3166-1 alpha-2 code directly, because mapping
 "Nairobi" to a country needs world knowledge that a local table does not have.
@@ -7,21 +13,11 @@ Everything it returns is then checked against the real ISO list, so a plausible
 invention becomes a detected fallback rather than a silently wrong search.
 """
 
+import os
+import re
 from dataclasses import dataclass
 
 import pycountry
-
-# Codes JSearch documents as supported. A country outside this list is still a
-# valid ISO code, so the local search is skipped rather than sent upstream to be
-# silently ignored.
-JSEARCH_COUNTRIES = frozenset({
-    "dz", "ao", "ar", "at", "au", "be", "br", "ca", "ch", "cl", "co", "de",
-    "dk", "eg", "es", "fi", "fr", "gb", "gh", "gr", "hk", "hu", "id", "ie",
-    "il", "in", "iq", "it", "jp", "ke", "kr", "kw", "lk", "ma", "mx", "my",
-    "ng", "nl", "no", "nz", "om", "pa", "pe", "ph", "pk", "pl", "pt", "qa",
-    "ro", "ru", "sa", "se", "sg", "so", "th", "tn", "tr", "tw", "ua", "ae",
-    "uk", "us", "ve", "vn", "za",
-})
 
 # Values that name a working arrangement rather than a place.
 REMOTE_WORDS = frozenset({
@@ -186,10 +182,6 @@ def resolve(query) -> ResolvedLocation:
     )
 
 
-def supported_by_jsearch(code: str | None) -> bool:
-    return bool(code) and code in JSEARCH_COUNTRIES
-
-
 # Coarse region membership, used to decide whether a remote posting that lists
 # eligible regions is open to this user. Only the groupings providers actually
 # write in that field are modelled.
@@ -216,6 +208,19 @@ _ALIASES = {
     "us": ("usa", "united states", "u.s."),
     "gb": ("uk", "united kingdom", "britain", "england"),
 }
+
+
+# "South Africa" is a country, not the continent; "Central African Republic" too.
+_REGION_PATTERNS = {
+    "africa": r"(?<!south )(?<!central )\bafrica\b",
+}
+
+
+def _mentions_region(text: str, region: str) -> bool:
+    pattern = _REGION_PATTERNS.get(region)
+    if pattern:
+        return re.search(pattern, text) is not None
+    return re.search(rf"\b{re.escape(region)}\b", text) is not None
 
 
 def _names_any_place(text: str) -> bool:
@@ -259,7 +264,7 @@ def remote_eligibility(requirement: str | None, country_code: str | None) -> boo
         return True
 
     for region, members in _REGIONS.items():
-        if region in text and code in members:
+        if _mentions_region(text, region) and code in members:
             return True
 
     # Names somewhere, and it is not this user's somewhere.
@@ -271,3 +276,172 @@ def remote_eligibility(requirement: str | None, country_code: str | None) -> boo
         return None
 
     return None
+
+
+# ----------------------------------------------------------- location tiers
+# Collection is broad; ranking is where a user's location matters. Every job is
+# placed in one tier relative to the user, and the user's preferred order turns
+# that tier into a 0..1 location fit. Nothing here names a particular country:
+# the home market comes from the user's CV or saved preferences.
+
+TIERS = (
+    "local",               # onsite/hybrid in the user's city or country
+    "remote_country",      # remote, open to the user's country by name
+    "remote_region",       # remote, open to the user's region (e.g. Africa)
+    "remote_emea",         # remote, open to EMEA and the user is in EMEA
+    "remote_global",       # remote, explicitly worldwide
+    "remote_unspecified",  # remote, eligibility not stated
+    "international",       # onsite/hybrid somewhere else
+)
+
+# The market assumed when a CV gives no location. Configuration, not code:
+# set JOBRADAR_DEFAULT_COUNTRY for a deployment serving a different market.
+DEFAULT_COUNTRY = os.getenv("JOBRADAR_DEFAULT_COUNTRY", "ke").lower() or None
+
+# Continental grouping for the remote_region tier, most specific first.
+_HOME_REGIONS = ("africa", "europe", "north america", "americas", "asia", "oceania")
+
+
+@dataclass(frozen=True)
+class LocationPreferences:
+    country_code: str | None = None
+    city: str | None = None
+    order: tuple[str, ...] = TIERS
+    source: str = "resolved"   # resolved | saved | default
+
+    def __post_init__(self):
+        unknown = set(self.order) - set(TIERS)
+        if unknown or len(set(self.order)) != len(self.order):
+            raise ValueError(f"invalid tier order {self.order!r}")
+
+    @property
+    def region(self) -> str | None:
+        code = _normalise_gb(self.country_code) if self.country_code else None
+        return next((r for r in _HOME_REGIONS if code and code in _REGIONS[r]), None)
+
+    @property
+    def in_emea(self) -> bool:
+        return bool(self.country_code) and _normalise_gb(self.country_code) in _REGIONS["emea"]
+
+    @classmethod
+    def resolve(cls, resolved: ResolvedLocation | None, saved: dict | None = None) -> "LocationPreferences":
+        """Saved preferences win; then the CV's location; then the deployment default."""
+        if saved:
+            return cls.from_dict(saved)
+        if resolved is not None and resolved.country_code:
+            return cls(country_code=resolved.country_code, city=resolved.city, source="resolved")
+        return cls(country_code=DEFAULT_COUNTRY, source="default")
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LocationPreferences":
+        code = _validate_code(data.get("country_code"))
+        order = tuple(data.get("order") or TIERS)
+        return cls(country_code=code, city=_clean(data.get("city")) or None, order=order, source="saved")
+
+    def to_dict(self) -> dict:
+        return {"country_code": self.country_code, "city": self.city,
+                "order": list(self.order), "source": self.source}
+
+
+def _names_home(text: str, prefs: LocationPreferences) -> bool:
+    if prefs.city and prefs.city.lower() in text:
+        return True
+    if not prefs.country_code:
+        return False
+    code = _normalise_gb(prefs.country_code)
+    name = (_country_name(code) or "").lower()
+    return bool(name and name in text) or any(a in text for a in _ALIASES.get(code, ()))
+
+
+_US_STATES = frozenset("""al ak az ar ca co ct de fl ga hi id il in ia ks ky la me md ma mi mn ms mo mt
+ne nv nh nj nm ny nc nd oh ok or pa ri sc sd tn tx ut vt va wa wv wi wy dc""".split())
+_US_STATE_SUFFIX = re.compile(r",\s*([A-Za-z]{2})\b")
+
+
+# Hubs boards write without a country ("Westlands, Nairobi", "NYC Office").
+_HUB_CITIES = {
+    "nairobi": "ke", "mombasa": "ke", "kisumu": "ke", "lagos": "ng", "abuja": "ng", "accra": "gh",
+    "kampala": "ug", "kigali": "rw", "dar es salaam": "tz", "addis ababa": "et", "cairo": "eg",
+    "johannesburg": "za", "cape town": "za", "casablanca": "ma", "tunis": "tn",
+    "london": "gb", "manchester": "gb", "edinburgh": "gb", "dublin": "ie", "berlin": "de", "munich": "de",
+    "paris": "fr", "amsterdam": "nl", "madrid": "es", "barcelona": "es", "lisbon": "pt", "warsaw": "pl",
+    "stockholm": "se", "zurich": "ch", "dubai": "ae", "tel aviv": "il", "istanbul": "tr",
+    "new york": "us", "nyc": "us", "san francisco": "us", "seattle": "us", "austin": "us", "boston": "us",
+    "chicago": "us", "los angeles": "us", "toronto": "ca", "vancouver": "ca", "montreal": "ca",
+    "sao paulo": "br", "mexico city": "mx", "bengaluru": "in", "bangalore": "in", "mumbai": "in",
+    "singapore": "sg", "tokyo": "jp", "sydney": "au", "melbourne": "au",
+}
+
+
+_COUNTRY_TOKENS = re.compile(r"\b(usa|us|uk|u\.s\.)\b")
+_NOT_PLACE_WORDS = REMOTE_WORDS | {"office", "hq", "headquarters", "-", "(", ")"}
+
+
+def country_named(place: str) -> str | None:
+    """
+    The one country a job's location string names, or None.
+
+    Boards rarely name the country outright: "Austin, TX", "NYC Office",
+    "Remote - US", "Westlands, Nairobi". Work-arrangement words are ignored, so
+    "Remote - Spain" names Spain.
+    """
+    core = place.lower()
+    for word in _NOT_PLACE_WORDS:
+        core = core.replace(word, " ")
+    core = " ".join(core.split())
+    if not core:
+        return None
+    token = _COUNTRY_TOKENS.search(core)
+    if token:
+        return "gb" if token.group(1) == "uk" else "us"
+    for m in _US_STATE_SUFFIX.finditer(place):
+        if m.group(1).lower() in _US_STATES:
+            return "us"
+    for city, code in _HUB_CITIES.items():
+        if city in core:
+            return code
+    return _country_in_text(core)
+
+
+def location_tier(job, prefs: LocationPreferences) -> str:
+    """One of TIERS, or "ineligible" for a remote job that excludes the user."""
+    place = _clean(getattr(job, "location", None)).lower()
+    stated = _clean(getattr(job, "remote_eligibility", None)).lower()
+    remote = bool(getattr(job, "remote", None)) or (bool(place) and _looks_remote(place))
+
+    if not remote:
+        if _names_home(place, prefs):
+            return "local"
+        home = _normalise_gb(prefs.country_code) if prefs.country_code else None
+        return "local" if home and country_named(place) == home else "international"
+
+    text = f"{stated} {place}"
+    if _names_home(text, prefs):
+        return "remote_country"
+    eligible = remote_eligibility(stated or place, prefs.country_code)
+    if eligible is False:
+        return "ineligible"
+    if prefs.region and _mentions_region(text, prefs.region):
+        return "remote_region"
+    if prefs.in_emea and _mentions_region(text, "emea"):
+        return "remote_emea"
+    if any(word in text for word in _OPEN_WORDS):
+        return "remote_global"
+    if eligible:
+        # Open to the user through a grouping not modelled as its own tier.
+        return "remote_region"
+    # "Remote - Spain", "Remote - US", or a "remote" flag on "New York City
+    # Office": the place a remote job names is where it hires.
+    restricted_to = country_named(place)
+    home = _normalise_gb(prefs.country_code) if prefs.country_code else None
+    if restricted_to and home:
+        return "remote_country" if restricted_to == home else "ineligible"
+    return "remote_unspecified"
+
+
+def location_fit(tier: str, prefs: LocationPreferences) -> float:
+    """1.0 for the user's first tier, falling evenly to 0.2 for the last; 0 if ineligible."""
+    if tier not in prefs.order:
+        return 0.0
+    steps = max(len(prefs.order) - 1, 1)
+    return round(1.0 - 0.8 * prefs.order.index(tier) / steps, 4)

@@ -3,7 +3,7 @@ import os
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
 
-from src.Agent.utils.parser import ProcessedJob, ParsedQuery
+from src.Agent.utils.types import ParsedQuery, ProcessedJob
 
 # Fraction of the best-matching title's score a posting must reach to be counted
 # as part of this user's market. Relative rather than absolute because the

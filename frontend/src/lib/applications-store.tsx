@@ -5,7 +5,7 @@ import {useSession} from "next-auth/react";
 import {toast} from "sonner";
 
 import {ApplicationRow, ApplicationStatus} from "@/types/jobradar";
-import {ApiError, CreateManualApplication, DeleteApplication, ListApplications, ManualApplicationPayload, ToggleBookmark, TransitionApplication} from "@/lib/api";
+import {ApiError, CreateApplicationFromUrl, CreateManualApplication, DeleteApplication, ListApplications, ManualApplicationPayload, ToggleBookmark, TransitionApplication, UrlApplicationPayload} from "@/lib/api";
 import {useCv} from "@/lib/cv-store";
 
 export const PIPELINE: ApplicationStatus[] = ["saved", "applied", "screening", "interview", "offer"];
@@ -22,6 +22,18 @@ export const STATUS_LABEL: Record<ApplicationStatus, string> = {
 };
 
 export type ApplicationsState = "signed-out" | "loading" | "ready" | "error";
+
+const cacheKey = (userId: string) => `applications:${userId}`;
+
+function readCache(userId: string): ApplicationRow[] | null {
+    try {
+        const raw = localStorage.getItem(cacheKey(userId));
+        const parsed: unknown = raw ? JSON.parse(raw) : null;
+        return Array.isArray(parsed) ? parsed as ApplicationRow[] : null;
+    } catch {
+        return null;
+    }
+}
 
 interface SaveTarget {
     jobId: number;
@@ -45,12 +57,16 @@ interface ApplicationsContextValue {
     markApplied: (job: SaveTarget) => void;
     /** An application made outside JobRadar, entered by hand. */
     addManual: (entry: ManualApplicationPayload) => void;
+    /** A reviewed job link. */
+    addFromUrl: (entry: UrlApplicationPayload) => void;
     /** Deletes a terminal row (saved, withdrawn, rejected) with its history. */
     remove: (app: ApplicationRow) => void;
     transition: (id: number, to: Exclude<ApplicationStatus, "saved">) => void;
     refresh: () => Promise<void>;
     /** The token was refused: this browser's session predates an app update. */
     staleSession: boolean;
+    /** Showing cached rows while the server round-trip is still in flight. */
+    syncing: boolean;
 }
 
 const ApplicationsContext = createContext<ApplicationsContextValue | null>(null);
@@ -63,18 +79,24 @@ const nowIso = () => new Date().toISOString();
  * temp rows with real ids on success, or reverting the UI on failure.
  */
 export function ApplicationsProvider({children}: { children: React.ReactNode }) {
-    const {status: authStatus} = useSession();
+    const {status: authStatus, data: session} = useSession();
+    const userId = session?.user?.id ?? null;
     const {cv} = useCv();
     const [apps, setApps] = useState<ApplicationRow[]>([]);
     const [state, setState] = useState<ApplicationsState>("loading");
     const [pending, setPending] = useState<Set<number>>(new Set());
     const [staleSession, setStaleSession] = useState(false);
+    const [syncing, setSyncing] = useState(false);
 
     const refresh = useCallback(async () => {
+        setSyncing(true);
         try {
-            setApps(await ListApplications() ?? []);
+            const rows = await ListApplications() ?? [];
+            setApps(rows);
             setState("ready");
             setStaleSession(false);
+            // Server rows only: optimistic temp rows never reach the cache.
+            if (userId) try { localStorage.setItem(cacheKey(userId), JSON.stringify(rows)) } catch {}
         } catch (err) {
             console.error("Loading applications failed:", err);
             // Only the backend's stale-identity guard warrants the re-auth
@@ -82,14 +104,26 @@ export function ApplicationsProvider({children}: { children: React.ReactNode }) 
             // tell users to sign out.
             if (err instanceof ApiError && err.status === 401
                 && err.message.includes("outdated app session")) setStaleSession(true);
-            setState("error");
+            // Cached rows stay usable; only an empty tab needs the error state.
+            setState((prev) => prev === "ready" ? prev : "error");
+        } finally {
+            setSyncing(false);
         }
-    }, []);
+    }, [userId]);
 
     useEffect(() => {
-        if (authStatus === "authenticated") void refresh();
+        if (authStatus === "authenticated" && userId) {
+            // Paint the last known list immediately. The API scales to zero and
+            // can take ~30s to answer; the tab must not wait on that.
+            const cached = readCache(userId);
+            if (cached) {
+                setApps(cached);
+                setState("ready");
+            }
+            void refresh();
+        }
         if (authStatus === "unauthenticated") setState("signed-out");
-    }, [authStatus, refresh]);
+    }, [authStatus, userId, refresh]);
 
     const markPending = useCallback((keys: number[], on: boolean) => setPending((prev) => {
         const next = new Set(prev);
@@ -220,6 +254,30 @@ export function ApplicationsProvider({children}: { children: React.ReactNode }) 
         void sync(() => CreateManualApplication({...entry, cv_snapshot: cv}));
     }, [cv, sync]);
 
+    const addFromUrl = useCallback((entry: UrlApplicationPayload) => {
+        const status = entry.status ?? "saved";
+        setApps((prev) => [{
+            id: -Date.now(),
+            job_id: entry.job_id ?? null,
+            title: entry.title,
+            company: entry.company ?? null,
+            match_score: null,
+            status,
+            applied_at: status === "applied" ? nowIso() : null,
+            last_status_at: nowIso(),
+            cv_snapshot: cv,
+            url: entry.url,
+            location: entry.location ?? null,
+            remote: entry.workplace === "remote",
+            workplace: entry.workplace ?? null,
+            employment_type: entry.employment_type ?? null,
+            salary: entry.salary ?? null,
+            provider: entry.source ?? null
+        }, ...prev]);
+        toast(`Added ${entry.title}`);
+        void sync(() => CreateApplicationFromUrl({...entry, cv_snapshot: cv}));
+    }, [cv, sync]);
+
     const remove = useCallback((app: ApplicationRow) => {
         if (app.id < 0) return;
         setApps((prev) => prev.filter((row) => row.id !== app.id));
@@ -228,8 +286,8 @@ export function ApplicationsProvider({children}: { children: React.ReactNode }) 
     }, [sync]);
 
     const value = useMemo<ApplicationsContextValue>(
-        () => ({apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, remove, transition, refresh, staleSession}),
-        [apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, remove, transition, refresh, staleSession]
+        () => ({apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, transition, refresh, staleSession, syncing}),
+        [apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, transition, refresh, staleSession, syncing]
     );
 
     return <ApplicationsContext.Provider value={value}>{children}</ApplicationsContext.Provider>;

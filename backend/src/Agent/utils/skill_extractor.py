@@ -1,12 +1,13 @@
 import os
 import re
-from html.parser import HTMLParser
 from pathlib import Path
 
 import spacy
 from spacy.matcher import PhraseMatcher
 from skillNer.general_params import SKILL_DB
 from skillNer.skill_extractor_class import SkillExtractor as nerExtractor
+
+from src.jobpool.posting import NOT_SKILLS, html_to_text
 
 # The container path is not the checkout path. `Dockerfile:19` copies the model
 # to /app/en_core_web_lg, while a checkout has it at the wheel's own nested
@@ -171,89 +172,6 @@ DENYLISTED_SURFACE_FORMS = frozenset({
     "sales", "zoom", "•",
 })
 
-# Canonical names that are real database entries but are job titles, fields of
-# study or document artefacts rather than differentiating skills. Listing
-# "Software Engineering" as a top skill for software jobs answers no question.
-DENYLISTED_SKILL_NAMES = frozenset({
-    "software engineering",
-    "software development",
-    "computer science",
-    "computer engineering",
-    "electrical engineering",
-    "job descriptions",
-    "innovation",
-    "operations",
-    "scale (map)",
-    "scholastic read 180",
-    "target 3001!",
-    # "transformation" in a business/data context matches a genetics entry.
-    # Remove this line if the search is ever pointed at biotech postings.
-    "transformation (genetics)",
-    # "programming" in a software posting matches the musical sense.
-    "programming (music)",
-})
-
-
-# Tags that end a line of prose. Turning them into blank lines is what restores
-# the paragraph structure the filters below depend on.
-_BLOCK_TAGS = frozenset({
-    "p", "br", "div", "li", "ul", "ol", "tr", "td", "table", "section",
-    "article", "header", "footer", "blockquote", "hr",
-    "h1", "h2", "h3", "h4", "h5", "h6",
-})
-_SKIP_CONTENT = frozenset({"script", "style", "noscript"})
-
-_HTML_MARKER = re.compile(r"<[a-zA-Z/!]")
-
-
-class _HTMLToText(HTMLParser):
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.parts = []
-        self._skipping = 0
-
-    def handle_starttag(self, tag, attrs):
-        if tag in _SKIP_CONTENT:
-            self._skipping += 1
-        elif tag in _BLOCK_TAGS:
-            self.parts.append("\n\n")
-
-    def handle_endtag(self, tag):
-        if tag in _SKIP_CONTENT:
-            self._skipping = max(0, self._skipping - 1)
-        elif tag in _BLOCK_TAGS:
-            self.parts.append("\n\n")
-
-    def handle_data(self, data):
-        if not self._skipping:
-            self.parts.append(data)
-
-
-def html_to_text(text: str) -> str:
-    """
-    Flatten a provider's HTML description into paragraphs.
-
-    Three providers return HTML, and HTML has no blank lines — so `_blocks`
-    saw one enormous block, nothing could be stripped, and the full posting
-    (tags included) went to SkillNer. Measured on Remotive: 127 tags, 1 block,
-    0% reduction where plain-text postings reduce by about two thirds.
-    """
-    if not text or not _HTML_MARKER.search(text):
-        return text
-
-    parser = _HTMLToText()
-    try:
-        parser.feed(text)
-        parser.close()
-    except Exception:
-        return text
-
-    out = "".join(parser.parts).replace("\xa0", " ")
-    out = re.sub(r"[ \t]+", " ", out)
-    out = re.sub(r"\n{3,}", "\n\n", out)
-    return out.strip()
-
-
 def _blocks(text: str) -> list:
     return re.split(r"\n\s*\n|\n(?=[A-Z][^\n]{0,60}:\s*\n)", text)
 
@@ -330,7 +248,7 @@ class SkillExtractor:
             return None
 
         skill_name = entry["skill_name"]
-        if skill_name.strip().lower() in DENYLISTED_SKILL_NAMES:
+        if skill_name.strip().lower() in NOT_SKILLS:
             return None
 
         return skill_name

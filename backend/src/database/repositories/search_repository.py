@@ -32,9 +32,11 @@ def create_search(
     with conn.cursor() as cur:
         cur.execute(INSERT_SEARCH, (
             Jsonb(query.model_dump(mode="json")),
-            getattr(query, "primary_role", None),
-            getattr(query, "location", None),
-            getattr(query, "remote", None),
+            # Attribute access, not getattr defaults: a wrongly-shaped query must
+            # fail here, not be recorded as a search for nothing.
+            query.primary_role,
+            query.location,
+            query.remote,
             started_at,
             jobs_returned,
             resolved.get("country_code"),

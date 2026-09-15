@@ -3,6 +3,8 @@ import json
 import re
 from urllib.parse import urlsplit, urlunsplit
 
+from src.database.models.job import JobIdentity
+
 _WHITESPACE = re.compile(r"\s+")
 
 
@@ -52,3 +54,22 @@ def payload_hash(raw: dict | None) -> str:
     return hashlib.sha256(
         json.dumps(raw or {}, sort_keys=True, default=str).encode("utf-8")
     ).hexdigest()
+
+
+def resolve_identity(job) -> tuple[JobIdentity, str, str]:
+    """
+    The (provider, external_id) pair a posting is stored under.
+
+    Deterministic and side-effect free so skill persistence can recompute the
+    same key later without the job carrying resolution state around.
+    """
+    provider = job.provider or "unknown"
+    fingerprint = job_fingerprint(
+        provider, job.title, job.company, job.location, job.url
+    )
+
+    external_id = (job.external_id or "").strip()
+    if external_id:
+        return JobIdentity(provider, external_id), "provider", fingerprint
+
+    return JobIdentity(provider, f"fp:{fingerprint[:32]}"), "fingerprint", fingerprint

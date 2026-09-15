@@ -13,7 +13,7 @@ import {STATUS_LABEL} from "@/lib/applications-store";
  */
 
 export const TABLE_WRAP = "overflow-x-auto rounded-lg border border-border bg-card/70";
-export const TH = "whitespace-nowrap border-b border-border px-3 py-2 text-left font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
+const TH = "whitespace-nowrap border-b border-border px-3 py-2 text-left font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
 export const TD = "border-b border-border/60 px-3 py-2.5 align-middle text-[13px]";
 export const CELL_DIVIDE = "border-l border-border/40 first:border-l-0";
 
@@ -21,7 +21,7 @@ export const CELL_DIVIDE = "border-l border-border/40 first:border-l-0";
  * separated by hairlines, the table flush to the content edges. */
 /* border-input (white @ 12%) over border (8%) — the grid must read as a
  * spreadsheet, every cell visibly ruled. */
-export const GRID_TH = "h-9 whitespace-nowrap border-b border-l border-input bg-card/70 px-3 text-left align-middle font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground first:border-l-0";
+const GRID_TH = "h-9 whitespace-nowrap border-b border-l border-input bg-card/70 px-3 text-left align-middle font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground first:border-l-0";
 export const GRID_TD = "border-b border-l border-input px-3 py-2 align-middle text-[13px] first:border-l-0";
 export const GRID_FOOT = "border-l border-input px-3 py-2 align-middle font-mono text-[10.5px] text-muted-foreground first:border-l-0";
 

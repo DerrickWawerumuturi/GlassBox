@@ -1,44 +1,64 @@
 from sentence_transformers.util import cos_sim
 from collections import Counter
 
+from src.Agent.utils.location import location_fit, location_tier
+
 
 # similarity engine -> asks the question, how similar is the users cv to each of these jobs
 class SimilarityEngine:
     def __init__(self):
+        # Without preferences, location is an embedding similarity between two
+        # place strings, which cannot tell "Remote (USA only)" from "Remote,
+        # worldwide". It stays as the fallback only.
         self.weights = {
             "title": 0.30,
             "skills": 0.50,
             "experience": 0.10,
             "location": 0.10
         }
+        # With preferences, location is whether the user can actually hold the
+        # job and how much they want that arrangement, so it carries more weight.
+        self.tier_weights = {
+            "title": 0.25,
+            "skills": 0.45,
+            "experience": 0.10,
+            "location": 0.20
+        }
 
-    def calculate(self, user_embs, job_embs, jobs):
+    def calculate(self, user_embs, job_embs, jobs, location_prefs=None):
         title_scores = cos_sim(user_embs["title"], job_embs["title"])
         skill_scores = cos_sim(user_embs["skills"],job_embs["skills"])
         experience_scores = cos_sim(user_embs["experience"], job_embs["experience"])
-        location_scores = cos_sim(user_embs["location"], job_embs["location"])
 
-        overall_scores = (
-                self.weights["title"] * title_scores
-                + self.weights["skills"] * skill_scores
-                + self.weights["experience"] * experience_scores
-                + self.weights["location"] * location_scores
-        )
+        if location_prefs is None:
+            weights = self.weights
+            location_scores = cos_sim(user_embs["location"], job_embs["location"])[0].tolist()
+            tiers = [None] * len(jobs)
+        else:
+            weights = self.tier_weights
+            tiers = [location_tier(processed.job, location_prefs) for processed in jobs]
+            location_scores = [location_fit(tier, location_prefs) for tier in tiers]
 
         results = []
 
         for i, job in enumerate(jobs):
+            title, skills = float(title_scores[0][i]), float(skill_scores[0][i])
+            experience, location = float(experience_scores[0][i]), float(location_scores[i])
             results.append({
                 "job": job,
-                "title_score": float(title_scores[0][i]),
-                "skills_score": float(skill_scores[0][i]),
-                "experience_score": float(experience_scores[0][i]),
-                "location_score": float(location_scores[0][i]),
-                "overall_score": float(overall_scores[0][i])
+                "title_score": title,
+                "skills_score": skills,
+                "experience_score": experience,
+                "location_score": location,
+                "location_tier": tiers[i],
+                "overall_score": (weights["title"] * title + weights["skills"] * skills
+                                  + weights["experience"] * experience + weights["location"] * location),
             })
 
+        # A job the user cannot legally hold never outranks one they can, however
+        # similar it is. It stays in the list, after every eligible job.
         results.sort(
-            key=lambda x: x["overall_score"],
+            key=lambda x: (x["location_tier"] != "ineligible", x["overall_score"]),
             reverse=True
         )
 

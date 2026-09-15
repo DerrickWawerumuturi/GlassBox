@@ -21,7 +21,7 @@ does not return, the answer is a backend change, not a frontend calculation.
 /  (landing)
    │  user selects a PDF, presses Upload
    ▼
-api/api.ts  ──►  POST http://127.0.0.1:8000/analyze     (~45s)
+src/lib/api.ts  ──►  POST {API_BASE_URL}/analyze     (minutes)
    │
    ▼
 JobRadarAnalysis
@@ -84,8 +84,6 @@ the UX more than anything else:
 
 - The result is persisted to `localStorage`, so navigation and reloads never
   cost another round trip.
-- `BackendStatus` polls `/health` so an unreachable API is visible *before* the
-  user spends the wait.
 - Analysis is started explicitly by the Upload button, never as a side effect.
 
 ## Stack

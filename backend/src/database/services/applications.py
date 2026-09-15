@@ -1,208 +1,132 @@
+"""
+The application tracker: starting an application (bookmark, hand-entered or a
+reviewed pasted link), moving it through statuses, and its history.
+
+Every application's event trail starts at `saved`, however it was created, so
+the timeline always reads from the beginning.
+"""
 from datetime import datetime, timezone
 
-from psycopg.errors import ForeignKeyViolation
-from src.database.repositories.application_repository import (
-    create, create_manual, current_status, list_for_user, update_status,
-    insert_event, find_by_user_and_job, delete, timeline,
-)
+from psycopg.errors import ForeignKeyViolation, UniqueViolation
+
+from src.database.repositories import application_repository as repo
+from src.database.services.users import UserNotFound, resolve_user_id  # noqa: F401  (re-raised to the API)
 from src.database.session import connection
-from src.database.repositories.user_repository import get_user_id, upsert_user
-
-
 
 INITIAL_STATUS = "saved"
+SIMILARITY_METHOD = "jobradar-similarity-v1"
+DELETABLE = ("saved", "withdrawn", "rejected")
+
 
 class ApplicationNotFound(Exception):
     pass
 
-class UserNotFound(Exception):
-    pass
 
 class JobNotFound(Exception):
     pass
+
 
 class BookmarkNotRemovable(Exception):
     pass
 
 
-def _getuser(conn, payload):
-    sub = payload.get("sub")
-    if not sub:
-        raise UserNotFound("token carries no subject")
-    # Google subjects are numeric. A UUID here is a stale frontend build
-    # minting random identities — refuse loudly rather than fork the user's
-    # data into a ghost account.
-    if not sub.isdigit():
-        raise UserNotFound("outdated app session — sign out and back in on the latest version")
-
-    user_id = get_user_id(conn, sub)
-    if user_id is None:
-        # First authenticated touch — provision on the spot, exactly as
-        # PUT /cv does, instead of failing until a CV is saved.
-        user_id = upsert_user(conn, sub, payload.get("email"), payload.get("name"), None)
-    return user_id
+class ApplicationExists(Exception):
+    pass
 
 
-def _create_bookmark(conn, user_id, job_id, title, company, source,
-                     match_score, cv_snapshot, occurred_at):
-    application_id = create(
-        conn, user_id, job_id, title, company, source, match_score, cv_snapshot
-    )
-    insert_event(conn, application_id, None, INITIAL_STATUS, occurred_at, None, None)
+def _start(conn, user_id: int, status: str = INITIAL_STATUS, **fields) -> int:
+    """Insert the application, record `saved`, then move it on if it already went further."""
+    now = datetime.now(timezone.utc)
+    try:
+        application_id = repo.create(conn, user_id, **fields)
+    except ForeignKeyViolation as err:
+        raise JobNotFound(f"job {fields.get('job_id')}") from err
+    except UniqueViolation as err:
+        # Two saves of the same job racing each other.
+        raise ApplicationExists("This job is already in your applications") from err
+
+    repo.insert_event(conn, application_id, None, INITIAL_STATUS, now, None, None)
+    if status != INITIAL_STATUS:
+        repo.update_status(conn, application_id, status, now)
+        repo.insert_event(conn, application_id, INITIAL_STATUS, status, now, None, None)
     return application_id
 
 
-class ApplicationIngestionService:
-
-    def bookmark(self,
-                 payload,
-                 job_id, title, company, source, match_score,
-                 cv_snapshot, last_status_at, scheduled_for = None, note= None):
-        occurred_at = last_status_at or datetime.now(timezone.utc)
-
+class ApplicationService:
+    def toggle_bookmark(self, payload, job_id, title=None, company=None,
+                        source=None, match_score=None, cv_snapshot=None) -> dict:
+        """Save a job, or remove it while it is still only a bookmark."""
         with connection() as conn:
-            user_id = _getuser(conn, payload)
+            user_id = resolve_user_id(conn, payload)
+            existing = repo.find_by_user_and_job(conn, user_id, job_id)
 
-            bookmark_id = create(
-                conn,
-                user_id,
-                job_id,
-                title,
-                company,
-                source,
-                match_score,
-                cv_snapshot
-            )
+            if existing is None:
+                application_id = _start(
+                    conn, user_id, job_id=job_id, title=title, company=company, source=source,
+                    match_score=match_score, cv_snapshot=cv_snapshot,
+                    match_method=SIMILARITY_METHOD if match_score is not None else None,
+                )
+                return {"bookmarked": True, "application_id": application_id}
 
-            insert_event(
-                conn,
-                bookmark_id,
-                None,
-                INITIAL_STATUS,
-                occurred_at,
-                scheduled_for,
-                note
-
-            )
-
-            return bookmark_id
-
-    def transition(self, payload, application_id, to_status,
-                   occurred_at, scheduled_for=None, note=None):
-        occurred_at = occurred_at or datetime.now(timezone.utc)
-        with connection() as conn:
-            user_id = _getuser(conn, payload)
-
-            status_now = current_status(
-                conn,
-                user_id,
-                application_id
-            )
-
-
-
-            if status_now is None:
-                raise ApplicationNotFound(f"application {application_id}")
-
-            update_status(
-                conn,
-                application_id,
-                to_status,
-                occurred_at,
-            )
-
-            insert_event(
-                conn,
-                application_id,
-                status_now,
-                to_status,
-                occurred_at,
-                scheduled_for,
-                note,
-            )
+            # Removal only while still `saved`: deleting a sent application would
+            # cascade away its whole event history.
+            if existing["status"] != INITIAL_STATUS:
+                raise BookmarkNotRemovable(f"application {existing['id']} is {existing['status']}, not a bookmark")
+            repo.delete(conn, user_id, existing["id"])
+            return {"bookmarked": False, "application_id": None}
 
     def add_manual(self, payload, title, company=None, url=None, location=None,
                    status="applied", cv_snapshot=None) -> int:
-        # Created as `saved` first so the event trail always starts at the
-        # beginning, then moved if the user already applied.
-        occurred_at = datetime.now(timezone.utc)
+        """An application made outside JobRadar, typed in by hand."""
         with connection() as conn:
-            user_id = _getuser(conn, payload)
+            return _start(conn, resolve_user_id(conn, payload), status, title=title, company=company,
+                          source="manual", url=url, location=location, cv_snapshot=cv_snapshot)
 
-            application_id = create_manual(
-                conn, user_id, title, company, cv_snapshot, url, location
-            )
-            insert_event(conn, application_id, None, INITIAL_STATUS, occurred_at, None, None)
-
-            if status != INITIAL_STATUS:
-                update_status(conn, application_id, status, occurred_at)
-                insert_event(conn, application_id, INITIAL_STATUS, status, occurred_at, None, None)
-
-            return application_id
-
-    def list_applications(self, payload) -> list[dict] | None:
+    def add_from_url(self, payload, title, url, job_id=None, company=None, location=None,
+                     workplace=None, employment_type=None, salary=None, source=None,
+                     status=INITIAL_STATUS, cv_snapshot=None) -> int:
+        """A pasted job link, as the user reviewed it. Not scored yet: match_score stays null."""
         with connection() as conn:
-            user_id = _getuser(conn, payload)
+            user_id = resolve_user_id(conn, payload)
+            if job_id is not None and repo.find_by_user_and_job(conn, user_id, job_id):
+                raise ApplicationExists("This job is already in your applications")
+            return _start(conn, user_id, status, job_id=job_id, title=title, company=company, source=source,
+                          url=url, location=location, workplace=workplace, employment_type=employment_type,
+                          salary=salary, cv_snapshot=cv_snapshot)
 
-            list_applications = list_for_user(
-                conn,
-                user_id
-            )
+    def list_applications(self, payload) -> list[dict]:
+        with connection() as conn:
+            user_id = resolve_user_id(conn, payload, create=False)
+            return repo.list_for_user(conn, user_id) if user_id else []
 
-            return list_applications
-
-    def toggle_bookmark(self, payload, job_id, title=None, company=None,
-                        source=None, match_score=None, cv_snapshot=None,
-                        occurred_at=None) -> dict:
-        # Removal only while still `saved`: deleting a sent application would
-        # cascade away its whole event history.
+    def transition(self, payload, application_id, to_status, occurred_at=None,
+                   scheduled_for=None, note=None) -> None:
         occurred_at = occurred_at or datetime.now(timezone.utc)
-
         with connection() as conn:
-            user_id = _getuser(conn, payload)
-            existing = find_by_user_and_job(conn, user_id, job_id)
-
-            if existing is None:
-                try:
-                    application_id = _create_bookmark(
-                        conn, user_id, job_id, title, company, source,
-                        match_score, cv_snapshot, occurred_at,
-                    )
-                except ForeignKeyViolation as err:
-                    raise JobNotFound(f"job {job_id}") from err
-                return {"bookmarked": True, "application_id": application_id}
-
-            if existing["status"] != INITIAL_STATUS:
-                raise BookmarkNotRemovable(
-                    f"application {existing['id']} is {existing['status']}, not a bookmark"
-                )
-
-            delete(conn, user_id, existing["id"])
-            return {"bookmarked": False, "application_id": None}
-
-    def remove(self, payload, application_id) -> None:
-        # Terminal rows (saved, withdrawn, rejected) may be deleted along with
-        # their history. Active ones must be withdrawn first, so the pipeline
-        # never loses a live application by accident.
-        with connection() as conn:
-            user_id = _getuser(conn, payload)
-            status_now = current_status(conn, user_id, application_id)
+            user_id = resolve_user_id(conn, payload, create=False)
+            status_now = repo.current_status(conn, user_id, application_id) if user_id else None
             if status_now is None:
                 raise ApplicationNotFound(f"application {application_id}")
-            if status_now not in ("saved", "withdrawn", "rejected"):
-                raise BookmarkNotRemovable(
-                    f"application is {status_now}: withdraw it first, then delete"
-                )
-            delete(conn, user_id, application_id)
+            repo.update_status(conn, application_id, to_status, occurred_at)
+            repo.insert_event(conn, application_id, status_now, to_status, occurred_at, scheduled_for, note)
+
+    def remove(self, payload, application_id) -> None:
+        """Only terminal rows go; an active application must be withdrawn first."""
+        with connection() as conn:
+            user_id = resolve_user_id(conn, payload, create=False)
+            status_now = repo.current_status(conn, user_id, application_id) if user_id else None
+            if status_now is None:
+                raise ApplicationNotFound(f"application {application_id}")
+            if status_now not in DELETABLE:
+                raise BookmarkNotRemovable(f"application is {status_now}: withdraw it first, then delete")
+            repo.delete(conn, user_id, application_id)
 
     def history(self, payload, application_id) -> list[dict]:
         with connection() as conn:
-            user_id = _getuser(conn, payload)
-
-            if current_status(conn, user_id, application_id) is None:
+            user_id = resolve_user_id(conn, payload, create=False)
+            if not user_id or repo.current_status(conn, user_id, application_id) is None:
                 raise ApplicationNotFound(f"application {application_id}")
+            return repo.timeline(conn, user_id, application_id)
 
-            return timeline(conn, user_id, application_id)
 
-
-application_service = ApplicationIngestionService()
+application_service = ApplicationService()

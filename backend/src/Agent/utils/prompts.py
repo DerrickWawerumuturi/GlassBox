@@ -1,5 +1,3 @@
-from src.Agent.utils.types import CVQuery
-from src.Agent.utils.parser import ParsedQuery
 
 USER_PROMPT = """
                 Parse the following job search request.            
@@ -66,8 +64,6 @@ Do not include markdown.
 Do not include code blocks.
 """
 
-USER_SYSTEM_TEMPLATE= f"{SYSTEM}\n\nRespond with a JSON object matching this schema:\n{ParsedQuery.model_json_schema()}"
-CV_SYSTEM_TEMPLATE = f"{SYSTEM}\n\nRespond with a JSON object matching this schema:\n{CVQuery.model_json_schema()}"
 
 ONBOARDING_PROMPT = """
     Given the following cv in text format, 

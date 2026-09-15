@@ -1,35 +1,5 @@
-from typing import Literal
-from unittest import result
-
-from src.Agent.utils.types import CVQuery
 from src.Agent.utils.extraction_pool import extraction_pool
-from src.Agent.utils.types import ParsedQuery, Job, ProcessedJob
-
-
-USER_INPUT_TEXT = "I am a junior ml learning Engineer with 1-2 years of experience"
-
-
-def parse_query(user_input) -> list[str]:
-    if len(user_input) > 0:
-        return [user_input]
-    raise ValueError("Input cannot be empty")
-
-
-
-# user_input = parse_query(USER_INPUT_PDF)
-
-def parse_generated_query(generated_input, type: Literal["user", "cv"]):
-    try:
-        if type == "user":
-            parsed_query = ParsedQuery.model_validate_json(generated_input)
-        elif type == "cv":
-            parsed_query = CVQuery.model_validate_json(generated_input)
-
-        return parsed_query
-    except Exception as err:
-        raise ValueError(f"Error parsing the generated input: {err}") from err
-
-
+from src.Agent.utils.types import Job, ProcessedJob
 
 
 def parse_retrieved_jobs(raw_jobs: list[Job]) -> list[ProcessedJob]:
@@ -60,5 +30,5 @@ def parse_retrieved_jobs(raw_jobs: list[Job]) -> list[ProcessedJob]:
 
         return cleaned_jobs
 
-    except Exception:
-        raise ValueError("Error parsing the fetched jobs")
+    except Exception as err:
+        raise ValueError(f"Error parsing the fetched jobs: {err}") from err

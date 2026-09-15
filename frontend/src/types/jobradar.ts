@@ -68,7 +68,6 @@ export interface JobPosting {
     experience_level: string | null;
     employment_type: string | null;
     url: string | null;
-    source: string | null;
     /** Whatever the provider called it — often relative ("3 days ago"). */
     posted_at: string | null;
     /** The provider's absolute publication time, where one is offered. */
@@ -104,6 +103,41 @@ export interface ApplicationRow {
     location?: string | null;
     remote?: boolean | null;
     provider?: string | null;
+    workplace?: Workplace | null;
+    employment_type?: string | null;
+    salary?: string | null;
+}
+
+export type Workplace = "remote" | "hybrid" | "onsite";
+
+/** POST /dashboard/applications/extract — what could be read from a job link. */
+export interface ExtractedJob {
+    url: string;
+    /** linkedin, greenhouse, company_site, … */
+    source: string;
+    /** pool | greenhouse | lever | ashby | json-ld | page-meta | url-path | none */
+    method: string;
+    fields: {
+        title: string | null;
+        company: string | null;
+        location: string | null;
+        workplace: Workplace | null;
+        employment_type: string | null;
+        salary: string | null;
+        /** Provider-stated level, e.g. "Mid-Senior". */
+        experience_level: string | null;
+        posted_at: string | null;
+        description: string | null;
+    };
+    skills: string[];
+    /** Read from the description: the lowest years figure, and whether it is required. */
+    experience: {years: number | null; kind: "required" | "preferred" | "unstated"};
+    /** Review fields nothing could be found for. */
+    missing: string[];
+    /** Why the result is partial, in words a user can act on. */
+    message: string | null;
+    /** The posting's row in the job pool, when it is real source data. */
+    job_id: number | null;
 }
 
 export interface BookmarkResult {
@@ -135,6 +169,8 @@ export interface RankedJob {
     experience_score: number;
     /** Constant across all jobs sharing a location value. */
     location_score: number;
+    /** local | remote_country | remote_region | remote_emea | remote_global | remote_unspecified | international | ineligible */
+    location_tier?: string | null;
 }
 
 /** Where the search decided to look, and how it got there. */

@@ -7,14 +7,16 @@ Application tracking for the dashboard. All routes require
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| POST | `/auth/provision` | — | `{"ok": true}` |
 | POST | `/dashboard/applications` | `BookmarkRequest` | `{"bookmarked": bool, "application_id": int\|null}` |
+| POST | `/dashboard/applications/extract` | `{"url": str}` | `ExtractedJob` — see [From a job link](#from-a-job-link) |
+| POST | `/dashboard/applications/from-url` | `UrlApplicationRequest` | `{"application_id": int}` |
 | GET | `/dashboard/applications` | — | list of applications |
 | POST | `/dashboard/applications/{id}/transition` | `TransitionRequest` | `{"status": "<new>"}` |
 | GET | `/dashboard/applications/{id}/history` | — | event timeline, newest first |
 
-`POST /auth/provision` must be called once after sign-in. Nothing else creates
-the `users` row, and every other route returns 401 until it exists.
+Accounts are created on a user's first write; there is no separate provisioning
+call. Tokens whose subject is not a numeric Google id are refused (401) on
+every route.
 
 ## Bodies
 
@@ -45,14 +47,32 @@ event history.
 **null** when persistence was disabled or failed — those postings cannot be
 bookmarked and the control should be disabled rather than posting null.
 
+## From a job link
+
+`extract` never fails on a partial read. It returns what it found, `missing`
+(review fields still empty), and `message` explaining why, in words fit to show.
+Sources are tried in order: the job pool (`method: "pool"`), the ATS API
+(`greenhouse` / `lever` / `ashby`), JSON-LD (`json-ld`), page meta tags
+(`page-meta`), the URL slug (`url-path`). Sites that block bots (Indeed,
+Glassdoor) come back as `method: "none"` with a message.
+
+`job_id` is set only for structured results, which join the shared pool. Pass
+it to `from-url` so the application links to that job. The reviewed values are
+stored on the application and win in the list; the shared `jobs` row is never
+edited by a user.
+
+`UrlApplicationRequest`: `url`, `title` (required), `job_id`, `company`,
+`location`, `workplace` (`remote|hybrid|onsite`), `employment_type`, `salary`
+(free text), `source`, `status` (`saved` default, or `applied`), `cv_snapshot`.
+
 ## Status codes
 
 | code | meaning |
 |---|---|
-| 401 | bad token, or no `users` row (call `/auth/provision`) |
+| 401 | bad token, or an outdated app session (non-numeric subject) |
 | 404 | application not found, not yours, or unknown `job_id` |
-| 409 | un-bookmarking an application that has been sent |
-| 422 | body failed validation |
+| 409 | un-bookmarking an application that has been sent, or `from-url` for a job already tracked |
+| 422 | body failed validation, or `extract` given an unusable/private URL (`detail` is user-facing) |
 
 404 covers "not yours" deliberately, so ids cannot be probed.
 

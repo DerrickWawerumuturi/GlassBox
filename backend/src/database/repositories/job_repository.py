@@ -128,3 +128,70 @@ def upsert_many(conn, records: list[JobRecord]) -> list[UpsertedJob]:
             )
 
     return results
+
+
+# ------------------------------------------------------------------ reading
+# Rows come back as the pipeline's Job, so a posting read from the pool is
+# indistinguishable from one a provider just returned.
+
+_JOB_SELECT = """
+select id, provider, external_id, title, company, description, location,
+       remote, remote_eligibility, employment_type, experience_level,
+       salary_min, salary_max, salary_currency, salary_period, url,
+       posted_at, posted_at_raw, raw_payload
+from jobs
+"""
+
+SEARCH_POOL = _JOB_SELECT + """
+where exists (
+    select 1 from unnest(%(roles)s::text[]) as r(role)
+    where to_tsvector('english', coalesce(title, '')) @@ plainto_tsquery('english', r.role)
+)
+  and archived_at is null
+  and (last_seen_at > now() - make_interval(days => %(live)s)
+       or (provider <> all(%(refreshed)s::text[])
+           and last_seen_at > now() - make_interval(days => %(unverified)s)))
+  and coalesce(posted_at, first_seen_at) > now() - make_interval(days => %(age)s)
+  and (%(remote)s::boolean is null or remote = %(remote)s::boolean)
+  and (%(place)s::text is null or location ~* %(place)s::text)
+order by posted_at desc nulls last
+limit %(limit)s
+"""
+
+FIND_BY_URL = _JOB_SELECT + """
+where rtrim(lower(url), '/') = rtrim(lower(%s), '/')
+  and archived_at is null
+order by last_seen_at desc
+limit 1
+"""
+
+
+def row_to_job(row):
+    from src.Agent.utils.types import Job
+
+    posted = row["posted_at"]
+    return Job(
+        title=row["title"], company=row["company"], description=row["description"],
+        location=row["location"], remote=row["remote"], remote_eligibility=row["remote_eligibility"],
+        employment_type=row["employment_type"], experience_level=row["experience_level"],
+        salary_min=row["salary_min"], salary_max=row["salary_max"],
+        salary_currency=row["salary_currency"], salary_period=row["salary_period"],
+        url=row["url"], posted_at=row["posted_at_raw"],
+        posted_at_utc=posted.isoformat() if posted else None,
+        provider=row["provider"], external_id=row["external_id"],
+        # The stored payload, so re-persisting sees an unchanged hash.
+        raw=row["raw_payload"], db_id=row["id"],
+    )
+
+
+def search_pool(conn, params: dict) -> list:
+    with conn.cursor() as cur:
+        cur.execute(SEARCH_POOL, params)
+        return [row_to_job(row) for row in cur.fetchall()]
+
+
+def find_by_url(conn, url: str):
+    with conn.cursor() as cur:
+        cur.execute(FIND_BY_URL, (url,))
+        row = cur.fetchone()
+        return row_to_job(row) if row else None

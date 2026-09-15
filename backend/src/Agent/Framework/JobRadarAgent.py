@@ -1,17 +1,21 @@
+import dataclasses
 from datetime import datetime, timezone
 
 from src.Agent.Framework.SimilarityEngine import SimilarityEngine, MarketAnalyzer
 from src.Agent.utils.embedder import SentenceEmbedder
-from src.Agent.Framework.QueryInterpreter import QueryInterpreter
+from src.Agent.utils.llm_client import GroqModel
 from src.Agent.Framework.SearchEngine import SearchEngine, MIN_JOBS_FLOOR
 from src.Agent.utils.skill_extractor import SkillExtractor
 from src.Agent.utils.parser import parse_retrieved_jobs
-from src.database.services.ingestion import JobIngestionService, resolve_identity
+from src.Agent.utils.types import SearchQuery
+from src.Agent.utils import location as loc
+from src.database.fingerprint import resolve_identity
+from src.database.services.ingestion import JobIngestionService
 
 
 class JobRadarAgent:
     def __init__(self):
-        self.query_interpreter = QueryInterpreter()
+        self.query_interpreter = GroqModel("user")
         self.search_engine = SearchEngine()
         self.skill_extractor = SkillExtractor()
         self.sentence_embedder = SentenceEmbedder()
@@ -20,12 +24,21 @@ class JobRadarAgent:
         self.ingestion = JobIngestionService()
 
 
-    def run(self, user_input):
-        query = self.query_interpreter.interpreter(user_input)
+    def run(self, user_input, location_preferences: dict | None = None):
+        query = self.query_interpreter.parse(user_input)
 
         started_at = datetime.now(timezone.utc)
         run_log = []
-        outcome = self.search_engine.get_jobs(query, run_log=run_log)
+        search_query = SearchQuery.from_parsed(query)
+
+        # Saved preferences, else the CV's own location, else the deployment
+        # default. Whichever wins also decides where the local leg searches.
+        prefs = loc.LocationPreferences.resolve(loc.resolve(search_query), saved=location_preferences)
+        if prefs.source != "resolved" and prefs.country_code:
+            search_query = dataclasses.replace(
+                search_query, location=None, country_code=prefs.country_code, city=prefs.city,
+            )
+        outcome = self.search_engine.get_jobs(search_query, run_log=run_log)
         raw_jobs = outcome.jobs
 
         # Raw postings are stored before parsing, so the ones parsing discards —
@@ -61,14 +74,8 @@ class JobRadarAgent:
 
         self.ingestion.persist_skills(job_ids, jobs)
 
-        user_embs, job_embs = self.sentence_embedder.get_embeddings(query, jobs)
-
-        ranked_jobs = self.similarity_engine.calculate(
-            user_embs,
-            job_embs,
-            jobs
-
-        )
+        ranked_jobs = self.score_jobs(query, jobs, prefs)
+        outcome.coverage["location_preferences"] = prefs.to_dict()
 
         # The CV skills arrive as free text from the LLM ("react", "aws") while
         # job skills are canonical EMSI names ("React.js", "Amazon Web
@@ -91,9 +98,14 @@ class JobRadarAgent:
         }
 
 
+    def score_jobs(self, query, processed_jobs, location_prefs=None):
+        """
+        The one JobRadar match score. Pool jobs, live search results and (later)
+        a job a user pasted all go through here, so they are comparable.
+        `processed_jobs` are ProcessedJob (job + extracted skills).
+        """
+        user_embs, job_embs = self.sentence_embedder.get_embeddings(query, processed_jobs)
+        return self.similarity_engine.calculate(user_embs, job_embs, processed_jobs, location_prefs)
+
+
 job_radar_agent = JobRadarAgent()
-
-
-if __name__ == "__main__":
-    agent = JobRadarAgent()
-    # print(agent.run(user_input=user_input))

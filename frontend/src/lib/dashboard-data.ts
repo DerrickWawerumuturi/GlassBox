@@ -52,7 +52,7 @@ function toRow(ranked: RankedJob, index: number, userSkillKeys: Set<string>): Op
         posted: posting.posted_at ?? formatDate(posting.posted_at_utc),
         salary: formatSalary(posting),
         type: posting.employment_type,
-        url: posting.url ?? posting.source,
+        url: posting.url,
         scores: {
             title: ranked.title_score,
             skills: ranked.skills_score,

@@ -24,11 +24,11 @@ CV (PDF)
 pdf_inspector.extract_text            plain text
    │
    ▼
-QueryInterpreter  ──► Groq LLM        ParsedQuery (role, skills, location…)
+GroqModel("user") ──► Groq LLM       ParsedQuery (role, skills, location…)
    │
    ▼
 SearchEngine      ──► local:<country> + remote:global legs   (concurrent)
-                      JSearch · Muse · Remotive · RemoteOK · Jooble
+                      JSearch · Muse · Jooble · daily job pool
    │                                  list[Job]
    ├────────────────────────────► persist raw jobs ──┐
    ▼                                                 │

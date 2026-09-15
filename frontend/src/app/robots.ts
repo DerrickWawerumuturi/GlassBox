@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
         rules: {
             userAgent: "*",
             allow: "/",
-            // Private, thin, or design-reference pages add nothing to search.
-            disallow: ["/dashboard", "/api/", "/onboarding", "/analysis", "/designs/"],
+            // Private or thin pages add nothing to search.
+            disallow: ["/dashboard", "/api/", "/onboarding", "/analysis"],
         },
         sitemap: "https://jobradar-frontend-pearl.vercel.app/sitemap.xml",
     };

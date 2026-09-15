@@ -14,34 +14,21 @@ import {
     FileTextIcon,
     GaugeIcon,
     MapPinIcon,
-    PlusIcon,
     GlobeIcon,
     TypeIcon
 } from "lucide-react";
 
 import {cn} from "@/lib/utils";
-import {ApplicationRow, ApplicationStatus} from "@/types/jobradar";
+import {ApplicationRow} from "@/types/jobradar";
 import {CLOSED, PIPELINE, STATUS_LABEL, useApplications} from "@/lib/applications-store";
-import {useAnalysis} from "@/lib/analysis-store";
-import {timeAgo, toOpportunities} from "@/lib/dashboard-data";
-import {GRID_TD, GridTh, Monogram, PageBar, ScoreChip, SectionLabel, StatusChip, Toolbar, ViewChip} from "@/components/dashboard/bits";
+import {timeAgo} from "@/lib/dashboard-data";
+import {GRID_TD, GridTh, PageBar, ScoreChip, Toolbar, ViewChip} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import SourceBadge from "@/components/dashboard/SourceBadge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import {Dialog, DialogContent, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
+import AddApplicationDialog from "@/components/dashboard/AddApplicationDialog";
+import {ApplicationsSkeleton, CvSnapshot, RemoveCell, TrackJobMenu, workplaceLabel} from "@/components/dashboard/ApplicationParts";
 import {DeleteButton} from "@/components/ui/delete-button";
 import {Folder} from "@/components/ui/folder-component";
-
-const TRANSITIONS: Exclude<ApplicationStatus, "saved">[] =
-    ["applied", "screening", "interview", "offer", "rejected", "withdrawn"];
-
-const TRACK_SUGGESTIONS = 5;
 
 const VIEWS = [
     {id: "all", label: "All"},
@@ -50,207 +37,8 @@ const VIEWS = [
 ] as const;
 type ViewId = typeof VIEWS[number]["id"];
 
-const INPUT = "rounded-md border border-input bg-transparent px-3 py-2 text-[13px] outline-none placeholder:text-muted-foreground/50 focus:border-foreground/30";
-
-/** An application made outside JobRadar — entered by hand, tracked the same. */
-function AddApplicationDialog() {
-    const {addManual} = useApplications();
-    const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({title: "", company: "", url: "", location: "", applied: true});
-
-    const set = (key: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) =>
-        setForm((prev) => ({...prev, [key]: event.target.value}));
-
-    const submit = (event: React.FormEvent) => {
-        event.preventDefault();
-        if (!form.title.trim()) return;
-        addManual({
-            title: form.title.trim(),
-            company: form.company.trim() || null,
-            url: form.url.trim() || null,
-            location: form.location.trim() || null,
-            status: form.applied ? "applied" : "saved"
-        });
-        setForm({title: "", company: "", url: "", location: "", applied: true});
-        setOpen(false);
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={(props) => (
-                <button
-                    {...props}
-                    className={cn(props.className, "ml-2 inline-flex items-center gap-1.5 rounded-md bg-accent-lime px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-accent-lime-ink transition-opacity hover:opacity-90")}
-                >
-                    <PlusIcon className={"size-3"} /> Add your own
-                </button>
-            )} />
-            <DialogContent className={"sm:max-w-md"}>
-                <DialogTitle className={"text-base font-bold"}>Add an application</DialogTitle>
-                <form onSubmit={submit} className={"flex flex-col gap-3"}>
-                    <input required autoFocus value={form.title} onChange={set("title")} placeholder={"Role — e.g. Backend Engineer"} className={INPUT} />
-                    <input value={form.company} onChange={set("company")} placeholder={"Company"} className={INPUT} />
-                    <input value={form.url} onChange={set("url")} type={"url"} placeholder={"Job link (https://…)"} className={INPUT} />
-                    <input value={form.location} onChange={set("location")} placeholder={"Location"} className={INPUT} />
-                    <div className={"flex gap-1"} role={"radiogroup"} aria-label={"Starting status"}>
-                        {([["applied", true], ["saved", false]] as const).map(([label, applied]) => (
-                            <button
-                                key={label}
-                                type={"button"}
-                                role={"radio"}
-                                aria-checked={form.applied === applied}
-                                onClick={() => setForm((prev) => ({...prev, applied}))}
-                                className={cn(
-                                    "rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors",
-                                    form.applied === applied ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground"
-                                )}
-                            >
-                                <StatusChip status={label} />
-                            </button>
-                        ))}
-                    </div>
-                    <button
-                        type={"submit"}
-                        className={"mt-1 rounded-md bg-accent-lime px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.1em] text-accent-lime-ink transition-opacity hover:opacity-90 disabled:opacity-40"}
-                        disabled={!form.title.trim()}
-                    >
-                        Track it
-                    </button>
-                </form>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
-/** Only bookmarks are deletable — a sent application would lose its history. */
-function RemoveCell({app}: { app: ApplicationRow }) {
-    const {toggleSave} = useApplications();
-    if (app.status !== "saved" || app.id < 0 || app.job_id == null) return null;
-
-    return (
-        <DeleteButton
-            className={"origin-left scale-70 -my-1.5"}
-            onConfirm={() => toggleSave({
-                jobId: app.job_id!,
-                role: app.title,
-                company: app.company,
-                match: Number(app.match_score) || null
-            })}
-        />
-    )
-}
-
-/** The CV exactly as it was when this job was saved. */
-function CvSnapshot({app}: { app: ApplicationRow }) {
-    const cv = app.cv_snapshot;
-    if (!cv) return <span className={"text-muted-foreground/50"}>—</span>;
-
-    const skills = (cv.skills ?? []).filter((s): s is string => Boolean(s));
-
-    return (
-        <Dialog>
-            <DialogTrigger render={(props) => (
-                <button
-                    {...props}
-                    aria-label={"View the CV this was saved with"}
-                    className={cn(props.className, "inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground")}
-                >
-                    <FileTextIcon className={"size-3.5"} /> view
-                </button>
-            )} />
-            <DialogContent className={"sm:max-w-md"}>
-                <DialogTitle className={"text-base font-bold"}>
-                    CV at save time
-                </DialogTitle>
-                <div className={"flex flex-col gap-3 text-[13px]"}>
-                    <div>
-                        <p className={"font-medium"}>{cv.name ?? "Unnamed"}</p>
-                        <p className={"font-mono text-[11px] text-muted-foreground"}>
-                            {[cv.title, cv.experience_level, cv.location].filter(Boolean).join(" · ") || "no details"}
-                        </p>
-                    </div>
-                    <div>
-                        <SectionLabel>Skills ({skills.length})</SectionLabel>
-                        <div className={"mt-2 flex flex-wrap gap-1.5"}>
-                            {skills.slice(0, 16).map((skill) => (
-                                <span key={skill} className={"rounded-[3px] border border-border px-2 py-0.5 font-mono text-[10.5px] text-muted-foreground"}>
-                                    {skill}
-                                </span>
-                            ))}
-                            {skills.length > 16 && (
-                                <span className={"self-center text-[11px] text-muted-foreground"}>+{skills.length - 16} more</span>
-                            )}
-                        </div>
-                    </div>
-                    <p className={"text-[11px] leading-relaxed text-muted-foreground"}>
-                        This is the profile the {Math.round(Number(app.match_score ?? 0))}% match was
-                        computed against. It stays frozen even as your CV evolves.
-                    </p>
-                </div>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
-/** "+ Track a job" — the top unsaved matches, one click each. */
-function TrackJobMenu() {
-    const {analysis} = useAnalysis();
-    const {byJobId, toggleSave, pending} = useApplications();
-
-    const candidates = useMemo(() => {
-        if (!analysis) return [];
-        return toOpportunities(analysis)
-            .filter((row) => row.jobId != null && !byJobId.has(row.jobId))
-            .slice(0, TRACK_SUGGESTIONS);
-    }, [analysis, byJobId]);
-
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger render={(props) => (
-                <button
-                    {...props}
-                    className={cn(props.className, "flex w-full items-center gap-1.5 border-b border-border/70 px-4 py-2.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-foreground/3 hover:text-foreground sm:px-5")}
-                >
-                    <PlusIcon className={"size-3.5"} /> Track a job
-                </button>
-            )} />
-            <DropdownMenuContent align={"start"} className={"w-80"}>
-                {candidates.length > 0 ? candidates.map((row) => (
-                    <DropdownMenuItem
-                        key={row.key}
-                        disabled={row.jobId != null && pending.has(row.jobId)}
-                        onClick={() => row.jobId != null && toggleSave({
-                            jobId: row.jobId, role: row.role, company: row.company, match: row.match
-                        })}
-                        className={"cursor-pointer gap-2.5"}
-                    >
-                        <CompanyLogo company={row.company ?? row.role} url={row.url} />
-                        <span className={"min-w-0 flex-1"}>
-                            <span className={"block truncate text-[13px]"}>{row.role}</span>
-                            <span className={"block truncate font-mono text-[10.5px] text-muted-foreground"}>{row.company ?? "—"}</span>
-                        </span>
-                        <ScoreChip value={row.match} />
-                    </DropdownMenuItem>
-                )) : (
-                    <p className={"px-2 py-2 text-xs text-muted-foreground"}>
-                        {analysis ? "Every current match is already tracked." : "Run a scan first and matches show up here."}
-                    </p>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                    render={(props) => (
-                        <Link {...props} href={"/dashboard/opportunities"} className={cn(props.className, "cursor-pointer text-xs text-muted-foreground")}>
-                            Browse all opportunities →
-                        </Link>
-                    )}
-                />
-            </DropdownMenuContent>
-        </DropdownMenu>
-    )
-}
-
 export default function ApplicationsPage() {
-    const {apps, state, counts, refresh, remove} = useApplications();
+    const {apps, state, counts, refresh, remove, syncing} = useApplications();
     const [view, setView] = useState<ViewId>("all");
 
     // Long-press on a row (touch only) opens the action sheet — the delete
@@ -281,7 +69,9 @@ export default function ApplicationsPage() {
         <div className={"flex min-h-screen flex-col"}>
             <PageBar
                 title={"Applications"}
-                meta={state === "ready" ? `${apps.length} tracked · ${counts.interview} in interview` : undefined}
+                meta={state === "ready"
+                    ? `${apps.length} tracked · ${counts.interview} in interview${syncing ? " · syncing" : ""}`
+                    : undefined}
             />
 
             {state === "signed-out" && (
@@ -393,7 +183,7 @@ export default function ApplicationsPage() {
                                             </td>
                                             <td className={GRID_TD}><ScoreChip value={app.match_score} /></td>
                                             <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground lg:table-cell")}>
-                                                {app.remote ? "Remote" : app.location ?? "—"}
+                                                {workplaceLabel(app)}
                                             </td>
                                             <td className={cn(GRID_TD, "hidden md:table-cell")}>
                                                 <SourceBadge url={app.url} provider={app.provider} />
@@ -415,7 +205,9 @@ export default function ApplicationsPage() {
                             </table>
                             <TrackJobMenu />
                         </div>
-                    ) : state === "ready" && (
+                    ) : state === "loading" ? (
+                        <ApplicationsSkeleton />
+                    ) : (
                         <div className={"px-4 py-8 sm:px-8"}>
                             <div className={"flex flex-col items-center gap-4 rounded-lg border border-border bg-card/50 px-6 py-12 text-center"}>
                                 <Folder color={"orange"} size={"sm"} aria-hidden />

@@ -1,8 +1,14 @@
 from psycopg.types.json import Jsonb
 
-CREATE_APPLICATION = """
-insert into application (user_id, job_id, title, company, source, match_score, cv_snapshot)
-values (%s, %s, %s, %s,  %s, %s, %s)
+# Every way an application starts — a bookmark, a hand-entered one, a reviewed
+# pasted link — is this one insert with different fields filled in.
+CREATE_COLUMNS = (
+    "job_id", "title", "company", "source", "match_score", "match_method", "cv_snapshot",
+    "url", "location", "workplace", "employment_type", "salary",
+)
+CREATE_APPLICATION = f"""
+insert into application (user_id, {", ".join(CREATE_COLUMNS)})
+values (%(user_id)s, {", ".join(f"%({c})s" for c in CREATE_COLUMNS)})
 returning id
 """
 
@@ -26,12 +32,15 @@ insert into application_events(application_id, from_status, to_status, occurred_
 values (%s, %s, %s, %s, %s, %s)
 """
 
+# The application's own values win: they are what the user reviewed. The job
+# row fills in only what the application never recorded (plain bookmarks).
 GET_LIST_FOR_USER = """
 select a.id, a.job_id, a.title, a.company, a.match_score, a.status,
        a.applied_at, a.last_status_at, a.cv_snapshot,
-       coalesce(j.url, a.url)           as url,
-       coalesce(j.location, a.location) as location,
-       j.remote,
+       a.workplace, a.employment_type, a.salary, a.match_method,
+       coalesce(a.url, j.url)           as url,
+       coalesce(a.location, j.location) as location,
+       coalesce(a.workplace = 'remote', j.remote) as remote,
        coalesce(j.provider, 'manual')   as provider
 from application a
 left join jobs j on j.id = a.job_id
@@ -58,23 +67,15 @@ delete from application
 where id = %s and user_id = %s
 """
 
-CREATE_MANUAL = """
-insert into application (user_id, job_id, title, company, source, cv_snapshot, url, location)
-values (%s, null, %s, %s, 'manual', %s, %s, %s)
-returning id
-"""
-
-
-def create(conn, user_id, job_id, title, company, source, match_score, cv_snapshot) -> int:
+def create(conn, user_id: int, **fields) -> int:
+    unknown = set(fields) - set(CREATE_COLUMNS)
+    if unknown:
+        raise TypeError(f"not application columns: {sorted(unknown)}")
+    values = {column: fields.get(column) for column in CREATE_COLUMNS}
+    if values["cv_snapshot"] is not None:
+        values["cv_snapshot"] = Jsonb(values["cv_snapshot"])
     with conn.cursor() as cur:
-        cur.execute(CREATE_APPLICATION,
-                    (user_id, job_id, title, company, source, match_score, Jsonb(cv_snapshot) if cv_snapshot else None,))
-        return cur.fetchone()["id"]
-
-def create_manual(conn, user_id, title, company, cv_snapshot, url, location) -> int:
-    with conn.cursor() as cur:
-        cur.execute(CREATE_MANUAL,
-                    (user_id, title, company, Jsonb(cv_snapshot) if cv_snapshot else None, url, location,))
+        cur.execute(CREATE_APPLICATION, {"user_id": user_id, **values})
         return cur.fetchone()["id"]
 
 

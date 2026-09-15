@@ -1,61 +1,62 @@
 # Frontend architecture
 
-Next.js 16 App Router app presenting the JobRadar analysis.
+Next.js 16 App Router app. Signed-in users work in `/dashboard`; the landing
+page's anonymous scan shows its result under `/analysis`.
 
 ## Layout
 
 ```
-api/api.ts                       API base URL + Analyze()   (outside src/)
 src/
   app/
-    layout.tsx                   fonts, dark lock, AnalysisProvider, Toaster
-    page.tsx                     landing (Navbar + Hero)
-    globals.css                  all design tokens (Tailwind v4 is CSS-first)
-    analysis/
-      layout.tsx                 masthead, tab nav, route guard
-      page.tsx                   overview · coverage
-      skills/page.tsx            demand · my skills · landscape
-      gaps/page.tsx              gaps
-      jobs/page.tsx              matches
+    layout.tsx                   fonts, dark lock, SessionProvider, AnalysisProvider, CVProvider, Toaster
+    auth.ts, proxy.ts            NextAuth (Google); the token subject is Google's account id
+    api/token/route.ts           mints the short-lived JWT the backend verifies
+    api/logo/route.ts            same-origin company-logo proxy
+    (landing)/page.tsx           landing + anonymous upload
+    (auth)/sign-in/page.tsx
+    (product)/
+      analysis/…                 overview · skills · gaps · jobs for an anonymous scan
+      onboarding/page.tsx        CV breakdown after sign-in
+      dashboard/
+        layout.tsx               sidebar shell + ApplicationsProvider
+        page.tsx                 overview
+        applications/page.tsx    the tracker table
+        opportunities, market, gaps, scan, profile
   components/
-    Navbar.tsx                   landing header
-    Hero.tsx                     upload + analysis trigger
-    BackendStatus.tsx            API liveness dot
-    Market/                      analysis sections
-    ui/                          shadcn primitives (@base-ui/react)
+    Market/                      analysis charts, shared by /analysis and /dashboard
+    dashboard/                   dashboard pieces; ApplicationParts.tsx holds the tracker's cells
+                                 and menus, AddApplicationDialog.tsx the paste-a-link flow
+    ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
-    analysis-store.tsx           analysis context + persistence
-    market.ts                    display transforms
-    backend-health.ts            /health polling hook
-    utils.ts                     cn()
-  types/
-    jobradar.ts                  API contract
+    api.ts                       every backend call; `authed()` attaches the token
+    analysis-store.tsx           the analysis, cached in localStorage and on the account
+    cv-store.tsx                 the CV, same pattern
+    applications-store.tsx       tracked applications, optimistic writes, per-user cache
+    market.ts                    display transforms over the analysis
+    dashboard-data.ts            analysis -> opportunity rows
+  types/jobradar.ts              API contract
 ```
-
-`api/` sits **outside** `src/`, so it is imported by relative path
-(`../../api/api`) rather than the `@/` alias.
 
 ## State
 
-`AnalysisProvider` (`src/lib/analysis-store.tsx`) wraps the app in the root
-layout and is the only place the analysis lives.
+Three providers, one per kind of data, all following the same rule: paint
+from `localStorage` immediately, then reconcile with the API. The API scales
+to zero and a cold start takes ~30s, so nothing waits on it to render.
 
-```ts
-const { analysis, status, hydrated, fileName, save, setStatus, clear } = useAnalysis()
-```
-
-- Reads `localStorage["jobradar"]` once on mount, behind a shape guard.
-- `hydrated` is false until that read completes. **Route guards must wait for
-  it** — acting earlier bounces returning visitors off the analysis on first
-  paint.
-- `status` is `idle | analyzing | ready | error`.
+- `AnalysisProvider` — `hydrated` is false until localStorage has been read;
+  **route guards must wait for it**, or returning visitors are bounced off
+  the analysis on first paint.
+- `CVProvider` — migrates a local CV up to the account on first sign-in.
+- `ApplicationsProvider` — cache keyed by user id; writes are optimistic and
+  reverted on failure; `syncing` is true while the cached rows are unconfirmed.
 
 See `decisions/state-management.md`.
 
 ## Routing
 
-Five routes; the four analysis ones share `analysis/layout.tsx`, which renders
-the masthead and tab nav and redirects to `/` when `hydrated && !analysis`.
+The four `/analysis` routes share `analysis/layout.tsx`, which renders the tab
+nav and redirects to `/` when `hydrated && !analysis`. The `/dashboard` routes
+share the sidebar layout.
 
 Nested layouts must be typed with Next's generated `LayoutProps<"/analysis">`.
 An inline `{ children: React.ReactNode }` fails typed-route validation in
@@ -95,7 +96,7 @@ not compute; they call these.
 | `gapPriority` | High (≥40%) vs medium |
 | `partitionJobSkills` | Splits a posting's skills into have/missing |
 | `isConstantScore` | Detects sub-scores identical across all jobs |
-| `skillKey` / `toSkillKeys` | Case-insensitive skill comparison |
+| `skillKey` / `toSkillKeys` | One spelling per skill: lowercased, without the `(Programming Language)` qualifier or `.js` |
 
 Sorting always copies, and is applied even where the backend already sorts, so a
 backend change cannot silently reorder a chart.
@@ -128,13 +129,10 @@ have local edits.
 
 ## Backend connection
 
-`api/api.ts` exports `API_BASE_URL` (`http://127.0.0.1:8000`) and `Analyze()`,
-which POSTs the PDF as multipart `FormData`. The URL is hardcoded, not
-env-driven.
-
-`src/lib/backend-health.ts` polls `GET /health` every 15s with a 4s timeout and
-re-checks on window focus. `BackendStatus` renders it in the landing navbar and
-analysis masthead.
+`src/lib/api.ts` is the only place the backend is called. `API_BASE_URL` comes
+from `NEXT_PUBLIC_API_BASE_URL`. Signed-in calls go through `authed()`, which
+fetches a 15-minute token from `/api/token`. Timeouts are 60s for ordinary
+calls, long enough to outlast a cold start, and longer for analysis.
 
 ## Commands
 
@@ -144,14 +142,13 @@ npm run build   # production build; also the only type-check gate
 npx tsc --noEmit
 ```
 
-There is no test runner and no lint config.
+There is no lint config.
 
 ## Known limitations
 
-- No UI has been visually verified; all work to date is compiler-verified only.
-- `experience_score` and `location_score` are constant across jobs, because no
-  posting carries an `experience_level`. `JobMatches` detects and discloses this
-  at runtime.
 - `overall_score` compresses into roughly 0.2–0.5, so a strong match displays
   near 48% rather than 90%.
-- The API base URL is hardcoded and would need an env var to deploy.
+- `experience_score` barely varies, because few postings carry an
+  `experience_level`. `JobMatches` detects and discloses a constant sub-score.
+- There is no frontend test runner; the browser checks used for the tracker
+  live outside the repo.

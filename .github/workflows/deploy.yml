@@ -15,6 +15,9 @@ concurrency:
   group: deploy
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -25,12 +28,42 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build and push image
+      - name: Build image
+        run: |
+          IMAGE=jobradarregistry.azurecr.io/jobradar:${GITHUB_SHA::8}
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          docker build --platform linux/amd64 -t "$IMAGE" ./backend
+
+      # Inside the image that is about to ship, so the tests see its exact
+      # dependencies. A failure here stops the deploy before anything is pushed.
+      - name: Test
+        run: |
+          docker run --rm -v "$PWD/backend/tests:/app/tests:ro" "$IMAGE" \
+            sh -c "pip install -q pytest && python -m pytest -q -p no:cacheprovider tests"
+
+      - name: Push image
         run: |
           az acr login --name jobradarregistry
-          IMAGE=jobradarregistry.azurecr.io/jobradar:${GITHUB_SHA::8}
-          docker build --platform linux/amd64 -t "$IMAGE" ./backend
           docker push "$IMAGE"
+
+      # Before the new revision takes traffic: code may rely on the new schema,
+      # and every migration is additive, so the old revision keeps working.
+      # `-e DATABASE_URL` passes the variable by name — its value is never on a
+      # command line. Parts are masked in case a driver error quotes them.
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "JOBRADAR_DATABASE_URL is not set on this repository"; exit 1
+          fi
+          python3 -c "
+          import os, urllib.parse as u
+          p = u.urlsplit(os.environ['DATABASE_URL'])
+          for part in (p.username, p.password, p.hostname):
+              if part: print('::add-mask::' + part)
+          "
+          docker run --rm -e DATABASE_URL "$IMAGE" python -m src.database.migrate
 
       - name: Update container app
         # -o none: the default output dumps the full app config, env values
@@ -39,7 +72,7 @@ jobs:
           az containerapp update \
             -n jobradar-backend \
             -g jobradar-rg \
-            --image jobradarregistry.azurecr.io/jobradar:${GITHUB_SHA::8} \
+            --image "$IMAGE" \
             -o none
 
       - name: Smoke test

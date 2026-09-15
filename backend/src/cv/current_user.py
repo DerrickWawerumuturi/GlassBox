@@ -18,4 +18,11 @@ def current_user(authorization: Annotated[str, Header()]):
         raise HTTPException(status_code=401,detail="Invalid or expired token")
 
 
-
+def optional_user(authorization: Annotated[str | None, Header()] = None):
+    """The caller's claims when a valid token is sent, else None. Never refuses."""
+    if not authorization:
+        return None
+    try:
+        return jwt.decode(authorization.removeprefix("Bearer ").strip(), SECRET, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        return None

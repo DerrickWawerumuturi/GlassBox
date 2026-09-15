@@ -2,8 +2,7 @@ import os
 import time
 from datetime import datetime
 
-from src.database.repositories import user_repository
-from src.database.fingerprint import job_fingerprint, payload_hash
+from src.database.fingerprint import payload_hash, resolve_identity
 from src.database.models.job import JobIdentity, JobRecord, ObservationRecord
 from src.database.repositories import (
     job_repository,
@@ -30,25 +29,6 @@ def _parse_timestamp(value: str | None) -> datetime | None:
         return datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
     except ValueError:
         return None
-
-
-def resolve_identity(job) -> tuple[JobIdentity, str, str]:
-    """
-    The (provider, external_id) pair a posting is stored under.
-
-    Deterministic and side-effect free so skill persistence can recompute the
-    same key later without the job carrying resolution state around.
-    """
-    provider = job.provider or "unknown"
-    fingerprint = job_fingerprint(
-        provider, job.title, job.company, job.location, job.url
-    )
-
-    external_id = (job.external_id or "").strip()
-    if external_id:
-        return JobIdentity(provider, external_id), "provider", fingerprint
-
-    return JobIdentity(provider, f"fp:{fingerprint[:32]}"), "fingerprint", fingerprint
 
 
 def _to_record(job, identity: JobIdentity, identity_source: str, fingerprint: str) -> JobRecord:
@@ -126,7 +106,13 @@ class JobIngestionService:
             self._record_failure("record search", err)
             return None
 
-    def persist_jobs(self, search_id: int | None, jobs: list) -> dict[JobIdentity, int]:
+    def persist_jobs(self, search_id: int | None, jobs: list, observe: bool = True) -> dict[JobIdentity, int]:
+        """
+        `observe=False` is for the daily pool refresh: it re-sights thousands of
+        unchanged postings every day, and one observation row per posting per
+        day would outgrow the rest of the database. `last_seen_at` on the job
+        already records that it is still live.
+        """
         if not self._available() or not jobs:
             return {}
 
@@ -151,7 +137,7 @@ class JobIngestionService:
                 }
 
                 observations = []
-                for record in deduped:
+                for record in (deduped if observe else []):
                     identity = record.identity
                     job_id = job_ids.get(identity)
                     if job_id is None:
@@ -233,70 +219,3 @@ class JobIngestionService:
 
         except Exception as err:
             self._record_failure("store skills", err)
-
-class CVIngestionService:
-    def provision(self, payload):
-        with connection() as conn:
-            return user_repository.upsert_user(
-                conn,
-                payload["sub"],
-                payload.get("email"),
-                payload.get("name"),
-                payload.get("image"),
-            )
-
-    def store(self, payload, cv_dict):
-        with connection() as conn:
-            user_id = user_repository.upsert_user(
-                conn,
-                payload["sub"],
-                payload.get("email"),
-                payload.get("name"),
-                payload.get("image")
-            )
-
-            user_repository.save_cv(conn, user_id, cv_dict)
-
-    def fetch(self, payload) -> dict | None:
-        with connection() as conn:
-            return user_repository.get_cv(conn, payload["sub"])
-
-    def store_analysis(self, payload, data: dict, file_name):
-        with connection() as conn:
-            user_id = user_repository.upsert_user(
-                conn,
-                payload["sub"],
-                payload.get("email"),
-                payload.get("name"),
-                payload.get("image")
-            )
-            user_repository.save_analysis(conn, user_id, data, file_name)
-
-    def fetch_analysis(self, payload) -> dict | None:
-        with connection() as conn:
-            return user_repository.get_analysis(conn, payload["sub"])
-
-    def delete_data(self, payload) -> None:
-        # Wipes everything stored for the user but keeps the account itself:
-        # cv, stored analysis, and all tracked applications (events cascade).
-        with connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "select id from users where sub = %s", (payload["sub"],)
-                )
-                row = cur.fetchone()
-                if row is None:
-                    return
-                user_id = row["id"]
-                cur.execute("delete from cvs where user_id = %s", (user_id,))
-                cur.execute("delete from analyses where user_id = %s", (user_id,))
-                cur.execute("delete from application where user_id = %s", (user_id,))
-
-    def delete_account(self, payload) -> bool:
-        # The users row cascades to cvs, analyses and applications.
-        with connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("delete from users where sub = %s", (payload["sub"],))
-                return cur.rowcount > 0
-
-user_ingestion = CVIngestionService()

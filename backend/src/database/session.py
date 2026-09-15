@@ -58,10 +58,3 @@ def get_pool() -> ConnectionPool:
 def connection():
     """Pooled connection; the transaction commits on clean exit."""
     return get_pool().connection()
-
-
-def close_pool() -> None:
-    global _pool
-    if _pool is not None:
-        _pool.close()
-        _pool = None
