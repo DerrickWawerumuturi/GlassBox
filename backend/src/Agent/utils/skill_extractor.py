@@ -7,7 +7,7 @@ from spacy.matcher import PhraseMatcher
 from skillNer.general_params import SKILL_DB
 from skillNer.skill_extractor_class import SkillExtractor as nerExtractor
 
-from src.jobpool.posting import NOT_SKILLS, html_to_text
+from src.jobpool.posting import html_to_text
 
 # The container path is not the checkout path. `Dockerfile:19` copies the model
 # to /app/en_core_web_lg, while a checkout has it at the wheel's own nested
@@ -170,6 +170,28 @@ DENYLISTED_SURFACE_FORMS = frozenset({
     "reach", "imagine", "boost", "massive", "ordinances", "added",
     "adjacent", "switch", "track", "fix", "national", "geography",
     "sales", "zoom", "•",
+})
+
+# Canonical names that are real database entries but are job titles, fields of
+# study or document artefacts rather than differentiating skills. Listing
+# "Software Engineering" as a top skill for software jobs answers no question.
+NOT_SKILLS = frozenset({
+    "software engineering",
+    "software development",
+    "computer science",
+    "computer engineering",
+    "electrical engineering",
+    "job descriptions",
+    "innovation",
+    "operations",
+    "scale (map)",
+    "scholastic read 180",
+    "target 3001!",
+    # "transformation" in a business/data context matches a genetics entry.
+    # Remove this line if the search is ever pointed at biotech postings.
+    "transformation (genetics)",
+    # "programming" in a software posting matches the musical sense.
+    "programming (music)",
 })
 
 def _blocks(text: str) -> list:

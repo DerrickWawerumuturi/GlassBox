@@ -1,10 +1,18 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from dataclasses import field
 from dataclasses import dataclass
+
+
+class Position(BaseModel):
+    """One job on the CV. Only its dates and role are read: years are counted from them."""
+    role: str | None = None
+    company: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 class ParsedQuery(BaseModel):
@@ -15,6 +23,9 @@ class ParsedQuery(BaseModel):
     # dropped it and the provider was sent a role string that matched nothing.
     category: str | None = None
     skills: list[str] = Field(default_factory=list)
+    # Dated positions, so matching counts professional years per track instead
+    # of trusting the label below, which came back "Mid Level" for early-career CVs.
+    experience: list[Position] = Field(default_factory=list)
     experience_level: str | None = None
     job_requirements: str | None = None
     education: str | None = None
@@ -234,6 +245,35 @@ class UrlApplicationRequest(BaseModel):
     source: str | None = Field(default=None, max_length=50)
     status: Literal["saved", "applied"] = "saved"
     cv_snapshot: dict | None = None
+
+
+ApplicationStatus = Literal["saved", "applied", "screening", "interview", "offer", "rejected", "withdrawn"]
+
+
+class ImportRow(BaseModel):
+    """One spreadsheet row as the user confirmed it on the import preview."""
+    title: str = Field(min_length=1, max_length=300)
+    company: str | None = Field(default=None, max_length=300)
+    url: str | None = Field(default=None, max_length=2048, pattern=r"^https?://")
+    location: str | None = Field(default=None, max_length=300)
+    workplace: Literal["remote", "hybrid", "onsite"] | None = None
+    applied_at: date | None = None
+    status: ApplicationStatus = "applied"
+    employment_type: str | None = Field(default=None, max_length=100)
+    salary: str | None = Field(default=None, max_length=200)
+    source: str | None = Field(default=None, max_length=50)
+    notes: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def _saved_has_no_date(self):
+        if self.status == "saved":
+            self.applied_at = None
+        return self
+
+
+class ImportRequest(BaseModel):
+    file_name: str | None = Field(default=None, max_length=255)
+    rows: list[ImportRow] = Field(min_length=1, max_length=2000)
 
 
 class TransitionRequest(BaseModel):

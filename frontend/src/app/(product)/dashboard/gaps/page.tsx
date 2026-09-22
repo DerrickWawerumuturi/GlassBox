@@ -10,7 +10,8 @@ import {byDemand, skillKey, toPercent, toSkillKeys} from "@/lib/market";
 import SkillBadge from "@/components/dashboard/SkillBadge";
 import {DemandMeter, EmptyScan, GRID_FOOT, GRID_TD, GridTh, PageBar, ScoreChip} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
-import {OpportunityRow, toOpportunities} from "@/lib/dashboard-data";
+import {OpportunityRow} from "@/lib/dashboard-data";
+import {useOpportunities} from "@/lib/opportunities-store";
 
 const DEMAND_LIMIT = 15;
 const ROLE_CHIPS = 3;
@@ -73,17 +74,18 @@ function JobChip({row}: { row: OpportunityRow }) {
 
 export default function GapsPage() {
     const {analysis, hydrated} = useAnalysis();
+    const {rows} = useOpportunities();
 
     const market = analysis?.market;
     const haveKeys = useMemo(() => toSkillKeys(market?.user_skill_presence ?? []), [market]);
     const demand = useMemo(() => byDemand(market?.top_skills ?? []).slice(0, DEMAND_LIMIT), [market]);
 
-    // Which scanned jobs actually list each skill, best match first, one chip
-    // per distinct role title.
+    // Which reachable pool jobs ask for each skill, best fit first, one chip per
+    // distinct role title — the same jobs Opportunities lists, so a chip's link lands.
     const jobsBySkill = useMemo(() => {
         const map = new Map<string, OpportunityRow[]>();
-        if (!analysis) return map;
-        for (const row of toOpportunities(analysis)) {
+        const reachable = rows.filter((row) => row.tier !== "unlikely").sort((a, b) => b.match - a.match);
+        for (const row of reachable) {
             for (const skill of [...row.have, ...row.missing]) {
                 const key = skillKey(skill);
                 const jobs = map.get(key) ?? [];
@@ -92,7 +94,7 @@ export default function GapsPage() {
             }
         }
         return map;
-    }, [analysis]);
+    }, [rows]);
 
     if (!hydrated) return null;
 

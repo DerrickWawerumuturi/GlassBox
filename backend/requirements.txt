@@ -19,3 +19,4 @@ sentence-transformers
 python-multipart
 ipython
 pyjwt
+openpyxl

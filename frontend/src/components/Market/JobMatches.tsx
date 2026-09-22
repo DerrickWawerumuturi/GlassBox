@@ -3,11 +3,13 @@
 import React, {useMemo, useState} from 'react'
 import {ChevronDownIcon, ExternalLinkIcon} from "lucide-react";
 
-import {RankedJob, SkillStat} from "@/types/jobradar";
+import {JobPosting, RankedJob, SkillStat} from "@/types/jobradar";
 import {cn} from "@/lib/utils";
 import {isConstantScore, partitionJobSkills, toPercent, toSkillKeys} from "@/lib/market";
+import {ageLabel} from "@/lib/dashboard-data";
 import {Button} from "@/components/ui/button";
 import PanelNote from "@/components/Market/PanelNote";
+import {Reasons} from "@/components/dashboard/OpportunityPeek";
 
 interface JobMatchesProps {
     jobs: RankedJob[];
@@ -19,11 +21,22 @@ const INITIAL_COUNT = 8;
 const MISSING_SKILL_LIMIT = 15;
 
 const SUB_SCORES = [
-    {key: "title_score", label: "Title"},
-    {key: "skills_score", label: "Skills"},
+    {key: "title_score", label: "Role fit"},
+    {key: "skills_score", label: "Required skills"},
     {key: "experience_score", label: "Experience"},
     {key: "location_score", label: "Location"}
 ] as const;
+
+/**
+ * When it was posted, as a person reads it. `posted_at` is whatever the source
+ * sent — "2 days ago" from JSearch, but an ISO string or epoch milliseconds from
+ * the boards — so it is shown only when it is already words.
+ */
+function postedLabel(posting: JobPosting): string | null {
+    if (posting.posted_at_utc) return ageLabel(posting.posted_at_utc);
+    const raw = posting.posted_at?.trim();
+    return raw && /[a-z]/i.test(raw) && !/^\d{4}-\d{2}/.test(raw) ? raw : null;
+}
 
 function ScoreMeter({label, value, inert}: {
     label: string;
@@ -82,14 +95,18 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
 }) {
     const [open, setOpen] = useState(false);
     const posting = ranked.job?.job;
-    const {matched, missing} = partitionJobSkills(ranked.job?.skills ?? [], userSkillKeys);
+    const fit = ranked.match;
+    // The matcher's own split when present: it knows Postgres covers PostgreSQL.
+    const {matched, missing} = fit
+        ? {matched: [...fit.required.matched, ...fit.required.partial], missing: fit.required.missing}
+        : partitionJobSkills(ranked.job?.skills ?? [], userSkillKeys);
 
     if (!posting) return null;
 
     const meta = [
         posting.remote ? "Remote" : posting.location,
         posting.employment_type,
-        posting.posted_at
+        postedLabel(posting)
     ].filter(Boolean);
 
     const visibleMissing = missing.slice(0, MISSING_SKILL_LIMIT);
@@ -126,6 +143,7 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
 
             {open && (
                 <div className={"flex flex-col gap-5 border-t border-border px-4 py-4"}>
+                    {fit && <Reasons reasons={fit.reasons} />}
                     <div className={"grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
                         {SUB_SCORES.map(({key, label}) => (
                             <ScoreMeter
@@ -151,7 +169,7 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
 
                     <div className={"flex flex-col gap-2"}>
                         <h4 className={"font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground"}>
-                            Skills you have ({matched.length})
+                            {fit ? "Required skills you have" : "Skills you have"} ({matched.length})
                         </h4>
                         {matched.length > 0
                             ? <SkillChips skills={matched} tone={"have"} />
@@ -162,7 +180,7 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
 
                     <div className={"flex flex-col gap-2"}>
                         <h4 className={"font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground"}>
-                            Skills you&apos;re missing ({missing.length})
+                            {fit ? "Required skills you're missing" : "Skills you're missing"} ({missing.length})
                         </h4>
                         <SkillChips skills={visibleMissing} tone={"missing"} />
                         {hiddenMissing > 0 && (
@@ -253,10 +271,10 @@ const JobMatches = ({jobs, userSkills}: JobMatchesProps) => {
 
             <PanelNote
                 points={[
-                    <>Each row is a real job posting, the big percentage is its overall fit with your CV, best matches first.</>,
-                    <>Click a row to see the four scores behind that number: title, skills, experience and location.</>,
-                    <>Highlighted chips are skills the posting wants that you already have; grey chips are ones your CV doesn&apos;t show.</>,
-                    <>Learning, or simply listing, the grey-chip skills would push a match higher.</>
+                    <>Each row is a real job posting, the big percentage is how well you fit it — best fits first.</>,
+                    <>It measures fit, not how similar the texts are: a senior role, too many years short, or a job you can&apos;t hold from where you are scores low however well the skills overlap.</>,
+                    <>Click a row for the reasons behind the number, and the required skills you have and lack.</>,
+                    <>Learning, or simply listing, the missing required skills is what moves a match.</>
                 ]}
             />
         </section>

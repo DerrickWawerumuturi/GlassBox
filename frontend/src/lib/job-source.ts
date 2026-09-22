@@ -38,7 +38,15 @@ function rootDomain(host: string): string {
     return parts.length > keep ? parts.slice(-keep).join(".") : host;
 }
 
-export function jobSource(url: string | null | undefined, provider: string | null | undefined): JobSource {
+/** The provenance the tracker recorded, when there is no link to read it from. */
+const SOURCES: Record<string, string> = {
+    linkedin: "LinkedIn", indeed: "Indeed", glassdoor: "Glassdoor", company_site: "Company site",
+    referral: "Referral", recruiter: "Recruiter", job_fair: "Job fair", brightermonday: "BrighterMonday",
+    fuzu: "Fuzu", myjobmag: "MyJobMag", import: "Imported", other: "Other"
+};
+
+export function jobSource(url: string | null | undefined, provider: string | null | undefined,
+                          source?: string | null): JobSource {
     if (url) {
         try {
             const host = new URL(url).hostname.replace(/^www\./, "");
@@ -52,6 +60,7 @@ export function jobSource(url: string | null | undefined, provider: string | nul
             /* fall through */
         }
     }
+    if (source && source !== "manual" && SOURCES[source]) return {label: SOURCES[source], domain: null};
     if (provider === "manual") return {label: "Added by you", domain: null};
     return {label: "—", domain: null};
 }

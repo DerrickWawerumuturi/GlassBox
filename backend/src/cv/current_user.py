@@ -1,5 +1,4 @@
 import jwt
-from jwt import DecodeError
 from dotenv import find_dotenv, load_dotenv
 import os
 from fastapi import Header, HTTPException
@@ -14,8 +13,10 @@ def current_user(authorization: Annotated[str, Header()]):
     token = authorization.removeprefix("Bearer ").strip()
     try:
         return jwt.decode(token, SECRET, algorithms=[ALGORITHM])
-    except DecodeError:
-        raise HTTPException(status_code=401,detail="Invalid or expired token")
+    except jwt.PyJWTError:
+        # PyJWTError, not DecodeError: an expired token raises ExpiredSignatureError,
+        # which DecodeError does not cover, and used to surface as a 500.
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 def optional_user(authorization: Annotated[str | None, Header()] = None):

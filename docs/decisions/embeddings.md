@@ -1,66 +1,42 @@
 # Decision: embeddings
 
-**File:** `src/Agent/utils/embedder.py`
+**File:** `backend/src/Agent/utils/embedder.py`
+
+## What they are used for now
+
+One thing: deciding which retrieved postings belong to the user's market before
+an analysis counts skill demand (`filter_by_role`). The market statistics weight
+every posting equally, so a copywriter vacancy in the corpus would otherwise
+make its skills "market demand". Measured on a real corpus, cosine of role +
+skills against the job title separated best (F1 0.93; adding descriptions made
+it worse). See the 2026-08-21 market-quality changelog.
+
+Matching a job to the user no longer uses embeddings. Until 2026-09-22 the
+match score was four facet cosines (title, skills, experience, location); it was
+replaced because textual closeness is not fit — a one-year developer scored
+62% for a five-year senior role. See `decisions/fit-matching.md`, which also
+records the models considered as replacements.
 
 ## Model
 
 `sentence-transformers/all-MiniLM-L6-v2` — 6 layers, 384-dimensional output.
+Chosen for cost rather than accuracy ceiling: it loads in ~6 seconds, runs on
+CPU, and the filter embeds one profile string against a few dozen titles per
+analysis. Baked into the image (`HF_HOME=/opt/hf`, `HF_HUB_OFFLINE=1`) so a cold
+start never downloads it.
 
-Chosen for cost rather than accuracy ceiling. It loads in ~6 seconds, encodes
-the whole workload in ~1.2 seconds, and runs acceptably on CPU. A larger model
-(e.g. `all-mpnet-base-v2`) would improve semantic resolution but multiply a
-stage that is currently under 0.5% of total runtime — the wrong place to spend.
+## If embeddings come back into matching
 
-## What gets embedded
-
-Four facets, once for the user and once per job, matching the four facets
-`SimilarityEngine` scores:
-
-| Facet | User source | Job source |
-|---|---|---|
-| title | `query.primary_role` | `job.title` |
-| skills | `query.skills` | `" ".join(job.skills)` |
-| experience | `query.experience_level` | `job.experience_level or ""` |
-| location | `query.location or ""` | `job.location or ""` |
-
-Jobs are encoded in batches (one `encode` call per facet across all jobs) rather
-than per job, which is why this stage stays cheap as job count grows.
-
-## Why skills are joined into one string
-
-Job skills are joined with spaces and embedded as a single sentence rather than
-embedded individually and pooled. This keeps one vector per job per facet, so
-`cos_sim` produces a clean `1 × n` matrix and the scoring code stays simple.
-
-The tradeoff is real: a long skill list dilutes any individual skill's
-contribution to the vector. A posting listing 60 skills produces a vaguer
-embedding than one listing 8. Per-skill embeddings with max-pooling against the
-user's skills would be more precise and more expensive; it has not been needed
-because the skills facet is already the strongest signal in the ranking.
-
-## Empty strings are embedded, not skipped
-
-`experience` and `location` fall back to `""` when absent. MiniLM returns a
-valid vector for an empty string, so cosine similarity is defined — and because
-every job supplies the same empty experience value, every job receives the same
-`experience_score`.
-
-This is deliberate rather than accidental: the alternative was excluding facets
-per job, which would make scores non-comparable across jobs. Keeping the facet
-constant is the honest degenerate case, and downstream consumers detect and
-disclose it.
-
-See `decisions/similarity-engine.md` for what this does to the score band.
-
-## Hardware
-
-This stage does not benefit from a GPU in practice. Metal is available on Apple
-Silicon and MiniLM could use it, but the stage costs ~1.2 seconds against an
-extraction stage costing ~35. Moving embeddings to a GPU would optimise 3% of
-the runtime.
+- As a **role-fit signal** beside the rule-based families, a job-title model
+  (TechWolf JobBERT-v2) is the candidate: it is trained on job titles and their
+  skills. ~420 MB in a 4 GiB container that already holds spaCy's large model.
+- As a **reranker** over the top jobs a user can actually get — never as the
+  thing that decides whether they can get it.
+- Job-side vectors would be computed once per posting, in the daily run or on
+  first read, like `job_profiles` — never per request.
 
 ## Failure behaviour
 
-`get_embeddings` wraps everything and re-raises as `RuntimeError`. There is no
-partial-success path: if embedding fails the analysis cannot be scored, so
-failing loudly is correct.
+`filter_by_role` keeps everything when the profile is empty or no title scores
+above zero, and never trims below the minimum-jobs floor, so a failure to
+separate costs precision in the market numbers, never the analysis.

@@ -1,57 +1,64 @@
 # System overview
 
-JobRadar answers one question: *where does this CV stand in the current job
-market, and what should be learned next?*
+JobRadar answers: *where does this CV stand in the job market, which jobs does
+it actually fit, and what should be learned next?* — and keeps track of the
+applications that follow.
 
-It is one repository, two deployables:
+It is one repository, two deployables and a scheduled job:
 
-| Part | Path | Deploys to | Role |
+| Part | Path | Runs on | Role |
 |---|---|---|---|
 | API | `backend/` | Azure Container Apps | Produces the intelligence |
 | Dashboard | `frontend/` | Vercel | Presents the intelligence |
+| Daily pool refresh | `backend/src/jobpool/daily.py` | GitHub Actions, 05:00 UTC | Collects and reads jobs |
 
-They share a repo but never a process. The boundary is deliberate and
-load-bearing: **all analysis happens server-side.**
-The frontend may reshape numbers for display (`0.5555` → `55.6%`) but never
-recomputes similarity, frequency or gaps.
+The API and dashboard share a repo but never a process. The boundary is
+deliberate and load-bearing: **all analysis happens server-side.** The frontend
+may reshape numbers for display (`0.5555` → `55.6%`) but never recomputes
+similarity, frequency, fit or gaps.
 
-## End-to-end flow
+## Two pipelines
+
+Collecting jobs and matching them are separate, so neither waits on the other.
 
 ```
-CV (PDF)
-   │  multipart POST /analyze
-   ▼
-pdf_inspector.extract_text            plain text
-   │
-   ▼
-GroqModel("user") ──► Groq LLM       ParsedQuery (role, skills, location…)
-   │
-   ▼
-SearchEngine      ──► local:<country> + remote:global legs   (concurrent)
-                      JSearch · Muse · Jooble · daily job pool
-   │                                  list[Job]
-   ├────────────────────────────► persist raw jobs ──┐
-   ▼                                                 │
-parse_retrieved_jobs ──► extraction pool (4 processes)
-   │                                  list[ProcessedJob]  (job + skills)
-   ├────────────────────────────► persist skills ────┤
-   ├──────────────┐                                  ▼
-   ▼              ▼                            Postgres (Neon)
-SentenceEmbedder  MarketAnalyzer                jobs · skills · job_skills
-   │              │                             searches · observations
-   ▼              │
-SimilarityEngine  │
-   │              │
-   ▼              ▼
-        JobRadarAnalysis
-   { market, ranked_jobs }
+DAILY (job-pool.yml, 05:00 UTC, no ML stack)
+  sources.fetch_all — ATS boards (companies.txt), remote aggregators,
+                      Kenyan RSS boards: 24 threads, each source isolated
+     │  list[Job]                      normalise: one Job shape for every board
+     ▼
+  keep postings from the last 90 days
+     ▼
+  persist_jobs — upsert on (provider, external_id)         jobs
+     │            first_seen_at never moves, last_seen_at every sighting,
+     │            updated_at only when the stored posting changed
+     ▼
+  refresh_profiles — only new, edited, or read by older rules   job_profiles
+                     family · level · years · required/preferred skills ·
+                     work authorisation · language      (~10-35 ms a posting)
+
+ON REQUEST
+  GET /dashboard/opportunities
+     saved CV ──► Candidate (skills, years per track, level, location)
+     job_profiles (live pool, family-prefiltered) ──► match() per job
+     ──► gates · quality · multipliers · reasons ──► fold duplicates
+     ──► newest first (posted, else estimated, else fetched)
+
+  POST /analyze   (a scan: the market around a CV)
+     PDF ──► Groq ──► ParsedQuery
+         ──► SearchEngine: JSearch · Muse · Jooble · the pool   (concurrent legs)
+         ──► persist + profile ──► MiniLM off-market filter
+         ──► skills: stored ones reused, SkillNer (worker processes) for the rest
+         ──► MarketAnalyzer (demand, gaps, coverage)
+         └─► match() per job on its stored profile (ranked_jobs)
 ```
 
-Persistence is a side branch. It is fail-soft and nothing downstream reads from
-it — the database accumulates a historical dataset while the analysis path
-behaves exactly as before. See `decisions/persistent-job-storage.md`.
+One match score everywhere: pool jobs, analysis jobs and pasted links all go
+through `src/matching` (`decisions/unified-matching.md`), which measures fit —
+eligibility, level, years, required skills — rather than text similarity
+(`decisions/fit-matching.md`).
 
-## Response contract
+## Response contract (`/analyze`)
 
 ```jsonc
 {
@@ -62,61 +69,49 @@ behaves exactly as before. See `decisions/persistent-job-storage.md`.
     "user_skill_presence": [ ...same shape... ],
     "skill_coverage": { "covered": 2, "total": 20, "coverage": 0.1 }
   },
-  "search": {
-    "location": { "country_code": "ke", "country_name": "Kenya", "source": "llm" },
-    "scopes": ["local:ke", "remote:global"],
-    "widened_below_floor": false, "minimum_jobs_floor": 15,
-    "duplicates_removed": 0, "remote_ineligible_removed": 16,
-    "jobs_returned": 25, "providers": [ ... ]
-  },
+  "search": { "location": {...}, "scopes": [...], "jobs_returned": 25, ... },
   "ranked_jobs": [
     {
-      "job": {
-        "job":    { "db_id", "title", "company", "description", "location",
-                    "salary_min", "salary_max", "salary_currency",
-                    "salary_period", "posted_at", "posted_at_utc", ... },
-        "skills": ["Python (Programming Language)", ...]
-      },
-      "overall_score", "title_score", "skills_score",
-      "experience_score", "location_score"
+      "job": { "job": { "db_id", "title", "company", ... }, "skills": [...] },
+      "overall_score",                              // match score / 100
+      "title_score", "skills_score",                // role fit, required-skill coverage
+      "experience_score", "location_score",         // the two multipliers
+      "location_tier",
+      "match": { "score", "tier", "reasons", "blockers", "required", ... }
     }
   ]
 }
 ```
 
-`db_id` is the `jobs.id` row the posting was stored under, and is what the
-dashboard sends when bookmarking. It is `null` when persistence is disabled
-or the write failed, since storage is fail-soft.
+`GET /dashboard/opportunities` returns the same `match` object per job, plus
+`listed_at` and `date_basis` (`posted` · `estimated` · `fetched`). Contracts
+for the tracker and import: `architecture/applications-api.md`.
 
-Note the double nesting on `ranked_jobs[i].job.job` — it falls out of
-`SimilarityEngine` wrapping a `ProcessedJob`, which itself wraps a `Job`. The
-frontend type mirrors this exactly; see `decisions/` in the frontend repo.
-
-`frequency` is a ratio in 0–1. `coverage` equals `covered / total`.
+Note the double nesting on `ranked_jobs[i].job.job` — it falls out of the
+scored result wrapping a `ProcessedJob`, which wraps a `Job`. The frontend type
+mirrors this exactly (`frontend/src/types/jobradar.ts`).
 
 ## Performance shape
 
-One analysis takes roughly **45 seconds warm**. Skill extraction dominates
-everything else:
-
-| Stage | Share |
-|---|---|
-| Skill extraction (spaCy + SkillNer) | ~80% |
-| Job provider APIs | ~10% |
-| Groq interpretation, embeddings, scoring | <10% |
-
-This is CPU-bound single-process NLP work. It is not GPU-shaped — spaCy's
-`en_core_web_lg` runs on CPU, and the only GPU-capable component (MiniLM) costs
-about a second.
-
-See `architecture/backend.md` for module detail and `decisions/` for why each
-component works the way it does.
+- **A scan** takes roughly 45 seconds warm when its postings are new; SkillNer
+  extraction for the market statistics is ~80% of it, and postings an earlier
+  run read skip it. Matching the scan's jobs is milliseconds. A scan's jobs join
+  the pool as they are stored, and the user's cached Opportunities list is
+  dropped when the scan finishes, so they show there at once.
+- **Opportunities** read up to 5,000 stored profiles and score them in about
+  0.2 s. The exception is the first request in a fresh container: it resolves
+  each distinct location string once, about 3 s for 5,000 jobs, and every user
+  after it shares those lookups. The result is cached per user and CV for ten
+  minutes, and the dashboard paints its own cached copy while it waits.
+- **The daily run** fetches ~16k postings from ~200 sources in a minute or
+  two and profiles only what changed — typically 700-850 postings a day.
 
 ## Operational notes
 
-- `job_radar_agent` is a module-level singleton, so models load once at import.
-  Under `uvicorn --reload` that cost is paid again on every file save.
-- The extraction process pool is created lazily on first analysis and adds
-  roughly 22s to that first run only.
+- `job_radar_agent` is a module-level singleton, so models load once at import;
+  startup warms it in the background and no other route waits on it.
 - `/analyze` is serialised behind an `asyncio.Lock`; concurrent uploads queue.
 - `GET /health` is a cheap liveness probe the dashboard polls.
+- After migration 014 (or a `PROFILER_VERSION` bump) run
+  `python -m src.jobpool.daily --profile-only`, or wait for the morning run,
+  before Opportunities has anything to show.

@@ -28,14 +28,19 @@ def test_one_dead_source_does_not(monkeypatch):
     stored = {}
 
     class Ingestion:
-        def persist_jobs(self, search_id, jobs, observe=True):
-            stored.update(search_id=search_id, n=len(jobs), observe=observe)
+        def persist_jobs(self, search_id, jobs, observe=True, profile=True):
+            stored.update(search_id=search_id, n=len(jobs), observe=observe, profile=profile)
             return {i: i for i in range(len(jobs))}
+
+        def refresh_profiles(self, ids=None):
+            stored.update(profiled_all=ids is None)
+            return 1
 
     monkeypatch.setattr(daily, "fetch_all", lambda: ([job(1, 1), job(120, 2)], [("a", 2, None), ("b", 0, "TimeoutError")]))
     monkeypatch.setattr(daily, "JobIngestionService", Ingestion)
     assert daily.main() == 0
-    assert stored == {"search_id": None, "n": 1, "observe": False}
+    # Stored without observations, then profiled in one pass over everything stale.
+    assert stored == {"search_id": None, "n": 1, "observe": False, "profile": False, "profiled_all": True}
 
 
 def test_nothing_stored_fails_the_run(monkeypatch):

@@ -10,3 +10,6 @@ en_core_web_lg/
 
 # IDE state. dataSources.xml also carries the Neon endpoint hostname.
 .idea/
+
+# Growth strategy and market research: private plans, kept out of the repo.
+docs/growth/

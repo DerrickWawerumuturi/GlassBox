@@ -23,9 +23,8 @@ from urllib.parse import parse_qs, urlsplit
 
 from src.Agent.utils.types import Job
 from src.jobpool import sources
-from src.jobpool.posting import (
-    employment_text, extract_experience, html_to_text, iso_utc, salary_text, workplace,
-)
+from src.jobpool.posting import employment_text, html_to_text, iso_utc, salary_text, workplace
+from src.matching.requirements import extract_experience
 
 TIMEOUT = 12
 MAX_BYTES = 3_000_000

@@ -12,14 +12,13 @@ import {cn} from "@/lib/utils";
 import {useAnalysis} from "@/lib/analysis-store";
 import {PIPELINE, STATUS_LABEL, useApplications} from "@/lib/applications-store";
 import {byDemand, coveragePercent, significantGaps, toPercent} from "@/lib/market";
-import {toOpportunities} from "@/lib/dashboard-data";
+import {useOpportunities} from "@/lib/opportunities-store";
 import {CELL_DIVIDE, DemandMeter, EmptyScan, Monogram, Panel, ScoreChip, SectionLabel, StatusChip, TABLE_WRAP, TD, Th} from "@/components/dashboard/bits";
 import StatusDisclosure from "@/components/dashboard/StatusDisclosure";
 import SkillBadge from "@/components/dashboard/SkillBadge";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 
 const TOP_COUNT = 5;
-const STRONG_MATCH = 70;
 
 const STAT_TONES = {green: "green", lime: "lime", navy: "navy", maroon: "maroon"} as const;
 
@@ -66,6 +65,7 @@ export default function OverviewPage() {
     const {data: session} = useSession();
     const {analysis, hydrated} = useAnalysis();
     const {apps, state, counts, byJobId} = useApplications();
+    const {rows} = useOpportunities();
     const [greeting, setGreeting] = useState("Welcome back");
 
     useEffect(() => {
@@ -73,10 +73,9 @@ export default function OverviewPage() {
         setGreeting(hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
     }, []);
 
-    const rows = useMemo(() => analysis ? toOpportunities(analysis) : [], [analysis]);
     const market = analysis?.market;
-
-    const strong = rows.filter((row) => row.match >= STRONG_MATCH).length;
+    // Good fits from the daily pool, newest first as the store holds them.
+    const fits = useMemo(() => rows.filter((row) => row.tier === "strong" || row.tier === "good"), [rows]);
     const inProgress = counts.applied + counts.screening + counts.interview + counts.offer;
     const awaiting = counts.applied + counts.screening + counts.interview;
     const gaps = significantGaps(market?.skill_gaps ?? []).slice(0, 3);
@@ -86,7 +85,7 @@ export default function OverviewPage() {
             title: short(stat.skill),
             lines: [`${Math.round(toPercent(stat.frequency))}% demand`, `${stat.job_count} jobs`]
         }));
-    const strongCards: FolderPage[] = rows.filter((row) => row.match >= STRONG_MATCH)
+    const strongCards: FolderPage[] = fits
         .slice(0, 3).map((row) => ({
             title: short(row.role),
             lines: [short(row.company ?? "—", 13), `${row.match}% match`, short(row.location, 13)]
@@ -109,8 +108,8 @@ export default function OverviewPage() {
     const radarApps = [...apps]
         .sort((a, b) => new Date(b.last_status_at).getTime() - new Date(a.last_status_at).getTime())
         .slice(0, 3);
-    const radarOpps = rows
-        .filter((row) => row.jobId == null || !byJobId.has(row.jobId))
+    const radarOpps = fits
+        .filter((row) => !byJobId.has(row.jobId))
         .slice(0, Math.max(2, TOP_COUNT + 1 - radarApps.length));
 
     const firstName = session?.user?.name?.split(" ")[0];
@@ -128,7 +127,7 @@ export default function OverviewPage() {
                         Here&apos;s where you stand in your job market.
                     </p>
                 </div>
-                {rows.length > 0 && (
+                {fits.length > 0 && (
                     <span aria-hidden className={"hidden -rotate-2 font-hand text-xl text-primary/90 md:block"}>
                         every number below is counted, not guessed →
                     </span>
@@ -150,9 +149,9 @@ export default function OverviewPage() {
                         />
                         <Stat
                             tone={"lime"}
-                            label={"Strong matches"}
-                            value={strong}
-                            sub={`jobs at ${STRONG_MATCH}%+ fit, of ${rows.length} ranked against your CV`}
+                            label={"Good fits"}
+                            value={fits.length}
+                            sub={"jobs from today's pool that fit your CV — refreshed every morning"}
                             cards={strongCards}
                         />
                         <Stat
@@ -177,7 +176,7 @@ export default function OverviewPage() {
                         <div className={"flex items-baseline justify-between"}>
                             <SectionLabel>On your radar</SectionLabel>
                             <Link href={"/dashboard/opportunities"} className={"font-mono text-[10px] uppercase tracking-[0.1em] text-primary hover:underline"}>
-                                All {rows.length} jobs →
+                                All {fits.length} fits →
                             </Link>
                         </div>
                         <div className={TABLE_WRAP}>

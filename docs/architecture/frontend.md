@@ -18,28 +18,32 @@ src/
       analysis/…                 overview · skills · gaps · jobs for an anonymous scan
       onboarding/page.tsx        CV breakdown after sign-in
       dashboard/
-        layout.tsx               sidebar shell + ApplicationsProvider
+        layout.tsx               sidebar shell + ApplicationsProvider + OpportunitiesProvider
         page.tsx                 overview
         applications/page.tsx    the tracker table
-        opportunities, market, gaps, scan, profile
+        opportunities/page.tsx   the daily pool matched to the CV
+        market, gaps, scan, profile
   components/
     Market/                      analysis charts, shared by /analysis and /dashboard
     dashboard/                   dashboard pieces; ApplicationParts.tsx holds the tracker's cells
-                                 and menus, AddApplicationDialog.tsx the paste-a-link flow
+                                 and menus, AddApplicationDialog.tsx the paste-a-link flow,
+                                 ImportApplicationsDialog.tsx the spreadsheet import,
+                                 OpportunityCard/OpportunityPeek a match and its reasons
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token
     analysis-store.tsx           the analysis, cached in localStorage and on the account
     cv-store.tsx                 the CV, same pattern
     applications-store.tsx       tracked applications, optimistic writes, per-user cache
+    opportunities-store.tsx      matched pool jobs, per-user cache
     market.ts                    display transforms over the analysis
-    dashboard-data.ts            analysis -> opportunity rows
+    dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract
 ```
 
 ## State
 
-Three providers, one per kind of data, all following the same rule: paint
+Four providers, one per kind of data, all following the same rule: paint
 from `localStorage` immediately, then reconcile with the API. The API scales
 to zero and a cold start takes ~30s, so nothing waits on it to render.
 
@@ -49,6 +53,11 @@ to zero and a cold start takes ~30s, so nothing waits on it to render.
 - `CVProvider` — migrates a local CV up to the account on first sign-in.
 - `ApplicationsProvider` — cache keyed by user id; writes are optimistic and
   reverted on failure; `syncing` is true while the cached rows are unconfirmed.
+- `OpportunitiesProvider` — `GET /dashboard/opportunities`, cached per user;
+  refetched when the CV changes and after a dashboard scan, whose jobs join the
+  pool. `status` is `signed-out`, `loading`, `ready`,
+  `no-cv` (the API's 404) or `error`. Opportunities, the overview's good fits,
+  the gaps page and the sidebar count all read it; none of them needs a scan.
 
 See `decisions/state-management.md`.
 
@@ -73,7 +82,7 @@ All under `src/components/Market/`. Each answers one question:
 | `UserSkillPresence` | How common are my skills? |
 | `SkillGapChart` | What am I missing? |
 | `SkillCoverage` | How much of the core skillset do I cover? |
-| `JobMatches` | Which jobs fit me? |
+| `JobMatches` | Which of this scan's jobs fit me, and why? |
 | `SkillLandscape` | Where do I sit overall? |
 
 `SkillBarChart` is the shared Recharts horizontal bar chart used by the demand
@@ -96,6 +105,11 @@ not compute; they call these.
 | `gapPriority` | High (≥40%) vs medium |
 | `partitionJobSkills` | Splits a posting's skills into have/missing |
 | `isConstantScore` | Detects sub-scores identical across all jobs |
+
+`src/lib/dashboard-data.ts` does the same for Opportunities: `toRow`, the tier
+labels, `ageLabel` ("Today", "2 hours ago", "Yesterday", "3 days ago",
+"Sep 18, 2026"; hours only when the source gave a time) and `dateLabel`, which
+marks an estimated date with "≈" and a fetch date as "Found …".
 | `skillKey` / `toSkillKeys` | One spelling per skill: lowercased, without the `(Programming Language)` qualifier or `.js` |
 
 Sorting always copies, and is applied even where the backend already sorts, so a
@@ -146,9 +160,7 @@ There is no lint config.
 
 ## Known limitations
 
-- `overall_score` compresses into roughly 0.2–0.5, so a strong match displays
-  near 48% rather than 90%.
-- `experience_score` barely varies, because few postings carry an
-  `experience_level`. `JobMatches` detects and discloses a constant sub-score.
+- A match's `reasons` are written by the backend; the frontend shows them in
+  order and never composes its own.
 - There is no frontend test runner; the browser checks used for the tracker
   live outside the repo.

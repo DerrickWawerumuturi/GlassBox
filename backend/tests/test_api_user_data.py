@@ -46,7 +46,20 @@ def client():
 def job_ids():
     with connection() as conn, conn.cursor() as cur:
         cur.execute("select id from jobs where archived_at is null order by id desc limit 3")
-        return [r["id"] for r in cur.fetchall()]
+        ids = [r["id"] for r in cur.fetchall()]
+    if len(ids) == 3:
+        yield ids
+        return
+    # An empty database (a fresh local one): bring three postings of our own.
+    from src.Agent.utils.types import Job
+    from src.database.services.ingestion import JobIngestionService
+    seeded = JobIngestionService().persist_jobs(None, [
+        Job(provider="test-seed", external_id=f"{SUB}-{i}", title=f"Seed role {i}", description="Python.", raw={})
+        for i in range(3)], observe=False)
+    yield sorted(seeded.values())
+    with connection() as conn, conn.cursor() as cur:
+        cur.execute("delete from users where sub = %s", (SUB,))
+        cur.execute("delete from jobs where provider = 'test-seed'")
 
 
 def test_stale_non_numeric_session_is_refused_everywhere():
@@ -106,8 +119,9 @@ def test_application_lifecycle(client, job_ids):
     assert set(rows) == {"Typed", "Reviewed", "Kept"}
     assert rows["Typed"]["status"] == "applied" and rows["Typed"]["provider"] == "manual"
     assert rows["Reviewed"]["location"] == "Nairobi (hybrid)" and rows["Reviewed"]["workplace"] == "hybrid"
-    assert rows["Reviewed"]["match_score"] is None and rows["Reviewed"]["match_method"] is None
-    assert rows["Kept"]["status"] == "interview" and rows["Kept"]["match_method"] == "jobradar-similarity-v1"
+    # A pasted pool job is scored against the saved CV by the one matcher.
+    assert rows["Reviewed"]["match_score"] is not None and rows["Reviewed"]["match_method"] == "jobradar-fit-v2"
+    assert rows["Kept"]["status"] == "interview" and rows["Kept"]["match_method"] == "jobradar-fit-v2"
     assert client.get("/dashboard/applications/999999999/history").status_code == 404
 
 

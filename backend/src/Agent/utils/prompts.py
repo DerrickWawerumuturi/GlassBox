@@ -8,10 +8,11 @@ USER_PROMPT = """
                 {{
                   "primary_role": string | null,
                   "secondary_roles": [],
-                  "category": string | null
+                  "category": string | null,
                   "skills": [],
+                  "experience": [{{"role": string | null, "company": string | null, "start_date": string | null, "end_date": string | null}}],
                   "experience_level": string | null,
-                  "job_requirements: str | None = None,
+                  "job_requirements": string | null,
                   "education": string | null,
                   "location": string | null,
                   "country_code": string | null,
@@ -37,6 +38,7 @@ USER_PROMPT = """
                 - Never hallucinate values.
                 - Keep skill names standardized.
                 - If one or two more roles appears, pick the first one, add the rest to secondary_roles
+                - experience: one entry per position held (jobs, internships, freelance work), most recent first. Dates exactly as written in the CV; end_date null for a current role. Empty array if none.
                 - For experience level, classify it under one of these: Entry Level, Senior Level, Mid Level, Internship, Management
                 - For job_requirements, classify it under one of these: under_3_years_experience, more_than_3_years_experience, no_experience, no_degree
                 - location: the place as written, e.g. "Nairobi, Kenya". Null if absent.

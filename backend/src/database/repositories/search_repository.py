@@ -31,7 +31,9 @@ def create_search(
 
     with conn.cursor() as cur:
         cur.execute(INSERT_SEARCH, (
-            Jsonb(query.model_dump(mode="json")),
+            # Not the employment history: searches are not linked to a user, so
+            # deleting an account could never reach it here.
+            Jsonb(query.model_dump(mode="json", exclude={"experience"})),
             # Attribute access, not getattr defaults: a wrongly-shaped query must
             # fail here, not be recorded as a search for nothing.
             query.primary_role,

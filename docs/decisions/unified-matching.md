@@ -1,42 +1,37 @@
 # Decision: one match score for every job
 
-**Status:** entrypoint in place; pasted jobs not scored yet.
-**Files:** `backend/src/Agent/Framework/JobRadarAgent.py` (`score_jobs`),
-`backend/src/Agent/Framework/SimilarityEngine.py`,
-`backend/src/Agent/utils/location.py`, migration `013_match_method.sql`
+**Status:** in place for every path — analyses, the pool, pasted links.
+**Files:** `backend/src/matching/matcher.py` (`match`), `requirements.py`
+(`profile_job`), `candidate.py` (`Candidate.from_cv`); callers below. How the
+score is built, and why fit rather than similarity: `decisions/fit-matching.md`.
 
 ## The rule
 
-There is no second scoring algorithm. A job found by an analysis, a job from
-the daily pool and a job a user pasted all get their score from
-`JobRadarAgent.score_jobs(query, processed_jobs, location_prefs)`:
+There is no second scoring algorithm. Whatever path a job arrives by, its
+score is `match(candidate, profile_job(job), job)`:
 
-| Component | Weight | Source |
-|---|---|---|
-| skills | 0.45 | embedding similarity, CV skills vs SkillNer-extracted job skills |
-| title | 0.25 | embedding similarity |
-| experience | 0.10 | embedding similarity |
-| location | 0.20 | tier fit from the user's location preferences |
+| Path | Candidate from | Job profile from | Caller |
+|---|---|---|---|
+| Opportunities (the daily pool) | saved CV + location preferences | `job_profiles`, stored by the daily run | `jobpool/opportunities.py` |
+| An analysis' ranked jobs | the scan's ParsedQuery (with dated positions) | computed in memory | `JobRadarAgent.score_jobs` |
+| A pasted link, on review | saved CV | computed in memory | `jobpool/service.py` |
+| A pasted link, when saved | saved CV | `job_profiles` | `services/applications.py::_score` |
+| A bookmark from Opportunities | the score the page showed | — | `toggle_bookmark` |
 
-Pool and analysis jobs already take this path. `application.match_method`
-records which scorer produced `match_score`, so a future scorer version never
-gets compared with an old one as if they were the same scale.
+`application.match_method` records the scorer (`jobradar-fit-v2`) beside every
+stored `match_score`, so a later scorer is never compared with this one as if
+they were one scale. Rows scored by the retired weighted cosine keep
+`jobradar-similarity-v1`.
 
-## Why pasted jobs are not scored yet
+## Why the candidate is rebuilt per request
 
-A pasted job is already stored in `jobs` with a `job_id`. The missing input is
-the user's side: `score_jobs` needs the ParsedQuery that the LLM derives from
-the CV, and that is not stored. Deriving it again on every paste costs an LLM
-call and several seconds on a flow meant to feel instant. The review screen
-shows skill overlap in the meantime.
+A CV edit should change every match at once, and rebuilding the candidate is
+milliseconds. Nothing per user is stored: the expensive half — reading each
+posting — happens once per posting, in the daily run.
 
-## Adding it
+## What is still not scored
 
-1. Store the ParsedQuery alongside the saved analysis (or the CV) when it is
-   produced.
-2. After `POST /dashboard/applications/from-url`, score in the background:
-   build a `ProcessedJob` with `parse_retrieved_jobs([job])`, call
-   `score_jobs(stored_query, [processed], LocationPreferences.resolve(...))`,
-   and write `match_score` and `match_method = 'jobradar-similarity-v1'`.
-3. `application_unscored_idx` finds everything still waiting, including rows
-   created before step 2 existed.
+Imported applications (`services/application_import.py`) link to a pool job
+when their URL matches one, but are not scored at import: an import is history,
+and a score against today's CV would say little about an application made
+months ago with another one.

@@ -1,16 +1,19 @@
 import os
 import time
 from datetime import datetime
+from types import SimpleNamespace
 
 from src.database.fingerprint import payload_hash, resolve_identity
 from src.database.models.job import JobIdentity, JobRecord, ObservationRecord
 from src.database.repositories import (
     job_repository,
     observation_repository,
+    profile_repository,
     search_repository,
     skill_repository,
 )
 from src.database.session import connection, is_configured
+from src.matching.requirements import PROFILER_VERSION, JobProfile, content_hash, profile_job
 
 # Bump when SkillExtractor's output changes. Old rows are kept, so the two
 # generations stay comparable over identical descriptions.
@@ -56,6 +59,12 @@ def _to_record(job, identity: JobIdentity, identity_source: str, fingerprint: st
         posted_at=_parse_timestamp(job.posted_at_utc),
         posted_at_raw=job.posted_at,
     )
+
+
+def _profile_row(row: dict) -> tuple:
+    profile = profile_job(SimpleNamespace(**row))
+    digest = content_hash(row["title"], row["description"], row["experience_level"], row["employment_type"])
+    return row["id"], PROFILER_VERSION, digest, profile.family, profile.seniority, profile.to_dict()
 
 
 class JobIngestionService:
@@ -106,12 +115,16 @@ class JobIngestionService:
             self._record_failure("record search", err)
             return None
 
-    def persist_jobs(self, search_id: int | None, jobs: list, observe: bool = True) -> dict[JobIdentity, int]:
+    def persist_jobs(self, search_id: int | None, jobs: list, observe: bool = True,
+                     profile: bool = True) -> dict[JobIdentity, int]:
         """
         `observe=False` is for the daily pool refresh: it re-sights thousands of
         unchanged postings every day, and one observation row per posting per
         day would outgrow the rest of the database. `last_seen_at` on the job
         already records that it is still live.
+
+        `profile=False` leaves requirement profiles to a later refresh_profiles()
+        call — the daily run profiles everything stale in one pass instead.
         """
         if not self._available() or not jobs:
             return {}
@@ -166,10 +179,60 @@ class JobIngestionService:
                 f"({new} new, {len(upserted) - new} already known, "
                 f"{in_batch_duplicates} duplicates within the batch)"
             )
-            return job_ids
-
         except Exception as err:
             self._record_failure("store jobs", err)
+            return {}
+
+        if profile:
+            self.refresh_profiles(list(job_ids.values()))
+        return job_ids
+
+    def refresh_profiles(self, ids: list[int] | None = None) -> int:
+        """
+        Profile every job whose requirements profile is missing or stale — new,
+        edited since, or read by older rules — or only those among `ids`.
+
+        Unchanged postings are skipped by comparing a hash in SQL, so the daily
+        run pays for what arrived, not for the whole pool. Returns how many were
+        profiled; fail-soft like everything here.
+        """
+        if not self._available() or ids == []:
+            return 0
+        done, after = 0, 0
+        try:
+            while True:
+                with connection() as conn:
+                    rows = profile_repository.stale(conn, PROFILER_VERSION, ids, after)
+                    if not rows:
+                        return done
+                    profile_repository.upsert(conn, [_profile_row(row) for row in rows])
+                done += len(rows)
+                after = rows[-1]["id"]
+        except Exception as err:
+            self._record_failure("profile jobs", err)
+            return done
+
+    def stored_skills(self, job_ids: list[int]) -> dict[int, list[str]]:
+        """Skills an earlier run already extracted and that still hold, by job id."""
+        if not self._available() or not job_ids:
+            return {}
+        try:
+            with connection() as conn:
+                return skill_repository.stored_skills(conn, job_ids, self.extractor_version)
+        except Exception as err:
+            self._record_failure("read stored skills", err)
+            return {}
+
+    def stored_profiles(self, job_ids: list[int]) -> dict[int, JobProfile]:
+        """Requirement profiles that still describe their posting, by job id."""
+        if not self._available() or not job_ids:
+            return {}
+        try:
+            with connection() as conn:
+                profiles = profile_repository.fresh(conn, PROFILER_VERSION, job_ids)
+            return {job_id: JobProfile.from_dict(profile) for job_id, profile in profiles.items()}
+        except Exception as err:
+            self._record_failure("read stored profiles", err)
             return {}
 
     def persist_skills(

@@ -15,20 +15,24 @@ import {
     GaugeIcon,
     MapPinIcon,
     GlobeIcon,
+    NotebookTextIcon,
     TypeIcon
 } from "lucide-react";
 
 import {cn} from "@/lib/utils";
 import {ApplicationRow} from "@/types/jobradar";
 import {CLOSED, PIPELINE, STATUS_LABEL, useApplications} from "@/lib/applications-store";
-import {timeAgo} from "@/lib/dashboard-data";
+import {ageLabel, timeAgo} from "@/lib/dashboard-data";
 import {GRID_TD, GridTh, PageBar, ScoreChip, Toolbar, ViewChip} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import SourceBadge from "@/components/dashboard/SourceBadge";
 import AddApplicationDialog from "@/components/dashboard/AddApplicationDialog";
+import ImportApplicationsDialog from "@/components/dashboard/ImportApplicationsDialog";
 import {ApplicationsSkeleton, CvSnapshot, RemoveCell, TrackJobMenu, workplaceLabel} from "@/components/dashboard/ApplicationParts";
 import {DeleteButton} from "@/components/ui/delete-button";
 import {Folder} from "@/components/ui/folder-component";
+
+const time = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : 0) || 0;
 
 const VIEWS = [
     {id: "all", label: "All"},
@@ -57,10 +61,13 @@ export default function ApplicationsPage() {
     // Optimistic updates replace rows, so read the live one while open.
     const sheetApp = sheet ? apps.find((a) => a.id === sheet.id) ?? sheet : null;
 
+    // Newest in JobRadar first — when it was added, not when it was applied to;
+    // within one import, the sheet's own application dates decide.
     const visible = useMemo(() => [...apps]
         .filter((app) => view === "all"
             || (view === "closed") === CLOSED.includes(app.status))
-        .sort((a, b) => new Date(b.last_status_at).getTime() - new Date(a.last_status_at).getTime()),
+        .sort((a, b) => time(b.added_at ?? b.last_status_at) - time(a.added_at ?? a.last_status_at)
+            || time(b.applied_at) - time(a.applied_at) || b.id - a.id),
         [apps, view]);
 
     const closed = counts.rejected + counts.withdrawn;
@@ -121,6 +128,7 @@ export default function ApplicationsPage() {
                                     <b className={"mr-1 text-[12px] font-bold tabular-nums text-foreground"}>{cell.n}</b>{cell.label}
                                 </span>
                             ))}
+                            <ImportApplicationsDialog />
                             <AddApplicationDialog />
                         </div>
                     </Toolbar>
@@ -137,8 +145,8 @@ export default function ApplicationsPage() {
                                         <GridTh icon={GlobeIcon} className={"hidden md:table-cell"}>Source</GridTh>
                                         <GridTh icon={CircleDashedIcon}>Status</GridTh>
                                         <GridTh icon={FileTextIcon} className={"hidden md:table-cell"}>CV</GridTh>
-                                        <GridTh icon={CalendarIcon} className={"hidden xl:table-cell"}>First moved</GridTh>
-                                        <GridTh icon={ClockIcon} className={"hidden sm:table-cell"}>Updated</GridTh>
+                                        <GridTh icon={CalendarIcon} className={"hidden xl:table-cell"}>Applied</GridTh>
+                                        <GridTh icon={ClockIcon} className={"hidden sm:table-cell"}>Added</GridTh>
                                         <GridTh className={"hidden w-16 sm:table-cell"} />
                                     </tr>
                                 </thead>
@@ -167,6 +175,11 @@ export default function ApplicationsPage() {
                                                 ) : (
                                                     <span className={"font-medium"}>{app.title ?? "Untitled role"}</span>
                                                 )}
+                                                {app.notes && (
+                                                    <NotebookTextIcon aria-label={"Has notes"} className={"ml-1.5 inline size-3 text-muted-foreground"}>
+                                                        <title>{app.notes}</title>
+                                                    </NotebookTextIcon>
+                                                )}
                                                 {app.company && (
                                                     <span className={"mt-0.5 block truncate font-mono text-[10.5px] text-muted-foreground md:hidden"}>
                                                         {app.company}
@@ -186,17 +199,18 @@ export default function ApplicationsPage() {
                                                 {workplaceLabel(app)}
                                             </td>
                                             <td className={cn(GRID_TD, "hidden md:table-cell")}>
-                                                <SourceBadge url={app.url} provider={app.provider} />
+                                                <SourceBadge url={app.url} provider={app.provider} source={app.source} />
                                             </td>
                                             <td className={GRID_TD}><StatusDisclosure app={app} /></td>
                                             <td className={cn(GRID_TD, "hidden md:table-cell")}><CvSnapshot app={app} /></td>
                                             <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground xl:table-cell")}>
                                                 {app.status !== "saved" && app.applied_at
-                                                    ? new Date(app.applied_at).toLocaleDateString(undefined, {month: "short", day: "numeric"})
-                                                    : "—"}
+                                                    ? new Date(app.applied_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})
+                                                    : app.status !== "saved" ? <span title={"No application date was given"}>unknown</span> : "—"}
                                             </td>
-                                            <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground sm:table-cell")}>
-                                                {timeAgo(app.last_status_at)}
+                                            <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground sm:table-cell")}
+                                                title={`Status last changed ${timeAgo(app.last_status_at)}`}>
+                                                {ageLabel(app.added_at ?? app.last_status_at)}
                                             </td>
                                             <td className={cn(GRID_TD, "hidden py-1 sm:table-cell")}><RemoveCell app={app} /></td>
                                         </tr>
@@ -254,6 +268,11 @@ export default function ApplicationsPage() {
                                 <span className={"font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"}>Status</span>
                                 <StatusDisclosure app={sheetApp} />
                             </div>
+                            {sheetApp.notes && (
+                                <p className={"whitespace-pre-line rounded-md bg-foreground/4 px-3 py-2 text-[12px] text-muted-foreground"}>
+                                    {sheetApp.notes}
+                                </p>
+                            )}
                             <div className={"flex items-center gap-3 border-t border-border pt-4"}>
                                 {sheetApp.url && (
                                     <a

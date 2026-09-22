@@ -1,4 +1,5 @@
 """The canonical posting-text helpers every job path shares."""
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -33,16 +34,6 @@ def test_html_keeps_paragraphs_for_skill_extraction():
     assert text.split("\n\n") == ["About", "We build.", "Requirements", "Python", "SQL"]
 
 
-@pytest.mark.parametrize("description, expected", [
-    ("Requirements: 3+ years of Python experience.", {"years": 3, "kind": "required"}),
-    ("Requirements: Python. Nice to have: 5+ years in fintech.", {"years": 5, "kind": "preferred"}),
-    ("We need 2-4 years building web applications.", {"years": 2, "kind": "required"}),
-    ("Founded 10 years ago, we build tools.", {"years": None, "kind": "unstated"}),
-])
-def test_extract_experience(description, expected):
-    assert posting.extract_experience("Engineer", description) == expected
-
-
 def test_display_values():
     job = SimpleNamespace(salary_min=120000, salary_max=150000, salary_currency="USD", salary_period="per-year-salary",
                           raw={"workplaceType": "Hybrid"}, title="Engineer", location="Nairobi", description="", remote=False)
@@ -51,7 +42,11 @@ def test_display_values():
     assert [posting.employment_text(v) for v in ("FULL_TIME", "FullTime", "Contract")] == ["Full-time", "Full-time", "Contract"]
 
 
-def test_match_skills_skips_non_skills_and_soft_skills():
-    vocabulary = ["Python (Programming Language)", "Software Engineering", "Collaboration", "SQL (Programming Language)", "R"]
-    found = posting.match_skills("Python and SQL. Software engineering, collaboration. R&D.", vocabulary)
-    assert found == ["Python (Programming Language)", "SQL (Programming Language)"]
+def test_relative_dates_become_labelled_estimates_anchored_where_they_were_read():
+    seen = datetime(2026, 9, 15, 8, 30, tzinfo=timezone.utc)
+    assert posting.posted_estimate("2 days ago", seen) == seen - timedelta(days=2)
+    assert posting.posted_estimate("Posted an hour ago", seen) == seen - timedelta(hours=1)
+    assert posting.posted_estimate("30+ days ago", seen) == seen - timedelta(days=30)
+    assert posting.posted_estimate("yesterday", seen) == seen - timedelta(days=1)
+    assert posting.posted_estimate("2026-09-13T00:00:00Z", seen) is None      # absolute: not an estimate
+    assert posting.posted_estimate("3 days ago", None) is None

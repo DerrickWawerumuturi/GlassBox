@@ -13,13 +13,22 @@ COLUMNS = (
 
 # A later response is never allowed to null out a value we already hold, and
 # first_seen_at is absent from the update list on purpose: it is the one
-# timestamp that must never move.
+# timestamp that must never move. Three timestamps, three meanings:
+#   first_seen_at  when JobRadar first fetched the posting (its "fetched at")
+#   last_seen_at   the latest sighting — every daily run moves it
+#   updated_at     the last time what we store actually changed
 UPSERT = f"""
 insert into jobs ({", ".join(COLUMNS)})
 values {{rows}}
 on conflict (provider, external_id) do update set
     last_seen_at     = now(),
-    updated_at       = now(),
+    updated_at       = case
+                           when excluded.payload_hash is distinct from jobs.payload_hash
+                             or length(coalesce(excluded.description, ''))
+                              > length(coalesce(jobs.description, ''))
+                           then now()
+                           else jobs.updated_at
+                       end,
     title            = coalesce(excluded.title, jobs.title),
     company          = coalesce(excluded.company, jobs.company),
     description      = case

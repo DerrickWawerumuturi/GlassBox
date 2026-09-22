@@ -47,3 +47,10 @@ protected, 42 shown, 5,744 active, 0 stale.
    should be computed before the rows go.
 4. Views of a job page are not recorded at all yet. If they become a signal they
    need their own table; `last_shown_at` is not a substitute.
+
+## Derived rows follow their job
+
+`job_skills` and `job_profiles` are derived from a job and deleted with it
+(`on delete cascade`); nothing about them needs a policy of its own.
+`job_profiles` adds one ~300-byte row per job. Imported applications that match
+a pool job link to it, which makes that job `protected` like any other.

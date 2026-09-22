@@ -97,6 +97,18 @@ RemoteOK posting**, because that board usually leaves the field blank and the
 fallback string was `"Remote"` — an arrangement, not an eligibility list.
 "Unknown" and "excluded" are different answers.
 
+### When the body says what the location field does not
+
+Roughly half of remote ATS postings carry the restriction only in their text:
+"Remote", then "must be authorised to work in the US" three paragraphs down.
+`requirements.work_authorisation` reads those sentences (US, UK, Canada,
+Australia, the EU, Germany; a negated sentence does not count) once per posting into `job_profiles`, and the matcher treats a lock
+the user does not meet exactly like an ineligible location: a gate, not a
+weight. "No visa sponsorship" is a gate only for onsite roles abroad. A
+posting written in German, or requiring French, is gated on the CV's
+languages the same way. The location field decides where a job is; the text
+can only narrow who may take it.
+
 ## The minimum-jobs floor
 
 `MarketAnalyzer` computes `frequency = job_count / total_jobs`. At eight
@@ -151,15 +163,13 @@ dropped as duplicates or ineligible, and each provider's status.
 A six-job analysis and a forty-job one are indistinguishable otherwise, and the
 frequencies in `market` mean very different things in each.
 
-## Open issue: Remotive returns its whole inventory
+## Remotive returns its whole inventory
 
 Measured: `search=`, `category=` and no parameters all return the same 17
 postings, including "Patient Care Specialist" for a machine-learning query. Its
 filters appear inert.
 
 Those postings are counted equally by `MarketAnalyzer`, so a marketing job's
-skills contribute to an ML engineer's "market demand". `SimilarityEngine` will
-rank them low, but market statistics do not use the ranking.
-
-No relevance filter has been added — deciding what counts as relevant changes
-what "the market" means, which is a product decision rather than a bug fix.
+skills would contribute to an ML engineer's "market demand". The off-market
+filter (`decisions/embeddings.md`) now drops them before the market statistics
+are counted, and the matcher gates them as not technical.

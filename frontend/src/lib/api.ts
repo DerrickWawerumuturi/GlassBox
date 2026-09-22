@@ -5,7 +5,12 @@ import {
     BookmarkResult,
     CvBreakdown,
     ExtractedJob,
+    ImportField,
+    ImportPreview,
+    ImportResult,
+    ImportValues,
     JobRadarAnalysis,
+    OpportunitiesResponse,
     Workplace
 } from "@/types/jobradar";
 
@@ -180,10 +185,12 @@ export interface UrlApplicationPayload {
     source?: string | null;
     status?: "saved" | "applied";
     cv_snapshot?: CvBreakdown | null;
+    /** Shown optimistically; the server scores the job itself. Not sent. */
+    match?: number | null;
 }
 
 /** Saves the reviewed result of a pasted job link. */
-export function CreateApplicationFromUrl(payload: UrlApplicationPayload): Promise<{ application_id: number }> {
+export function CreateApplicationFromUrl({match: _shown, ...payload}: UrlApplicationPayload): Promise<{ application_id: number }> {
     return authed("POST", "/dashboard/applications/from-url", "Save application", payload);
 }
 
@@ -215,4 +222,32 @@ export function DeleteAccount(): Promise<{ deleted: boolean }> {
 
 export function ApplicationHistory(id: number): Promise<ApplicationEvent[]> {
     return authed("GET", `/dashboard/applications/${id}/history`, "History");
+}
+
+/** The daily job pool matched to the saved CV. 404 (ApiError) when there is no CV yet. */
+export function GetOpportunities(sort: "newest" | "match" = "newest"): Promise<OpportunitiesResponse> {
+    return authed("GET", `/dashboard/opportunities?sort=${sort}`, "Opportunities");
+}
+
+/**
+ * What importing a spreadsheet would do. Writes nothing: to correct a column,
+ * send the same file again with `mapping` ({column index: field or null}).
+ */
+export async function PreviewImport(
+    file: File,
+    mapping?: Record<number, ImportField | null>,
+    dateOrder?: "dmy" | "mdy"
+): Promise<ImportPreview> {
+    const form = new FormData();
+    form.append("file", file);
+    if (mapping && Object.keys(mapping).length > 0) form.append("mapping", JSON.stringify(mapping));
+    if (dateOrder) form.append("date_order", dateOrder);
+    const headers = {Authorization: `Bearer ${await getApiToken()}`};
+    return request<ImportPreview>("/dashboard/applications/import/preview",
+        {method: "POST", body: form, headers}, SAVE_TIMEOUT_MS, "Reading the spreadsheet");
+}
+
+/** Imports the rows the user confirmed. Duplicates are checked again and skipped. */
+export function CommitImport(rows: ImportValues[], fileName: string | null): Promise<ImportResult> {
+    return authed("POST", "/dashboard/applications/import", "Import", {rows, file_name: fileName});
 }

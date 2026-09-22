@@ -211,20 +211,16 @@ widens with every row added.
 ## Why we are not training a model yet
 
 The obvious move once this table fills is XGBoost over
-`(user profile, job) → match probability`, trained on `overall_score`.
+`(user profile, job) → match probability`, trained on the match score.
 
-That model would be worthless, and it is worth writing down exactly why.
-`overall_score` is a fixed weighted cosine — `0.30 · title + 0.50 · skills +
-0.10 · experience + 0.10 · location`, defined in `SimilarityEngine`. A model
-trained on it learns to approximate arithmetic we already have in closed form,
-and adds error doing so. Worse, `architecture/backend.md` records that
-`experience_score` and `location_score` are near-constant across postings, so a
-fifth of that label is noise by construction.
+That model would be worthless, and it is worth writing down exactly why. The
+score is a closed-form rule (`decisions/fit-matching.md`); a model trained on
+it learns to approximate arithmetic we already have, and adds error doing so.
 
-A ranking model needs labels the product does not yet emit: saved, applied,
-dismissed, interviewed. Those come from the dashboard, which today has no such
-affordances. The sequence is therefore: collect postings (this change) → capture
-interactions when the dashboard grows those buttons → *then* there is a
+A ranking model needs labels the product only now emits: saved, applied,
+interviewed, rejected — `application_events`, beside the `match_score` and
+`match_method` the application was saved with. The sequence is: collect
+postings → capture outcomes (the tracker) → *then*, with enough of them, a
 supervised problem worth solving.
 
 Market-trend prediction has a different gate. It needs **elapsed time**, not more
@@ -243,8 +239,9 @@ support it.
   matches on `skill_id` and then returns only the canonical name; threading the
   id out would change `extract()`'s return shape and ripple into
   `MarketAnalyzer` and the embedder. Backfillable later.
-- `jobs.experience_level` is populated only by The Muse, which publishes a level
-  per posting. JSearch supplies none and JobRadar does not infer one.
+- `jobs.experience_level` is populated only by the boards that publish a level
+  (The Muse, some ATS). JobRadar infers one per posting in `job_profiles`
+  (`seniority`) and leaves the source column as the source said.
 - `Job.salary` (the legacy single figure) is not written to the database. Its
   source key never existed in JSearch's response, and a lone number cannot be
   honestly recorded as a minimum, a maximum or an exact figure. The four

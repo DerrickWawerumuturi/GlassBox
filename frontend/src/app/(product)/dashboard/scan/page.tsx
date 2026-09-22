@@ -7,6 +7,7 @@ import {toast} from "sonner";
 import Analyze, {ProcessCv} from "@/lib/api";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
+import {useOpportunities} from "@/lib/opportunities-store";
 import {PageBar} from "@/components/dashboard/bits";
 import FileUpload from "@/components/ui/FileUpload";
 import AnalysisProgress from "@/components/AnalysisProgress";
@@ -16,6 +17,7 @@ export default function ScanPage() {
     const router = useRouter();
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
+    const {refresh: refreshOpportunities} = useOpportunities();
     const [file, setFile] = useState<File | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -33,6 +35,8 @@ export default function ScanPage() {
 
             const result = await analysisPromise;
             save(result, upload.name);
+            // The scan added the jobs it found to the pool: show them now.
+            void refreshOpportunities();
             router.push("/dashboard/opportunities");
         } catch (e) {
             console.error("Scan error:", e);
@@ -55,8 +59,10 @@ export default function ScanPage() {
                         <div>
                             <h2 className={"text-lg font-bold"}>Scan the market with your latest CV</h2>
                             <p className={"mt-1 text-sm text-muted-foreground"}>
-                                A scan takes about a minute: live postings are pulled, ranked against
-                                your CV, and land in Opportunities. It replaces your previous scan.
+                                A scan takes about a minute: it reads your CV, saves it to your profile, and maps
+                                your market — what it asks for, what you cover, what to learn next. It replaces
+                                your previous scan. Opportunities don&apos;t need one: they come from the job pool
+                                JobRadar refreshes every morning, matched to the CV on your profile.
                             </p>
                         </div>
                         <FileUpload Cv={file} setHandleCv={setFile} onUploadComplete={runScan} />

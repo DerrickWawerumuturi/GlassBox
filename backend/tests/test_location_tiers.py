@@ -83,16 +83,17 @@ def test_same_remote_us_posting_is_local_market_for_a_us_user():
 
 
 def test_ineligible_never_outranks_eligible():
-    from src.Agent.Framework.SimilarityEngine import SimilarityEngine
-    import torch
-    jobs = [Job(job=Job(location="Remote - Spain", remote=True, remote_eligibility=None)),
-            Job(job=Job(location="Remote", remote=True, remote_eligibility="Worldwide"))]
-    strong, weak = torch.tensor([[0.95, 0.10]]), torch.tensor([[0.9, 0.1]])
-    embs = {k: None for k in ("title", "skills", "experience", "location")}
-    import src.Agent.Framework.SimilarityEngine as se
-    se.cos_sim = lambda a, b: strong
-    ranked = SimilarityEngine().calculate(embs, embs, jobs, KE)
+    from src.Agent.Framework.JobRadarAgent import JobRadarAgent
+    from src.Agent.utils.types import Job as Posting, ParsedQuery, ProcessedJob
+    query = ParsedQuery(primary_role="Backend Engineer", skills=["Python", "PostgreSQL"])
+    # The ineligible one is the closer text match, and still ranks last.
+    spain = Posting(title="Backend Engineer", description="Requirements: Python, PostgreSQL.",
+                    location="Remote - Spain", remote=True)
+    anywhere = Posting(title="Engineer", description="Requirements: Python.", location="Remote",
+                       remote=True, remote_eligibility="Worldwide")
+    ranked = JobRadarAgent.score_jobs(query, [ProcessedJob(spain, []), ProcessedJob(anywhere, [])], KE)
     assert [r["location_tier"] for r in ranked] == ["remote_global", "ineligible"]
+    assert ranked[1]["match"]["tier"] == "unlikely"
 
 
 @pytest.mark.parametrize("location, eligibility, expected", [

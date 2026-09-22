@@ -11,9 +11,10 @@ import {timeAgo} from "@/lib/dashboard-data";
 import {skillKey} from "@/lib/market";
 import {ExtractedJob, Workplace} from "@/types/jobradar";
 import {Dialog, DialogContent, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
-import {StatusChip} from "@/components/dashboard/bits";
+import {ScoreChip, StatusChip} from "@/components/dashboard/bits";
 import SkillBadge from "@/components/dashboard/SkillBadge";
 import SourceBadge from "@/components/dashboard/SourceBadge";
+import {Reasons} from "@/components/dashboard/OpportunityPeek";
 
 const INPUT = "w-full rounded-md border border-input bg-transparent px-3 py-2 text-[13px] outline-none placeholder:text-muted-foreground/50 focus:border-foreground/30";
 const MISSING = "border-amber-500/60 bg-amber-500/5";
@@ -121,7 +122,13 @@ export default function AddApplicationDialog() {
         [cv]
     );
     const skills = result?.skills ?? [];
-    const matched = skills.filter((skill) => cvSkills.has(skillKey(skill))).length;
+    const fit = result?.match ?? null;
+    // With a match, the matcher says which skills the CV covers (Postgres counts
+    // for PostgreSQL); without one, a plain comparison is the best available.
+    const covered = useMemo(() => new Set(fit ? [...fit.required.matched, ...fit.required.partial,
+        ...fit.preferred.matched, ...fit.preferred.partial] : []), [fit]);
+    const has = (skill: string) => fit ? covered.has(skill) : cvSkills.has(skillKey(skill));
+    const matched = skills.filter(has).length;
 
     const save = (event: React.FormEvent) => {
         event.preventDefault();
@@ -140,7 +147,8 @@ export default function AddApplicationDialog() {
                 employment_type: draft.employment_type.trim() || null,
                 salary: draft.salary.trim() || null,
                 source: result?.source ?? null,
-                status
+                status,
+                match: fit?.score ?? null
             });
         } else {
             addManual({title, company: draft.company.trim() || null, location: draft.location.trim() || null, status});
@@ -283,6 +291,17 @@ export default function AddApplicationDialog() {
                                 </Field>
                             </div>
 
+                            {fit && (
+                                <div className={"flex flex-col gap-2 border-t border-border pt-3"}>
+                                    <div className={"flex items-center gap-2"}>
+                                        <ScoreChip value={fit.score} />
+                                        <span className={"text-[12.5px] font-medium"}>{fit.headline}</span>
+                                        <span className={"text-[11.5px] text-muted-foreground"}>against your CV</span>
+                                    </div>
+                                    <Reasons reasons={fit.reasons.slice(0, 5)} />
+                                </div>
+                            )}
+
                             {(skills.length > 0 || result?.experience.years != null || result?.fields.posted_at) && (
                                 <div className={"flex flex-col gap-2 border-t border-border pt-3"}>
                                     <div className={"flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground"}>
@@ -295,7 +314,7 @@ export default function AddApplicationDialog() {
                                     {skills.length > 0 && (
                                         <div className={"flex flex-wrap gap-1.5"}>
                                             {skills.map((skill) => {
-                                                const have = cvSkills.has(skillKey(skill));
+                                                const have = has(skill);
                                                 return (
                                                     <span
                                                         key={skill}

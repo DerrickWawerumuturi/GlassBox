@@ -6,15 +6,18 @@ Every application's event trail starts at `saved`, however it was created, so
 the timeline always reads from the beginning.
 """
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
 from src.database.repositories import application_repository as repo
-from src.database.services.users import UserNotFound, resolve_user_id  # noqa: F401  (re-raised to the API)
+from src.database.repositories import profile_repository
+from src.database.services.users import UserNotFound, candidate_for, resolve_user_id  # noqa: F401
 from src.database.session import connection
+from src.matching.matcher import MATCHER_VERSION, match
+from src.matching.requirements import PROFILER_VERSION, JobProfile
 
 INITIAL_STATUS = "saved"
-SIMILARITY_METHOD = "jobradar-similarity-v1"
 DELETABLE = ("saved", "withdrawn", "rejected")
 
 
@@ -52,6 +55,17 @@ def _start(conn, user_id: int, status: str = INITIAL_STATUS, **fields) -> int:
     return application_id
 
 
+def _score(conn, user_id: int, job_id: int | None) -> tuple[int | None, str | None]:
+    """The matcher's score for a pool job, when the user has a CV to match it against."""
+    row = profile_repository.for_job(conn, job_id) if job_id is not None else None
+    if not row or not row["profile"] or row["profiler_version"] != PROFILER_VERSION:
+        return None, None
+    candidate = candidate_for(conn, user_id)
+    if candidate is None:
+        return None, None
+    return match(candidate, JobProfile.from_dict(row["profile"]), SimpleNamespace(**row)).score, MATCHER_VERSION
+
+
 class ApplicationService:
     def toggle_bookmark(self, payload, job_id, title=None, company=None,
                         source=None, match_score=None, cv_snapshot=None) -> dict:
@@ -64,7 +78,7 @@ class ApplicationService:
                 application_id = _start(
                     conn, user_id, job_id=job_id, title=title, company=company, source=source,
                     match_score=match_score, cv_snapshot=cv_snapshot,
-                    match_method=SIMILARITY_METHOD if match_score is not None else None,
+                    match_method=MATCHER_VERSION if match_score is not None else None,
                 )
                 return {"bookmarked": True, "application_id": application_id}
 
@@ -85,14 +99,15 @@ class ApplicationService:
     def add_from_url(self, payload, title, url, job_id=None, company=None, location=None,
                      workplace=None, employment_type=None, salary=None, source=None,
                      status=INITIAL_STATUS, cv_snapshot=None) -> int:
-        """A pasted job link, as the user reviewed it. Not scored yet: match_score stays null."""
+        """A pasted job link, as the user reviewed it, scored when it is a pool job and there is a CV."""
         with connection() as conn:
             user_id = resolve_user_id(conn, payload)
             if job_id is not None and repo.find_by_user_and_job(conn, user_id, job_id):
                 raise ApplicationExists("This job is already in your applications")
+            score, method = _score(conn, user_id, job_id)
             return _start(conn, user_id, status, job_id=job_id, title=title, company=company, source=source,
                           url=url, location=location, workplace=workplace, employment_type=employment_type,
-                          salary=salary, cv_snapshot=cv_snapshot)
+                          salary=salary, cv_snapshot=cv_snapshot, match_score=score, match_method=method)
 
     def list_applications(self, payload) -> list[dict]:
         with connection() as conn:

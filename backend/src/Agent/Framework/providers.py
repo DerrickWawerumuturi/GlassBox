@@ -23,6 +23,7 @@ from src.Agent.utils import location as loc
 from src.Agent.utils.types import Job, SearchQuery, SearchScope
 from src.database.repositories import job_repository
 from src.database.session import connection, is_configured
+from src.jobpool.sources import FULL_BOARDS, POOL_WINDOWS
 
 load_dotenv(find_dotenv())
 
@@ -277,19 +278,8 @@ class PoolProvider(JobProvider):
     name = "pool"
     LIMIT = 60
     # Remote candidates fetched before tier ranking trims them to LIMIT, so a
-    # Kenya-eligible role is not lost behind newer US-only ones.
+    # role open to the user's country is not lost behind newer ones that are not.
     REMOTE_CANDIDATES = 400
-    MAX_AGE_DAYS = 90
-    # A posting the daily refresh has not seen for this long has most likely
-    # been taken down.
-    LIVE_WITHIN_DAYS = 3
-    # Providers the daily refresh re-checks. Others (JSearch, Jooble, Muse,
-    # pasted links) are only seen when someone finds them, so a missed daily
-    # sighting says nothing; they get a plain age limit instead. Without this,
-    # every Kenya job JSearch ever found vanished after 3 days.
-    DAILY_REFRESHED = ("greenhouse", "ashby", "lever", "workable", "remoteok", "remotive",
-                       "arbeitnow", "jobicy", "himalayas", "weworkremotely")
-    UNVERIFIED_WITHIN_DAYS = 30
 
     def available(self) -> bool:
         return is_configured()
@@ -301,10 +291,12 @@ class PoolProvider(JobProvider):
         places = [p for p in (scope.city, scope.country_name) if p]
         params = {
             "roles": roles,
-            "live": self.LIVE_WITHIN_DAYS,
-            "refreshed": list(self.DAILY_REFRESHED),
-            "unverified": self.UNVERIFIED_WITHIN_DAYS,
-            "age": self.MAX_AGE_DAYS,
+            # What counts as live is the pool's rule (sources.py): a board read
+            # in full daily must have been seen within days; anything else —
+            # JSearch, pasted links — gets a plain age limit, since a missed
+            # sighting of a searched posting says nothing.
+            **POOL_WINDOWS,
+            "refreshed": list(FULL_BOARDS),
             "remote": True if scope.kind == "remote" else None,
             "place": "|".join(re.escape(p) for p in places) if scope.kind != "remote" and places else None,
             "limit": self.REMOTE_CANDIDATES if scope.kind == "remote" else self.LIMIT,

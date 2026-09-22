@@ -15,7 +15,8 @@ import json
 import os
 import re
 import urllib.request
-from datetime import datetime, timezone
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 from html import unescape
 
 from src.Agent.utils.types import Job
@@ -229,35 +230,76 @@ def himalayas_regional():
     return out
 
 
+def rss(url) -> list[dict]:
+    """Each <item> of an RSS feed as {tag: text}, with pubDate also as ISO UTC."""
+    req = urllib.request.Request(url, headers={**UA, "Accept": "application/rss+xml, text/xml, */*"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        xml = r.read().decode("utf8", "ignore")
+    items = []
+    for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
+        def tag(t):
+            m = re.search(rf"<{t}[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{t}>", item, re.S)
+            return unescape(m.group(1)).strip() if m else ""
+        fields = {t: tag(t) for t in ("title", "link", "guid", "description", "content:encoded", "region", "pubDate")}
+        try:
+            fields["posted_utc"] = parsedate_to_datetime(fields["pubDate"]).astimezone(timezone.utc).isoformat()
+        except (TypeError, ValueError):
+            fields["posted_utc"] = None
+        items.append(fields)
+    return items
+
+
 def weworkremotely():
     feeds = ["remote-programming-jobs", "remote-full-stack-programming-jobs",
              "remote-front-end-programming-jobs", "remote-devops-sysadmin-jobs"]
     out = []
     for feed in feeds:
-        req = urllib.request.Request(f"https://weworkremotely.com/categories/{feed}.rss", headers=UA)
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            xml = r.read().decode("utf8", "ignore")
-        for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
-            def tag(t):
-                m = re.search(rf"<{t}>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{t}>", item, re.S)
-                return unescape(m.group(1)).strip() if m else ""
-            title = tag("title")
-            company, _, role = title.partition(":")
-            published = tag("pubDate")
-            try:
-                posted_utc = datetime.strptime(published[:25], "%a, %d %b %Y %H:%M:%S").replace(
-                    tzinfo=timezone.utc).isoformat()
-            except ValueError:
-                posted_utc = None
+        for item in rss(f"https://weworkremotely.com/categories/{feed}.rss"):
+            company, _, role = item["title"].partition(":")
             out.append(Job(
-                provider="weworkremotely", external_id=tag("guid") or tag("link"),
-                title=(role or title).strip(), company=company.strip() if role else None,
-                description=_description(tag("description")),
-                location=tag("region") or "Remote", remote=True, remote_eligibility=tag("region") or None,
-                url=tag("link"),
-                posted_at=published, posted_at_utc=posted_utc,
-                raw={"guid": tag("guid"), "title": title, "region": tag("region"), "pubDate": published},
+                provider="weworkremotely", external_id=item["guid"] or item["link"],
+                title=(role or item["title"]).strip(), company=company.strip() if role else None,
+                description=_description(item["description"]),
+                location=item["region"] or "Remote", remote=True, remote_eligibility=item["region"] or None,
+                url=item["link"],
+                posted_at=item["pubDate"], posted_at_utc=item["posted_utc"],
+                raw={"guid": item["guid"], "title": item["title"], "region": item["region"], "pubDate": item["pubDate"]},
             ))
+    return out
+
+
+# Local coverage for a market the global boards barely carry: Kenyan job boards'
+# RSS feeds, published for syndication (proven in jobhunt). Mixed industries, so
+# matching does the filtering, and summaries are short (100-500 bytes), so
+# profiles mark them thin. More countries' boards slot in the same way.
+KENYAN_BOARDS = {
+    "myjobmag": "https://www.myjobmag.co.ke/jobsxml.xml",
+    "corporatestaffing": "https://www.corporatestaffing.co.ke/feed/",
+    "careerpointkenya": "https://www.careerpointkenya.co.ke/feed/",
+    "jobwebkenya": "https://jobwebkenya.com/feed/",
+    "summitrecruitment": "https://www.summitrecruitment-search.com/feed/",
+    "jobsinkenya": "https://www.jobsinkenya.co.ke/feed/",
+}
+# Kenyan boards title their items "Role at Employer".
+_AT = re.compile(r"^(.*?)\s+at\s+(.+?)\s*$", re.I)
+
+
+def kenyan_board(name):
+    out = []
+    for item in rss(KENYAN_BOARDS[name]):
+        title = html_to_text(item["title"]) or ""
+        if not title:
+            continue
+        m = _AT.match(title)
+        role, company = (m.group(1), m.group(2)) if m else (title, None)
+        out.append(Job(
+            provider=name, external_id=item["guid"] or item["link"],
+            title=role, company=company,
+            description=_description(item["content:encoded"] or item["description"]),
+            location="Kenya", remote=False, url=item["link"],
+            posted_at=item["pubDate"], posted_at_utc=item["posted_utc"],
+            raw={"guid": item["guid"], "title": title, "pubDate": item["pubDate"]},
+        ))
     return out
 
 
@@ -292,6 +334,14 @@ REGIONAL_PAGES = int(os.getenv("JOBRADAR_POOL_REGIONAL_PAGES", "5"))
 AGGREGATORS = [remoteok, remotive, arbeitnow, jobicy, himalayas, himalayas_regional, weworkremotely]
 ATS = {"greenhouse": greenhouse, "ashby": ashby, "lever": lever, "workable": workable}
 
+# The live pool. Boards read in full every day: a posting missing from one for a
+# few days has been taken down. RSS feeds show only their latest items and
+# searches only what matched, so for everything else a missed sighting says
+# nothing and a plain age limit applies. Shared by PoolProvider (analyses) and
+# the opportunities list, so both mean the same pool.
+FULL_BOARDS = (*ATS, "remoteok", "remotive", "arbeitnow", "jobicy", "himalayas", "weworkremotely")
+POOL_WINDOWS = {"age": 90, "live": 3, "unverified": 30}
+
 
 def load_boards(path=None):
     path = path or os.path.join(HERE, "companies.txt")
@@ -311,6 +361,7 @@ def fetch_all(workers=24):
     jobs, report = [], []
     with cf.ThreadPoolExecutor(workers) as ex:
         futs = {ex.submit(fn): fn.__name__ for fn in AGGREGATORS}
+        futs.update({ex.submit(kenyan_board, name): f"ke:{name}" for name in KENYAN_BOARDS})
         for ats, slug in load_boards():
             futs[ex.submit(ATS[ats], slug)] = f"{ats}:{slug}"
         for fut in cf.as_completed(futs):

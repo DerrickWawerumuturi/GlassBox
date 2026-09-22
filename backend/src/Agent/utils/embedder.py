@@ -1,9 +1,16 @@
+"""
+MiniLM, for one job: deciding which retrieved postings belong to this user's
+market before skill extraction, so an analysis' market statistics are not
+skewed by off-market postings. Matching a job to the user is src/matching —
+fit, not text similarity — and no longer uses embeddings. See
+decisions/embeddings.md.
+"""
 import os
 
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
 
-from src.Agent.utils.types import ParsedQuery, ProcessedJob
+from src.Agent.utils.types import ParsedQuery
 
 # Fraction of the best-matching title's score a posting must reach to be counted
 # as part of this user's market. Relative rather than absolute because the
@@ -79,56 +86,3 @@ class SentenceEmbedder:
         kept = [job for i, job in enumerate(jobs) if i in keep]
         dropped = [(jobs[i], scores[i]) for i in range(len(jobs)) if i not in keep]
         return kept, dropped
-
-    def get_embeddings(self, query: ParsedQuery, jobs: list[ProcessedJob]):
-        try:
-
-            # Every value here must be a single (384,) vector, because
-            # SimilarityEngine reads `scores[0][i]` for each component.
-            #
-            # `query.skills` is a *list*, and `encode` on a list returns one row
-            # per element, so this was a (n_skills, 384) matrix while everything
-            # around it was a vector. cos_sim then produced (n_skills, n_jobs)
-            # and `[0][i]` read row 0 — meaning the skills term, half the total
-            # weight, was the cosine of the *first* CV skill alone and the other
-            # rows were computed and thrown away. Which skill landed in position
-            # 0 was simply whatever order the LLM emitted them in.
-            #
-            # Joining also puts the user side on the same footing as the job
-            # side below, which has always been `" ".join(j.skills)`.
-            user_embs = {
-                "title": self.model.encode(query.primary_role or ""),
-                "skills": self.model.encode(" ".join(query.skills or [])),
-                "experience": self.model.encode(query.experience_level or ""),
-                "location": self.model.encode(query.location or "")
-            }
-
-            job_titles = [j.job.title for j in jobs]
-            job_skills = [
-                " ".join(j.skills)
-                for j in jobs
-            ]
-            job_experience = [
-                j.job.experience_level or "" for j in jobs
-            ]
-            job_locations = [
-                j.job.location or ""
-                for j in jobs
-            ]
-
-
-            job_embs = {
-                "title": self.model.encode(job_titles),
-                "skills": self.model.encode(job_skills),
-                "experience": self.model.encode(job_experience),
-                "location": self.model.encode(job_locations)
-            }
-
-            return user_embs, job_embs
-
-
-        except Exception as e:
-            raise RuntimeError(f"Error generating embeddings: {e}") from e
-
-
-

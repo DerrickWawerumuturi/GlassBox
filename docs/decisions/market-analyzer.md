@@ -1,6 +1,6 @@
 # Decision: market analyzer
 
-**File:** `src/Agent/Framework/SimilarityEngine.py` (`MarketAnalyzer`)
+**File:** `src/Agent/Framework/MarketAnalyzer.py`
 
 ## What it does
 

@@ -8,27 +8,34 @@ FastAPI service. `main.py` holds the routes; everything they call lives under
 ```
 main.py                              routes, auth, status codes — no business logic
 skill_db_relax_20.json               EMSI skill database, read by SkillNer from the working directory
-src/Agent/                           CV analysis
+src/Agent/                           CV analysis (a scan)
   Framework/
-    JobRadarAgent.py                 orchestrator; score_jobs is the one match score
+    JobRadarAgent.py                 orchestrator; score_jobs ranks through src/matching
     SearchEngine.py                  search legs, dedupe, eligibility filter
     providers.py                     JSearch, The Muse, Jooble, and the job pool
-    SimilarityEngine.py              scoring + MarketAnalyzer
+    MarketAnalyzer.py                skill demand, gaps, presence, coverage
   utils/
     llm_client.py                    GroqModel("user" | "cv"): text -> ParsedQuery / CVQuery
     prompts.py                       prompts for both
     location.py                      location resolution, eligibility, tiers, fit
-    skill_extractor.py               SkillNer wrapper, canonical names
+    skill_extractor.py               SkillNer wrapper, canonical EMSI names (market charts)
     extraction_pool.py               process pool for extraction
-    embedder.py                      sentence-transformers
+    embedder.py                      MiniLM: the off-market filter before extraction
     parser.py                        extract skills for a list of jobs
     types.py                         pydantic + dataclass models, API request models
+src/matching/                        how well a CV fits a job — the one match score
+  skills.py + skills.txt             technology vocabulary: aliases, related-skill credit
+  roles.py                           role family and level from a title (jobs and CVs)
+  requirements.py                    a posting -> JobProfile (years, skills by section, gates)
+  candidate.py                       a CV -> Candidate (skills, years per track from dates)
+  matcher.py                         gates, quality, multipliers, reasons
 src/jobpool/                         jobs from outside an analysis
-  sources.py                         every daily-fetch board adapter + fetch_all
-  posting.py                         reading a posting: HTML, dates, experience, workplace, skills
-  daily.py                           the scheduled pool refresh
+  sources.py                         every daily-fetch board adapter, fetch_all, pool windows
+  posting.py                         provider fields -> clean values: HTML, dates, display
+  daily.py                           the scheduled pool refresh and profiling
+  opportunities.py                   the pool matched to one user's CV
   extract.py                         a pasted URL -> job fields (SSRF-guarded fetch)
-  service.py                         extract + pool lookup + storing the posting
+  service.py                         extract + pool lookup + match + storing the posting
   retention.py                       read-only lifecycle report
 src/cv/current_user.py               JWT -> claims (required and optional)
 src/database/
@@ -39,10 +46,13 @@ src/database/
   models/job.py                      row-shape dataclasses
   repositories/                      SQL, one module per table group
   services/
-    ingestion.py                     pipeline storage (searches, jobs, skills)
-    users.py                         resolve_user_id + a user's CV, analysis, preferences
+    ingestion.py                     pipeline storage (searches, jobs, skills, profiles)
+    users.py                         resolve_user_id, a user's data, their Candidate
     applications.py                  the application tracker
-tests/                               pytest; test_api_user_data needs DATABASE_URL
+    spreadsheet.py                   reading a tracker spreadsheet (pure)
+    application_import.py            preview and import, with duplicate detection
+tests/                               pytest; test_api_user_data needs DATABASE_URL,
+                                     test_api_pool_and_import a LOCAL database
 ```
 
 ## Request lifecycle
@@ -131,8 +141,13 @@ See `decisions/location-aware-search.md`.
 
 ### 3. Skill extraction → list[ProcessedJob]
 
-`parser.parse_retrieved_jobs` submits every description to `extraction_pool` and
-pairs results back with their job as `ProcessedJob(job, skills)`.
+`parser.parse_retrieved_jobs` pairs every description with its skills as
+`ProcessedJob(job, skills)`. A posting an earlier run already extracted keeps
+its stored skills (`JobIngestionService.stored_skills`: same `EXTRACTOR_VERSION`,
+extracted after the posting's `updated_at`); only the rest go to
+`extraction_pool`. A scan mostly re-finds postings it has read before, and
+SkillNer costs seconds each. A board whose payload changes on every fetch moves
+`updated_at` each time, so its postings are read again: safe, just no saving.
 
 `ExtractionPool` wraps a `ProcessPoolExecutor` whose initializer builds one
 `SkillExtractor` per worker and keeps it warm for the process lifetime. Workers
@@ -147,25 +162,50 @@ A posting whose extraction raises is **dropped**, not kept with an empty skill
 list — keeping it counted a job toward `jobs_analyzed` that contributed no
 skills, deflating every frequency.
 
-### 4. SentenceEmbedder
+### 4. The off-market filter
 
-`all-MiniLM-L6-v2` encodes four facets for the user and for every job: title,
-skills, experience, location. See `decisions/embeddings.md`.
-
-The same model also runs **before** extraction, scoring the user's role + skills
+`all-MiniLM-L6-v2` runs **before** extraction, scoring the user's role + skills
 against each job title and dropping postings below `alpha × best_score`. This
 keeps off-market postings — copywriter, sales, aviation — out of the market
-statistics, which weight every posting equally. See the 2026-08-21 changelog.
+statistics, which weight every posting equally. It is the only use of
+embeddings left. See `decisions/embeddings.md`.
 
-### 5. SimilarityEngine + MarketAnalyzer
+### 5. Matching + MarketAnalyzer
 
-`SimilarityEngine.calculate` scores each job: skills 0.45, title 0.25,
-experience 0.10 (embedding similarities) and location 0.20 (tier fit from the
-user's location preferences). Jobs the user cannot hold sort after every job
-they can. See `decisions/unified-matching.md`. `MarketAnalyzer.analyze` aggregates skill
-frequency, gaps, user presence and coverage across all jobs.
+`JobRadarAgent.score_jobs` builds a `Candidate` from the ParsedQuery (whose
+dated positions give years per track) and runs every job through
+`src/matching` — the same matcher Opportunities and pasted links use. Each job
+is scored on its stored profile (`stored_profiles`), which `persist_jobs` has
+just refreshed, so it scores exactly as it does in Opportunities; only a job
+that could not be stored is profiled in memory. Jobs
+behind a gate (ineligible, too senior, too many years short) are `unlikely` and
+sort after every job the user can get. See `decisions/fit-matching.md`.
 
-See `decisions/similarity-engine.md` and `decisions/market-analyzer.md`.
+`MarketAnalyzer.analyze` aggregates skill frequency, gaps, user presence and
+coverage across all jobs. See `decisions/market-analyzer.md`.
+
+## Daily pool and matching
+
+`python -m src.jobpool.daily` (`.github/workflows/job-pool.yml`, 05:00 UTC)
+fetches every board in `sources.py` concurrently — company ATS boards listed in
+`companies.txt`, the remote aggregators, Kenyan job boards' RSS feeds — keeps
+postings from the last 90 days, upserts them, and then profiles only postings
+that are new, edited (`content_hash`) or read by older rules
+(`PROFILER_VERSION`). It installs no ML stack: profiling is regex and dictionary
+lookups, ~10-35 ms a posting. `--profile-only` skips fetching (the backfill after
+migration 014 or a rules change); `--dry-run` fetches and stores nothing.
+
+A source failing costs its own postings; the run fails (red in Actions) only
+when most sources fail or nothing could be stored.
+
+`GET /dashboard/opportunities` matches the live pool (`sources.POOL_WINDOWS`:
+90 days old at most; boards read in full must have been seen in the last 3
+days, anything else in the last 30) against the saved CV, prefiltered in SQL to
+the role families the CV points at. Cross-posted copies of one role at one
+employer are folded into one row (`also`). Default order is newest first by the
+posting's own date, else an estimate from a relative "2 days ago", else when
+JobRadar first fetched it — each row says which (`date_basis`). Results are
+cached per user and CV fingerprint for ten minutes.
 
 ## The skill vocabulary
 
@@ -212,8 +252,15 @@ references `jobs` with `on delete restrict`. Job lifecycle signals
 view are described in `decisions/job-retention.md`.
 
 `jobs` holds **source data only** — provider values verbatim plus the complete
-`raw_payload` as `jsonb`. Everything JobRadar derives lives in `job_skills`, so
-the raw/processed split is a table boundary rather than a column prefix.
+`raw_payload` as `jsonb`. Everything JobRadar derives lives in `job_skills`
+(SkillNer's EMSI skills, for market statistics) and `job_profiles` (what a
+posting requires, for matching; one row per job, about 300 bytes), so the
+raw/processed split is a table boundary rather than a column prefix.
+
+A job's timestamps: `posted_at` is the source's own date, never guessed
+(`posted_at_raw` keeps what it said, e.g. "2 days ago"); `first_seen_at` is when
+JobRadar fetched it and never moves; `last_seen_at` is the latest sighting;
+`updated_at` moves only when the stored posting changed.
 
 Identity is `(provider, external_id)` with a unique constraint; postings without
 a provider id get `fp:<sha256[:32]>` over provider/company/title/location/url,
@@ -273,13 +320,15 @@ pipeline on top. See `docs/changelog/2026-08-25-container-oom.md`.
 
 ## Known limitations
 
-- Only The Muse supplies `experience_level`, so `experience_score` carries
-  little ranking signal.
+- Years of experience are read from CV dates as written: a part-time or
+  freelance role counts as full time.
+- The matching vocabulary (`skills.txt`) is technical; roles outside tech match
+  on role and level but barely on skills.
 - Skill extraction is **superlinear** in posting length: 46 postings / 85,900
   prepared characters took 434s on four workers, where a linear model predicted
   32s. Capping per-posting length would help more than trimming the corpus.
-- `overall_score` compresses into a narrow band (roughly 0.2–0.5), so raw
-  percentages read low.
 - SkillNer raises on some inputs; those postings are dropped and logged.
-- Extraction remains ~80% of runtime, dominated by SkillNer's pairwise
-  `token.similarity()` n-gram scoring.
+- Extraction remains ~80% of a scan's runtime for postings not read before,
+  dominated by SkillNer's pairwise `token.similarity()` n-gram scoring.
+- A posting SkillNer finds no skills in leaves no `job_skills` rows, so it is
+  read again by the next scan that finds it.

@@ -1,0 +1,217 @@
+"""Reading both sides of a match: a posting's requirements, a CV's skills and years. Offline."""
+from datetime import date
+from types import SimpleNamespace
+
+import pytest
+
+from src.Agent.utils.location import LocationPreferences
+from src.matching import skills as S
+from src.matching.candidate import Candidate, position_months
+from src.matching.requirements import content_hash, extract_experience, profile_job, split_sections
+from src.matching.roles import classify_family, classify_seniority
+
+TODAY = date(2026, 9, 22)
+
+
+def posting(title, description, level=None, employment=None):
+    return profile_job(SimpleNamespace(title=title, description=description, experience_level=level,
+                                       employment_type=employment))
+
+
+# ------------------------------------------------------------------ skills
+
+@pytest.mark.parametrize("name, key", [
+    ("React", "react"), ("React.js", "react"), ("ReactJS", "react"), ("react", "react"),
+    ("Postgres", "postgresql"), ("PostgreSQL", "postgresql"), ("Python (Programming Language)", "python"),
+    ("Docker (Software)", "docker"), ("golang", "go"), ("Go", "go"), ("C#", "c#"), ("C++", "c++"),
+    (".NET", ".net"), ("ASP.NET Core", ".net"), ("k8s", "kubernetes"), ("Scikit-learn", "scikit-learn"),
+    ("Amazon Web Services", "aws"), ("REST APIs", "rest api"), ("M-Pesa", "payments"), ("Communication", None),
+])
+def test_one_key_per_skill_however_it_is_spelled(name, key):
+    assert S.canonical(name) == key
+
+
+def test_ordinary_words_are_not_skills_in_prose():
+    # Known limit: "React" opening a sentence as a verb would still match; the
+    # capital cannot be told apart without parsing, and postings rarely say it.
+    text = "Go to market fast. Our R&D team works with C-level execs who react quickly to incidents."
+    assert S.find_skills(text) == []
+
+
+def test_short_language_names_count_where_a_language_is_named():
+    assert S.find_skills("We use Python, Go and Rust. You must know Go. Knowledge of R and C.") == \
+        ["python", "go", "rust", "r", "c"]
+
+
+def test_the_longest_alias_wins():
+    assert S.find_skills("React Native and Objective-C, CI/CD, A/B testing") == \
+        ["react native", "objective-c", "ci/cd", "statistics"]
+
+
+def test_related_credit_is_partial_and_directional():
+    assert S.credit({"next.js"}, "react") == 0.8 and S.credit({"react"}, "next.js") == 0.7
+    assert S.credit({"react"}, "react") == 1.0 and S.credit({"react"}, "kafka") == 0.0
+
+
+def test_a_cv_list_keeps_what_the_vocabulary_does_not_know():
+    known, unknown = S.resolve_all(["React & Next.js", "postgres", "Problem Solving", ""])
+    assert known == {"react", "next.js", "postgresql"} and unknown == ["Problem Solving"]
+
+
+# --------------------------------------------------------- sections, years
+
+def test_only_headings_open_sections():
+    sections = split_sections("Requirements: Python, AWS is a plus.\nNice to have:\nDocker\nBenefits:\nfree lunch")
+    assert "AWS is a plus" in sections["required"] and "Docker" in sections["preferred"]
+    assert "lunch" not in " ".join(sections.values())
+
+
+@pytest.mark.parametrize("description, expected", [
+    ("Requirements: 3+ years of Python experience.", {"years": 3, "kind": "required"}),
+    ("Requirements: Python.\nNice to have: 5+ years in fintech.", {"years": 5, "kind": "preferred"}),
+    ("We need 2-4 years building web applications.", {"years": 2, "kind": "required"}),
+    ("Founded 10 years ago, we build tools.", {"years": None, "kind": "unstated"}),
+    # Conjunctive: both figures are required, so the gate is the higher one.
+    ("Requirements: 4+ years shipping Go in production. 2+ years on distributed systems.", {"years": 4, "kind": "required"}),
+    ("Requirements: 3+ years of experience is a plus.", {"years": 3, "kind": "preferred"}),
+    ("Requirements: 3+ years of Python, ideally 5+ years.", {"years": 3, "kind": "required"}),
+    ("Requirements: two (2) years of experience with React.", {"years": 2, "kind": "required"}),
+    ("We have 10+ years in business. You need 2+ years of experience.", {"years": 2, "kind": "required"}),
+    ("Requirements: 0-2 years of professional experience.", {"years": 0, "kind": "required"}),
+])
+def test_extract_experience(description, expected):
+    assert extract_experience("Engineer", description) == expected
+
+
+def test_required_and_preferred_skills_are_separated_per_clause():
+    p = posting("Software Engineer", "Requirements: 3+ years of Python experience, AWS is a plus. "
+                "Strong SQL skills (Django a plus).\nNice to have: Docker, Redis.")
+    assert p.required == ("python", "sql") and set(p.preferred) == {"aws", "django", "docker", "redis"}
+
+
+def test_a_posting_without_headings_is_its_own_requirement_list():
+    assert set(posting("Backend Engineer", "You will build APIs in Python and PostgreSQL.").required) == \
+        {"python", "postgresql", "rest api"}
+
+
+def test_a_skill_in_the_title_is_required():
+    assert "react" in posting("React Developer", "Requirements: TypeScript.").required
+
+
+# --------------------------------------------------------- family, level
+
+@pytest.mark.parametrize("title, family", [
+    ("Senior React Engineer", "frontend"), ("Backend Engineer (Python)", "backend"), ("Full-Stack Developer", "full_stack"),
+    ("Machine Learning Engineer", "machine_learning"), ("Data Scientist", "data_science"),
+    ("Data Engineer", "data_engineering"), ("Site Reliability Engineer", "devops"), ("iOS Engineer", "mobile"),
+    ("QA Automation Engineer", "qa"), ("Software Engineer, Finance", "software_engineering"),
+    ("Member of Technical Staff", "software_engineering"), ("Softwareentwickler (m/w/d)", "software_engineering"),
+    ("AI Tutor - Chemistry", "ai_data"), ("Product Designer", "design"), ("AI Product Manager", "product"),
+    ("Sales Engineer", "solutions"), ("Business Developer", "non_tech"), ("Mechanical Engineer", "non_tech"),
+    ("Finance Manager", "non_tech"), ("ICT Officer", "it_support"), ("Graduate Trainee Programme", "other"),
+    ("Accountant", "non_tech"), ("Security Guard", "non_tech"), ("Security Engineer", "security"),
+    ("Customer Success Engineer", "solutions"), ("Forward Deployed Engineer EMEA", "solutions"),
+    ("Security Operations Engineer", "security"), ("SecOps Analyst", "security"),
+])
+def test_role_family_from_the_title(title, family):
+    assert classify_family(title) == family
+
+
+@pytest.mark.parametrize("title, provider, years, level", [
+    ("Senior Software Engineer", None, None, "senior"), ("Sr. Data Engineer", None, None, "senior"),
+    ("Software Engineer II", None, None, "mid"), ("Software Engineer I", None, None, "junior"),
+    ("Associate Director, Engineering", None, None, "principal"), ("Graduate Software Engineer", None, None, "entry"),
+    ("Werkstudent Softwareentwicklung", None, None, "intern"), ("Engineering Manager", None, None, "lead"),
+    ("Software Engineer", "Mid-Senior level", None, "mid"), ("Software Engineer", "Entry-Level, Junior", None, "entry"),
+    # The brief's case: a plain title that asks for five years is not entry level.
+    ("Software Engineer", None, 5, "senior"), ("Software Engineer", None, None, "unknown"),
+])
+def test_seniority(title, provider, years, level):
+    assert classify_seniority(title, "", provider, years) == level
+
+
+def test_an_internship_named_only_in_the_employment_type():
+    assert posting("Platform Developer", "Build our platform.", employment="INTERN").seniority == "intern"
+
+
+# ------------------------------------------------ eligibility, language, PhD
+
+@pytest.mark.parametrize("text, codes", [
+    ("You must be authorized to work in the United States.", ["us"]),
+    ("Candidates must have the right to work in the UK.", ["gb"]),
+    ("You do not need to be authorized to work in the US; we hire globally.", []),
+    ("Remote, open worldwide.", []),
+])
+def test_work_authorisation_in_the_body(text, codes):
+    assert list(posting("Engineer", text).work_authorisation) == codes
+
+
+def test_sponsorship_refusal():
+    assert posting("Engineer", "We are unable to sponsor visas for this role.").no_sponsorship
+    assert not posting("Engineer", "Visa sponsorship is available.").no_sponsorship
+
+
+@pytest.mark.parametrize("title, text, languages", [
+    ("Frontend Developer", "Requirements: Fluent in English and German.", ("de",)),
+    ("AI Tutor - Bulgarian", "Help train models.", ("bg",)),
+    ("Engineer", "Requirements: excellent written English.", ()),
+    ("Engineer", "Requirements: Python.\nNice to have: German.", ()),
+])
+def test_working_language(title, text, languages):
+    assert posting(title, text).languages == languages
+
+
+def test_phd_required_only_without_an_alternative():
+    assert posting("Research Scientist", "Requirements: PhD in Machine Learning.").phd == "required"
+    assert posting("ML Engineer", "Requirements: MS or PhD in Computer Science.").phd == "preferred"
+
+
+def test_content_hash_mirrors_sql_concat_ws():
+    # md5(concat_ws('|', 'T', NULL, 'Senior', NULL)) skips the NULLs.
+    assert content_hash("T", None, "Senior", None) == content_hash("T", "Senior", None, None)
+    assert content_hash("T", "desc", None, None) != content_hash("T", "desc2", None, None)
+
+
+# ------------------------------------------------------------------ the CV
+
+@pytest.mark.parametrize("start, end, months", [
+    ("Jan 2024", "Mar 2024", 3), ("01/2024", "12/2024", 12), ("2024-06", "Present", 28),
+    ("Jan 2023 - Mar 2023", None, 3), ("2022", "2023", 12), ("sometime", "Present", None),
+])
+def test_position_months(start, end, months):
+    covered = position_months(start, end, TODAY)
+    assert (len(covered) if covered else None) == months
+
+
+def test_years_per_track_merge_overlaps_and_halve_internships():
+    candidate = Candidate.from_cv({
+        "title": "Software Engineer", "skills": ["Python"],
+        "experience": [
+            {"role": "Software Engineer", "start_date": "Sep 2025", "end_date": "Present"},
+            {"role": "Freelance Web Developer", "start_date": "Jan 2026", "end_date": "Present"},   # overlaps
+            {"role": "Software Engineering Intern", "start_date": "Jan 2025", "end_date": "Jun 2025"},
+            {"role": "Waiter", "start_date": "2020", "end_date": "2022"},
+        ]}, LocationPreferences(country_code="ke"), TODAY)
+    assert candidate.years["software"] == pytest.approx(1.3, abs=0.05)   # 13 months + half of 6
+    assert candidate.years["ml"] == 0.0 and candidate.years["any"] > candidate.years["software"]
+    assert candidate.level("software") == "junior" and candidate.level("ml") == "entry"
+
+
+def test_without_dates_the_label_is_the_fallback():
+    candidate = Candidate.from_cv({"title": "Data Scientist", "skills": [], "experience_level": "Senior Level"},
+                                  LocationPreferences(country_code="ke"), TODAY)
+    assert candidate.years["ml"] == 6.0 and candidate.years["software"] == 0.0
+
+
+def test_families_come_from_title_skills_and_degree():
+    candidate = Candidate.from_cv({"title": "Software Engineer", "skills": ["React", "Next.js", "Node.js", "Express"],
+                                   "education": [{"course_title": "BSc Data Science"}]},
+                                  LocationPreferences(country_code="ke"), TODAY)
+    assert candidate.families["software_engineering"] == 1.0
+    assert candidate.families["full_stack"] == 0.8 and candidate.families["machine_learning"] == 0.6
+
+
+def test_a_kenyan_cv_speaks_english_and_swahili():
+    candidate = Candidate.from_cv({"title": "Engineer", "skills": ["French (B2)"]},
+                                  LocationPreferences(country_code="ke"), TODAY)
+    assert candidate.languages == {"en", "sw", "fr"}

@@ -65,8 +65,16 @@ handle it (`posting.title ?? "Untitled role"`).
 response, as has `experience_level`, but both are typed and commented rather
 than omitted so the shape stays honest.
 
-`posted_at` is a human string like `"3 days ago"`, not a timestamp. Do not try to
-parse it as a date.
+On an analysis posting, `posted_at` is whatever the provider said — an ISO
+date, or a human string like `"3 days ago"`. Do not parse it: `posted_at_utc`
+is the parsed timestamp, null when the source gave none, and the only one to
+compute an age from.
+
+On an Opportunity, `listed_at` is the date to show and sort on, and
+`date_basis` says what it is: `posted` (the source's date), `estimated` (from a
+relative "2 days ago", shown with "≈") or `fetched` (when JobRadar first saw
+it, shown as "Found …"). A date is never presented as a posting date when it
+is not one.
 
 ## The rule
 

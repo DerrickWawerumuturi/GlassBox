@@ -1,11 +1,15 @@
 """
 A signed-in user's own data: their account, CV, saved analysis and location
-preferences. `resolve_user_id` is the one way any request becomes a users.id —
-the applications service uses it too — so the stale-session guard cannot be
-skipped by one endpoint and not another.
+preferences — and the matching profile derived from those. `resolve_user_id` is
+the one way any request becomes a users.id — the applications service uses it
+too — so the stale-session guard cannot be skipped by one endpoint and not another.
 """
+from types import SimpleNamespace
+
+from src.Agent.utils import location as loc
 from src.database.repositories import user_repository
 from src.database.session import connection
+from src.matching.candidate import Candidate
 
 
 class UserNotFound(Exception):
@@ -39,6 +43,20 @@ def resolve_user_id(conn, payload: dict, create: bool = True) -> int | None:
     return user_repository.get_user_id(conn, sub)
 
 
+def candidate_for(conn, user_id: int | None) -> Candidate | None:
+    """
+    Who the user is, for matching: their saved CV, and where they want to work
+    (saved preferences, else the CV's location, else the deployment default).
+    None without a CV — there is nothing to match against.
+    """
+    cv = user_repository.get_cv(conn, user_id) if user_id else None
+    if cv is None:
+        return None
+    saved = user_repository.get_location_preferences(conn, user_id)
+    where = SimpleNamespace(location=cv.get("location"), country_code=None, city=None, remote=None)
+    return Candidate.from_cv(cv, loc.LocationPreferences.resolve(loc.resolve(where), saved=saved))
+
+
 class UserService:
     def store_cv(self, payload, cv: dict) -> None:
         with connection() as conn:
@@ -57,6 +75,10 @@ class UserService:
         with connection() as conn:
             user_id = resolve_user_id(conn, payload, create=False)
             return user_repository.get_analysis(conn, user_id) if user_id else None
+
+    def candidate(self, payload) -> Candidate | None:
+        with connection() as conn:
+            return candidate_for(conn, resolve_user_id(conn, payload, create=False))
 
     def fetch_location_preferences(self, payload) -> dict | None:
         with connection() as conn:

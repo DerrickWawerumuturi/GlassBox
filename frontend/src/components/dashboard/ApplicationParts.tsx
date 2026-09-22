@@ -7,8 +7,8 @@ import {FileTextIcon, PlusIcon} from "lucide-react";
 import {cn} from "@/lib/utils";
 import {ApplicationRow} from "@/types/jobradar";
 import {useApplications} from "@/lib/applications-store";
-import {useAnalysis} from "@/lib/analysis-store";
-import {toOpportunities} from "@/lib/dashboard-data";
+import {useOpportunities} from "@/lib/opportunities-store";
+import {placeLabel} from "@/lib/dashboard-data";
 import {ScoreChip, SectionLabel} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import {Dialog, DialogContent, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
@@ -29,13 +29,9 @@ import {DeleteButton} from "@/components/ui/delete-button";
 
 const TRACK_SUGGESTIONS = 5;
 
-/** "Hybrid · New York"; a location that already says remote is shown as written. */
 export function workplaceLabel(app: ApplicationRow): string {
-    const where = app.location?.trim() || null;
-    const mode = app.workplace === "hybrid" ? "Hybrid" : app.remote ? "Remote" : null;
-    if (!mode) return where ?? "—";
-    if (where && where.toLowerCase().includes(mode.toLowerCase())) return where;
-    return [mode, where].filter(Boolean).join(" · ");
+    return placeLabel(app.location, app.workplace === "hybrid" ? "hybrid"
+        : app.remote || app.workplace === "remote" ? "remote" : null);
 }
 
 /** First load with nothing cached — the shape of the table, not a spinner. */
@@ -124,17 +120,14 @@ export function CvSnapshot({app}: { app: ApplicationRow }) {
     )
 }
 
-/** "+ Track a job" — the top unsaved matches, one click each. */
+/** "+ Track a job" — the newest good fits not yet tracked, one click each. */
 export function TrackJobMenu() {
-    const {analysis} = useAnalysis();
+    const {rows, state} = useOpportunities();
     const {byJobId, toggleSave, pending} = useApplications();
 
-    const candidates = useMemo(() => {
-        if (!analysis) return [];
-        return toOpportunities(analysis)
-            .filter((row) => row.jobId != null && !byJobId.has(row.jobId))
-            .slice(0, TRACK_SUGGESTIONS);
-    }, [analysis, byJobId]);
+    const candidates = useMemo(() => rows
+        .filter((row) => (row.tier === "strong" || row.tier === "good") && !byJobId.has(row.jobId))
+        .slice(0, TRACK_SUGGESTIONS), [rows, byJobId]);
 
     return (
         <DropdownMenu>
@@ -150,10 +143,8 @@ export function TrackJobMenu() {
                 {candidates.length > 0 ? candidates.map((row) => (
                     <DropdownMenuItem
                         key={row.key}
-                        disabled={row.jobId != null && pending.has(row.jobId)}
-                        onClick={() => row.jobId != null && toggleSave({
-                            jobId: row.jobId, role: row.role, company: row.company, match: row.match
-                        })}
+                        disabled={pending.has(row.jobId)}
+                        onClick={() => toggleSave({jobId: row.jobId, role: row.role, company: row.company, match: row.match})}
                         className={"cursor-pointer gap-2.5"}
                     >
                         <CompanyLogo company={row.company ?? row.role} url={row.url} />
@@ -165,7 +156,7 @@ export function TrackJobMenu() {
                     </DropdownMenuItem>
                 )) : (
                     <p className={"px-2 py-2 text-xs text-muted-foreground"}>
-                        {analysis ? "Every current match is already tracked." : "Run a scan first and matches show up here."}
+                        {state === "no-cv" ? "Add your CV and matches show up here." : "Every current good fit is already tracked."}
                     </p>
                 )}
                 <DropdownMenuSeparator />

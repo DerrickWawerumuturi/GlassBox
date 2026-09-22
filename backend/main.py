@@ -4,17 +4,21 @@ authentication, request models and status codes live here; the work does not.
 
     /analyze, /cv/parse         CV analysis (src/Agent)
     /cv, /analysis, /profile    the user's own data (services/users.py)
+    /dashboard/opportunities    the job pool matched to the user's CV (src/jobpool)
     /dashboard/applications     the tracker (services/applications.py)
     .../extract                 pasted job links (src/jobpool)
+    .../import                  a spreadsheet of past applications (services/application_import.py)
 """
 import asyncio
+import json
 import os
 import tempfile
 import traceback
 from contextlib import asynccontextmanager
 from functools import cache
+from typing import Literal
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -22,15 +26,18 @@ from pdf_inspector import pdf_inspector
 
 from src.Agent.utils.location import LocationPreferences
 from src.Agent.utils.types import (
-    AnalysisPayload, BookmarkRequest, CVQuery, ExtractJobRequest, LocationPreferencesRequest,
+    AnalysisPayload, BookmarkRequest, CVQuery, ExtractJobRequest, ImportRequest, LocationPreferencesRequest,
     ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
 )
 from src.cv.current_user import current_user, optional_user
+from src.database.services import application_import
 from src.database.services.applications import (
     ApplicationExists, ApplicationNotFound, BookmarkNotRemovable, JobNotFound, application_service,
 )
+from src.database.services.spreadsheet import MAX_BYTES, InvalidSpreadsheet
 from src.database.services.users import UserNotFound, user_service
 from src.jobpool.extract import InvalidJobUrl
+from src.jobpool.opportunities import NoProfile, opportunity_service
 from src.jobpool.service import job_url_service
 
 
@@ -123,8 +130,9 @@ app.add_middleware(
 
 # Expected failures, each with its status code. Handled inside CORS, like
 # HTTPException, and their messages are written for users.
-for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (UserNotFound, 401),
-                  (BookmarkNotRemovable, 409), (ApplicationExists, 409), (InvalidJobUrl, 422)):
+for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (NoProfile, 404), (UserNotFound, 401),
+                  (BookmarkNotRemovable, 409), (ApplicationExists, 409), (InvalidJobUrl, 422),
+                  (InvalidSpreadsheet, 422)):
     app.add_exception_handler(
         exc,
         lambda request, err, code=code: JSONResponse(status_code=code, content={"detail": str(err)}),
@@ -165,7 +173,12 @@ async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
     # /health) unreachable for the duration of every analysis.
     async with analysis_lock:
         cv_text = await _pdf_text(file)
-        return await run_in_threadpool(_agent().run, cv_text, preferences)
+        result = await run_in_threadpool(_agent().run, cv_text, preferences)
+    if user:
+        # The scan stored the jobs it found; Opportunities shows them now, not
+        # when the user's cached list expires.
+        opportunity_service.forget(user)
+    return result
 
 
 @app.post("/cv/parse")
@@ -238,6 +251,13 @@ async def delete_account(user=Depends(current_user)):
     return {"deleted": await run_in_threadpool(user_service.delete_account, user)}
 
 
+# ----------------------------------------------------------- opportunities
+
+@app.get("/dashboard/opportunities")
+async def opportunities(sort: Literal["newest", "match"] = "newest", user=Depends(current_user)):
+    return await run_in_threadpool(opportunity_service.list, user, sort)
+
+
 # ------------------------------------------------------------ applications
 
 @app.get("/dashboard/applications")
@@ -257,13 +277,35 @@ async def add_manual_application(body: ManualApplicationRequest, user=Depends(cu
 
 @app.post("/dashboard/applications/extract")
 async def extract_job(body: ExtractJobRequest, user=Depends(current_user)):
-    # Authenticated so the server's outbound fetch is never an open proxy.
-    return await run_in_threadpool(job_url_service.extract, body.url)
+    # Authenticated so the server's outbound fetch is never an open proxy — and
+    # so the review screen can show how the job fits the user's CV.
+    candidate = await run_in_threadpool(user_service.candidate, user)
+    return await run_in_threadpool(job_url_service.extract, body.url, candidate)
 
 
 @app.post("/dashboard/applications/from-url")
 async def add_url_application(body: UrlApplicationRequest, user=Depends(current_user)):
     return {"application_id": await run_in_threadpool(application_service.add_from_url, user, **body.model_dump())}
+
+
+@app.post("/dashboard/applications/import/preview")
+async def preview_import(file: UploadFile = File(...), mapping: str | None = Form(None),
+                         date_order: Literal["dmy", "mdy"] | None = Form(None), user=Depends(current_user)):
+    """What importing this spreadsheet would do. Writes nothing; send it again with a corrected mapping."""
+    try:
+        chosen = json.loads(mapping) if mapping else None
+    except json.JSONDecodeError as err:
+        raise HTTPException(status_code=422, detail="mapping must be JSON: {column index: field}") from err
+    if chosen is not None and not isinstance(chosen, dict):
+        raise HTTPException(status_code=422, detail="mapping must be JSON: {column index: field}")
+    data = await file.read(MAX_BYTES + 1)  # past the limit is refused; never hold a huge upload in memory
+    return await run_in_threadpool(application_import.preview, user, data, file.filename or "", chosen, date_order)
+
+
+@app.post("/dashboard/applications/import")
+async def commit_import(body: ImportRequest, user=Depends(current_user)):
+    rows = [row.model_dump(mode="json") for row in body.rows]
+    return await run_in_threadpool(application_import.commit, user, rows, body.file_name)
 
 
 @app.post("/dashboard/applications/{application_id}/transition")

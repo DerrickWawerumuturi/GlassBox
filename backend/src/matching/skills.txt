@@ -1,0 +1,202 @@
+# The skill vocabulary matching reads. One skill per line:
+#
+#   key | Display name | category | aliases | related
+#
+# aliases  Comma-separated surface forms, matched as whole words, ignoring case.
+#          Hyphens and slashes separate words, so "react-native" and "react native"
+#          are one alias. A skill *name* resolves with its trailing qualifier
+#          dropped, so EMSI's "Python (Programming Language)" and SkillNer output
+#          land on the same keys as a CV's "python".
+#            ^Word  only with this exact capitalisation ("React", not "react quickly")
+#            ~Word  exact capitalisation AND inside a list ("Python, Go and Rust") —
+#                   for names that are also ordinary words: Go, R, C, Spring, Express
+# related  key=credit: knowing THIS skill earns partial credit toward THAT one.
+#          Directional on purpose — Next.js implies React more than React implies Next.js.
+#
+# Only concrete technologies and domains belong here. Soft skills and generic CS
+# vocabulary ("algorithms", "problem solving") are left out: nearly every posting
+# asks for them and almost no CV lists them, so they would lower every score
+# equally and separate nothing.
+
+# --------------------------------------------------------------- languages
+python | Python | language | python, python3, python 3 | fastapi=0.3, flask=0.3, django=0.3
+javascript | JavaScript | language | javascript, js, ecmascript, es6, vanilla js | typescript=0.8, node.js=0.4
+typescript | TypeScript | language | typescript, ts | javascript=0.9
+java | Java | language | java, java 8, java 11, java 17, java 21, core java | kotlin=0.6, scala=0.4, c#=0.4, spring boot=0.3
+kotlin | Kotlin | language | kotlin | java=0.6, android=0.5
+scala | Scala | language | scala | java=0.5, spark=0.4
+c# | C# | language | c#, csharp, c sharp | .net=0.7, java=0.4, unity=0.4
+c++ | C++ | language | c++, cpp | c=0.6
+c | C | language | ~C, ansi c | c++=0.5, embedded systems=0.3
+go | Go | language | golang, go lang, ~Go | rust=0.2
+rust | Rust | language | rust, rustlang | c++=0.3
+ruby | Ruby | language | ruby | ruby on rails=0.6
+php | PHP | language | php, php8, php 8 | laravel=0.5, wordpress=0.4
+swift | Swift | language | ~Swift | swiftui=0.7, ios=0.7
+objective-c | Objective-C | language | objective c, objc, obj c | swift=0.5, ios=0.6
+dart | Dart | language | dart | flutter=0.8
+r | R | language | r programming, r language, rstudio, ~R | statistics=0.4
+sql | SQL | language | sql, t sql, tsql, pl sql, plsql, ansi sql | postgresql=0.7, mysql=0.7, sql server=0.7
+bash | Bash | language | bash, shell scripting, shell script, shell scripts, bash scripting | linux=0.4
+powershell | PowerShell | language | powershell, windows powershell |
+elixir | Elixir | language | elixir, phoenix framework |
+haskell | Haskell | language | haskell |
+perl | Perl | language | perl |
+lua | Lua | language | lua |
+matlab | MATLAB | language | matlab |
+solidity | Solidity | blockchain | solidity | blockchain=0.7
+html | HTML | frontend | html, html5, hypertext markup language | css=0.5
+css | CSS | frontend | css, css3, cascading style sheets | sass=0.6, tailwind=0.5
+sass | Sass | frontend | sass, scss | css=0.9
+
+# ---------------------------------------------------------------- frontend
+react | React | frontend | react.js, reactjs, react js, react hooks, ^React | next.js=0.7, react native=0.6, redux=0.5, vue=0.4, angular=0.3
+next.js | Next.js | frontend | next.js, nextjs, next js | react=0.8
+vue | Vue.js | frontend | vue, vue.js, vuejs, vue 3, vue3 | nuxt=0.7, react=0.4
+nuxt | Nuxt | frontend | nuxt, nuxt.js, nuxtjs | vue=0.8
+angular | Angular | frontend | angular, angularjs, angular.js | react=0.3, typescript=0.4
+svelte | Svelte | frontend | svelte, sveltekit | react=0.3
+redux | Redux / state management | frontend | redux, redux toolkit, zustand, mobx | react=0.5
+jquery | jQuery | frontend | jquery | javascript=0.5
+tailwind | Tailwind CSS | frontend | tailwind, tailwindcss, tailwind css | css=0.7
+bootstrap | Bootstrap | frontend | ^Bootstrap | css=0.6
+material ui | UI component libraries | frontend | material ui, mui, chakra ui, shadcn, shadcn ui | react=0.3
+webpack | Webpack / bundlers | frontend | webpack, babel, rollup, esbuild | vite=0.6
+vite | Vite | frontend | vite, vitejs | webpack=0.6
+storybook | Storybook | frontend | storybook |
+three.js | Three.js | frontend | three.js, threejs, webgl, webgpu |
+accessibility | Accessibility | frontend | accessibility, a11y, wcag |
+figma | Figma | design | figma, sketch app | ui/ux design=0.6
+ui/ux design | UI/UX design | design | ui/ux, ui ux design, ux design, ui design, user experience design, user interface design, wireframing, wireframes | figma=0.6
+
+# ----------------------------------------------------------------- backend
+node.js | Node.js | backend | node.js, nodejs, node js, ^Node | express=0.8, nestjs=0.6, javascript=0.6
+express | Express | backend | express.js, expressjs, express js, ~Express | node.js=0.9, nestjs=0.5
+nestjs | NestJS | backend | nestjs, nest.js, nest js | node.js=0.8, express=0.6, typescript=0.6
+django | Django | backend | django, django rest framework, drf | python=0.9, flask=0.6, fastapi=0.6
+flask | Flask | backend | flask | python=0.9, fastapi=0.7, django=0.5
+fastapi | FastAPI | backend | fastapi, fast api | python=0.9, flask=0.7, django=0.5
+spring boot | Spring Boot | backend | spring boot, springboot, spring framework, spring mvc, ~Spring | java=0.9
+ruby on rails | Ruby on Rails | backend | ruby on rails, rails, ror | ruby=0.9
+laravel | Laravel | backend | laravel | php=0.9
+.net | .NET | backend | .net, dotnet, .net core, .net framework, asp.net, asp.net core, asp.net mvc | c#=0.8
+rest api | REST APIs | backend | rest api, rest apis, restful, restful api, restful apis, restful services, rest services, api, apis, api design, api development, web api, web apis, application programming interface, ~REST | graphql=0.5
+graphql | GraphQL | backend | graphql, apollo graphql, apollo server | rest api=0.6
+grpc | gRPC | backend | grpc, protobuf, protocol buffers | rest api=0.4
+microservices | Microservices | backend | microservices, microservice, micro services, microservice architecture, microservices architecture | rest api=0.4
+websockets | WebSockets | backend | websocket, websockets, socket.io |
+kafka | Kafka | data | kafka, apache kafka | message queues=0.5
+message queues | Message queues | backend | rabbitmq, rabbit mq, amqp, sqs, amazon sqs, pub sub, pubsub, activemq, nats, message queue, message queues, message brokers | kafka=0.4
+redis | Redis | database | redis, memcached, elasticache |
+elasticsearch | Elasticsearch | database | elasticsearch, elastic search, opensearch, lucene, solr |
+nginx | Nginx | devops | nginx, apache http server |
+prisma | Prisma | backend | prisma, drizzle, typeorm, sequelize | postgresql=0.3
+sqlalchemy | SQLAlchemy | backend | sqlalchemy, alembic | python=0.6
+hibernate | Hibernate | backend | hibernate, jpa | java=0.6
+oauth | Auth (OAuth, JWT) | security | oauth, oauth2, oauth 2.0, openid connect, oidc, jwt, saml | application security=0.3
+payments | Payments integration (M-Pesa) | backend | m pesa, mpesa, daraja api, payment gateway, payment gateways, payment integration, payments integration |
+
+# --------------------------------------------------------------- databases
+postgresql | PostgreSQL | database | postgresql, postgres, postgre, psql, pgsql | mysql=0.6, sql=0.8, supabase=0.4
+mysql | MySQL | database | mysql, mariadb | postgresql=0.6, sql=0.8
+sql server | SQL Server | database | sql server, mssql, ms sql, microsoft sql server | sql=0.8, postgresql=0.5
+oracle database | Oracle Database | database | oracle database, oracle db, oracle sql | sql=0.7
+sqlite | SQLite | database | sqlite | sql=0.6
+mongodb | MongoDB / NoSQL | database | mongodb, mongo, mongo db, mongoose, nosql, nosql databases | dynamodb=0.4, firebase=0.3
+dynamodb | DynamoDB | database | dynamodb, dynamo db | mongodb=0.4, aws=0.4
+cassandra | Cassandra | database | cassandra, apache cassandra, scylladb |
+neo4j | Neo4j | database | neo4j, graph database, graph databases |
+clickhouse | ClickHouse | database | clickhouse |
+firebase | Firebase | cloud | firebase, firestore | supabase=0.5
+supabase | Supabase | cloud | supabase | postgresql=0.8, firebase=0.5
+
+# ---------------------------------------------------------- cloud, devops
+aws | AWS | cloud | aws, amazon web services, ec2, amazon ec2, s3, amazon s3, aws s3, cloudformation, ecs, rds, amazon rds, cloudwatch, aws cdk | azure=0.5, gcp=0.5
+azure | Azure | cloud | azure, microsoft azure, azure cloud | aws=0.5, gcp=0.5
+gcp | Google Cloud | cloud | gcp, google cloud, google cloud platform, cloud run, app engine | aws=0.5, azure=0.5
+serverless | Serverless | cloud | serverless, aws lambda, lambda functions, cloud functions, azure functions | aws=0.4
+docker | Docker | devops | docker, dockerfile, docker compose, containerization, containerisation | kubernetes=0.3
+kubernetes | Kubernetes | devops | kubernetes, k8s, eks, gke, aks, openshift | docker=0.6
+helm | Helm | devops | helm charts, helm chart, ~Helm | kubernetes=0.5
+terraform | Terraform / IaC | devops | terraform, terragrunt, pulumi, infrastructure as code, iac, cloudformation templates | ansible=0.3
+ansible | Ansible / config management | devops | ansible, saltstack | terraform=0.3
+ci/cd | CI/CD | devops | ci/cd, cicd, ci cd, continuous integration, continuous delivery, continuous deployment, build pipelines, deployment pipelines |
+github actions | GitHub Actions | devops | github actions, gh actions | ci/cd=0.9, gitlab ci=0.7, jenkins=0.6
+gitlab ci | GitLab CI | devops | gitlab ci, gitlab pipelines, gitlab runners | ci/cd=0.9, github actions=0.7
+jenkins | Jenkins / CI servers | devops | jenkins, circleci, circle ci, travis ci, teamcity, argo cd, argocd | ci/cd=0.9
+linux | Linux | devops | linux, unix, ubuntu, debian, centos, rhel, red hat linux | bash=0.4
+git | Git | tool | git, version control, github, gitlab, bitbucket |
+observability | Observability | devops | observability, prometheus, grafana, datadog, new relic, splunk, opentelemetry, sentry, elk, elk stack, monitoring and alerting |
+vercel | Vercel | cloud | vercel | netlify=0.8
+netlify | Netlify | cloud | netlify | vercel=0.8
+heroku | Heroku | cloud | heroku, render.com, fly.io |
+cloudflare | Cloudflare | cloud | cloudflare, cloudflare workers |
+
+# -------------------------------------------------------------- data, ML
+machine learning | Machine Learning | ml | machine learning, ml, predictive modeling, predictive modelling, statistical learning | deep learning=0.5, scikit-learn=0.6
+deep learning | Deep Learning | ml | deep learning, neural networks, neural network, cnn, cnns, rnn, lstm, transformer models, transformer architecture | machine learning=0.8, pytorch=0.5, tensorflow=0.5
+pytorch | PyTorch | ml | pytorch, torch | tensorflow=0.7, deep learning=0.8
+tensorflow | TensorFlow | ml | tensorflow, tensor flow, keras | pytorch=0.7, deep learning=0.8
+scikit-learn | scikit-learn | ml | scikit learn, sklearn, scikit | xgboost=0.6, machine learning=0.8
+xgboost | XGBoost | ml | xgboost, lightgbm, catboost, gradient boosting | scikit-learn=0.7
+pandas | pandas | data | pandas | numpy=0.5, data analysis=0.6
+numpy | NumPy | data | numpy | pandas=0.5
+scipy | SciPy | data | scipy | numpy=0.5
+nlp | NLP | ml | nlp, natural language processing, text mining, text classification, spacy, nltk, named entity recognition | llm=0.6
+computer vision | Computer Vision | ml | computer vision, opencv, image processing, object detection, image recognition, image classification | deep learning=0.5
+llm | LLMs | ml | llm, llms, large language model, large language models, language model, generative ai, genai, gen ai, openai api, gpt 4, gpt, prompt engineering, fine tuning llms | nlp=0.6, rag=0.7
+rag | RAG | ml | rag, retrieval augmented generation, semantic search, vector search | llm=0.8, vector databases=0.6
+langchain | LangChain | ml | langchain, llamaindex, llama index, langgraph, crewai, autogen | llm=0.8, rag=0.7
+hugging face | Hugging Face | ml | hugging face, huggingface, hugging face transformers, sentence transformers | llm=0.5, nlp=0.6, pytorch=0.4
+vector databases | Vector databases | ml | vector database, vector databases, vector db, vector store, vector stores, pinecone, weaviate, chroma, chromadb, faiss, pgvector, milvus, qdrant | rag=0.6
+mlops | MLOps | ml | mlops, ml ops, mlflow, kubeflow, model deployment, model serving, sagemaker, amazon sagemaker, vertex ai, bentoml | docker=0.3
+reinforcement learning | Reinforcement learning | ml | reinforcement learning, rlhf |
+statistics | Statistics | data | statistics, statistical analysis, statistical modeling, statistical modelling, hypothesis testing, a/b testing, ab testing, mathematical statistics, applied statistics | data analysis=0.6
+data analysis | Data analysis | data | data analysis, data analytics, exploratory data analysis, eda | statistics=0.5, sql=0.3
+data visualization | Data visualization | data | data visualization, data visualisation, matplotlib, seaborn, plotly, d3.js | tableau=0.5, power bi=0.5
+tableau | Tableau | data | tableau | power bi=0.7, data visualization=0.8
+power bi | Power BI | data | power bi, powerbi, dax | tableau=0.7, data visualization=0.8
+looker | Looker | data | looker, looker studio, google data studio | tableau=0.6
+excel | Excel | tool | microsoft excel, ms excel, advanced excel, excel spreadsheets, vba, ~Excel | data analysis=0.3
+spark | Apache Spark | data | apache spark, pyspark, spark sql, spark streaming, ~Spark | databricks=0.7, hadoop=0.5
+databricks | Databricks | data | databricks, delta lake | spark=0.7
+hadoop | Hadoop | data | hadoop, hdfs, mapreduce, apache hive | spark=0.5
+airflow | Airflow | data | airflow, apache airflow, dagster, prefect | dbt=0.3, etl=0.5
+dbt | dbt | data | dbt, data build tool | sql=0.5, airflow=0.3
+etl | ETL / data pipelines | data | etl, elt, data pipelines, data pipeline, etl pipelines, data ingestion, data integration | airflow=0.5, spark=0.4
+data warehousing | Data warehousing | data | data warehouse, data warehousing, data warehouses, dimensional modeling, data modeling, data modelling, star schema | snowflake=0.5
+snowflake | Snowflake | data | snowflake | bigquery=0.6, redshift=0.6
+bigquery | BigQuery | data | bigquery, big query | snowflake=0.6, gcp=0.4
+redshift | Redshift | data | redshift, amazon redshift | snowflake=0.6
+jupyter | Jupyter | data | jupyter, jupyter notebook, jupyter notebooks, jupyterlab, google colab | python=0.4
+
+# ----------------------------------------------------------------- mobile
+react native | React Native | mobile | react native, expo go | react=0.7, flutter=0.4
+flutter | Flutter | mobile | flutter | dart=0.9, react native=0.4
+android | Android | mobile | android, android sdk, android development, jetpack compose, android studio | kotlin=0.6, java=0.4
+ios | iOS | mobile | ios, ios development, xcode, uikit, cocoapods | swift=0.7
+swiftui | SwiftUI | mobile | swiftui, swift ui | swift=0.8, ios=0.7
+
+# ---------------------------------------------------------------- testing
+unit testing | Automated testing | testing | unit testing, unit tests, unit test, test driven development, tdd, automated testing, automated tests, test automation, integration testing |
+jest | Jest / Vitest | testing | jest, vitest, mocha, jasmine, react testing library, testing library | unit testing=0.8
+pytest | pytest | testing | pytest | unit testing=0.8
+junit | JUnit | testing | junit, testng, mockito | unit testing=0.8
+e2e testing | End-to-end testing | testing | end to end testing, e2e testing, e2e tests, cypress, playwright, selenium, puppeteer, webdriver, appium | unit testing=0.5
+
+# --------------------------------------------------- security, infra, other
+application security | Application security | security | application security, appsec, owasp, secure coding, penetration testing, pen testing, vulnerability assessment, threat modeling, threat modelling |
+cybersecurity | Cybersecurity | security | cybersecurity, cyber security, information security, infosec, siem, soc 2, iso 27001 | application security=0.4
+networking | Computer networking | infra | computer networking, network engineering, tcp/ip, ccna, routing and switching, lan wan, dns, vpn, firewalls |
+active directory | Active Directory | infra | active directory, azure ad, entra id, ldap, group policy |
+jira | Jira | tool | jira, confluence |
+wordpress | WordPress | cms | wordpress, woocommerce | php=0.4
+shopify | Shopify | cms | shopify, shopify liquid |
+salesforce | Salesforce | crm | salesforce, apex, salesforce apex, sfdc |
+sap | SAP | enterprise | ^SAP, sap erp, sap abap, abap, s/4hana |
+intersystems | InterSystems (Caché, IRIS) | enterprise | intersystems, intersystems iris, objectscript, cache objectscript, ^MUMPS, trakcare, healthshare |
+unity | Unity | game | unity3d, unity 3d, unity engine, ^Unity | c#=0.5
+unreal engine | Unreal Engine | game | unreal engine, unreal, ue5, ue4 | c++=0.5
+blockchain | Blockchain | blockchain | blockchain, web3, ethereum, smart contracts, smart contract, defi | solidity=0.6
+embedded systems | Embedded systems | embedded | embedded systems, embedded software, embedded c, firmware, microcontrollers, rtos, arduino, raspberry pi, stm32 | c=0.6
+fpga | FPGA | embedded | fpga, verilog, vhdl, systemverilog |

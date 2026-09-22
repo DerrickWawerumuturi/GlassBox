@@ -16,6 +16,7 @@ invention becomes a detected fallback rather than a silently wrong search.
 import os
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 
 import pycountry
 
@@ -79,6 +80,9 @@ def _country_name(code: str) -> str | None:
     if entry is None:
         return None
     return getattr(entry, "common_name", None) or entry.name
+
+
+country_name = _country_name
 
 
 def _country_in_text(text: str) -> str | None:
@@ -236,6 +240,10 @@ def _names_any_place(text: str) -> bool:
     )
 
 
+# Pure functions of their strings, and the country lookups behind them are the
+# slow part of ranking (pycountry's fuzzy search): each distinct location string
+# is resolved once per process, for every user, instead of once per user.
+@lru_cache(maxsize=50_000)
 def remote_eligibility(requirement: str | None, country_code: str | None) -> bool | None:
     """
     Can someone in `country_code` hold this remote job?
@@ -377,6 +385,7 @@ _COUNTRY_TOKENS = re.compile(r"\b(usa|us|uk|u\.s\.)\b")
 _NOT_PLACE_WORDS = REMOTE_WORDS | {"office", "hq", "headquarters", "-", "(", ")"}
 
 
+@lru_cache(maxsize=50_000)
 def country_named(place: str) -> str | None:
     """
     The one country a job's location string names, or None.

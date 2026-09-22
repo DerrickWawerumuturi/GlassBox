@@ -30,6 +30,7 @@ import {cn, initials} from "@/lib/utils";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
 import {useApplications} from "@/lib/applications-store";
+import {useOpportunities} from "@/lib/opportunities-store";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import InstallApp from "@/components/dashboard/InstallApp";
 
@@ -77,6 +78,7 @@ export default function Sidebar() {
     const {analysis} = useAnalysis();
     const {cv} = useCv();
     const {apps} = useApplications();
+    const {data: opportunities} = useOpportunities();
 
     const [collapsed, setCollapsed] = useState(false);
     useEffect(() => {
@@ -96,7 +98,8 @@ export default function Sidebar() {
 
     const workspace: NavItem[] = [
         {href: "/dashboard", label: "Overview", icon: HomeIcon},
-        {href: "/dashboard/opportunities", label: "Opportunities", icon: RadarIcon, count: analysis?.ranked_jobs?.length},
+        {href: "/dashboard/opportunities", label: "Opportunities", icon: RadarIcon,
+            count: opportunities ? opportunities.counts.strong + opportunities.counts.good : undefined},
         {href: "/dashboard/applications", label: "Applications", icon: ClipboardListIcon, count: apps.length},
         {href: "/dashboard/gaps", label: "Skill gaps", icon: TrendingUpIcon}
     ];

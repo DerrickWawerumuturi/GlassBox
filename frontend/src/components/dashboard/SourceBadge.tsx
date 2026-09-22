@@ -7,12 +7,14 @@ import {Monogram} from "@/components/dashboard/bits";
 interface SourceBadgeProps {
     url: string | null | undefined;
     provider: string | null | undefined;
+    /** Recorded provenance ("linkedin", "referral"), shown when there is no link. */
+    source?: string | null;
 }
 
 /** The venue a job lives on: its favicon and a name people recognize. */
-export default function SourceBadge({url, provider}: SourceBadgeProps) {
+export default function SourceBadge({url, provider, source}: SourceBadgeProps) {
     const [failed, setFailed] = useState(false);
-    const {label, domain} = jobSource(url, provider);
+    const {label, domain} = jobSource(url, provider, source);
 
     if (label === "—") return <span className={"text-muted-foreground/50"}>—</span>;
 

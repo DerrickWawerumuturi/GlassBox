@@ -19,6 +19,16 @@ values {rows}
 on conflict (job_id, skill_id, extractor_version) do nothing
 """
 
+# A job's skills from this extractor, if they were extracted after the posting
+# last changed — jobs.updated_at moves only when what is stored changes.
+STORED_SKILLS = """
+select js.job_id, s.name
+from job_skills js
+join skills s on s.id = js.skill_id
+join jobs j on j.id = js.job_id
+where js.job_id = any(%s) and js.extractor_version = %s and js.extracted_at >= j.updated_at
+"""
+
 BATCH_SIZE = 500
 
 
@@ -50,6 +60,16 @@ def get_or_create_skills(conn, names: set[str]) -> dict[str, int]:
             ids.update({row["normalized_name"]: row["id"] for row in cur.fetchall()})
 
     return ids
+
+
+def stored_skills(conn, job_ids: list[int], extractor_version: str) -> dict[int, list[str]]:
+    """{job_id: sorted skill names} for the jobs whose stored skills are still current."""
+    skills: dict[int, list[str]] = {}
+    with conn.cursor() as cur:
+        cur.execute(STORED_SKILLS, (job_ids, extractor_version))
+        for row in cur.fetchall():
+            skills.setdefault(row["job_id"], []).append(row["name"])
+    return {job_id: sorted(names) for job_id, names in skills.items()}
 
 
 def replace_job_skills(
