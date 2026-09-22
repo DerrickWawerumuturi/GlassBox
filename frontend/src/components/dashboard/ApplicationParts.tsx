@@ -8,7 +8,8 @@ import {cn} from "@/lib/utils";
 import {ApplicationRow} from "@/types/jobradar";
 import {useApplications} from "@/lib/applications-store";
 import {useOpportunities} from "@/lib/opportunities-store";
-import {placeLabel} from "@/lib/dashboard-data";
+import {ageLabel, placeLabel} from "@/lib/dashboard-data";
+import {jobSource} from "@/lib/job-source";
 import {ScoreChip, SectionLabel} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import {Dialog, DialogContent, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
@@ -23,8 +24,8 @@ import {DeleteButton} from "@/components/ui/delete-button";
 
 /*
  * The applications table's pieces: the cells that do more than show a value,
- * the first-load skeleton, and the "Track a job" menu. The page itself keeps
- * the layout, the views and the mobile action sheet.
+ * the phone row's second lines, the first-load skeleton, and the "Track a job"
+ * menu. The page itself keeps the layout, the views and the selection.
  */
 
 const TRACK_SUGGESTIONS = 5;
@@ -32,6 +33,36 @@ const TRACK_SUGGESTIONS = 5;
 export function workplaceLabel(app: ApplicationRow): string {
     return placeLabel(app.location, app.workplace === "hybrid" ? "hybrid"
         : app.remote || app.workplace === "remote" ? "remote" : null);
+}
+
+export const shortDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"});
+
+/** When it happened, as a phrase: "Applied Sep 18", "Added today". */
+export function whenLabel(app: ApplicationRow): string {
+    if (app.status !== "saved" && app.applied_at) return `Applied ${shortDate(app.applied_at)}`;
+    const age = ageLabel(app.added_at ?? app.last_status_at);
+    return `Added ${/^(Today|Yesterday|Just now)$/.test(age) ? age.toLowerCase() : age}`;
+}
+
+/**
+ * On a phone the table keeps two columns, role and status. The rest reads
+ * under the role in two quiet lines: where, then fit, when and from where.
+ */
+export function RowMeta({app}: { app: ApplicationRow }) {
+    const place = workplaceLabel(app);
+    const source = jobSource(app.url, app.provider, app.source).label;
+    return (
+        <span className={"mt-1 flex flex-col gap-1 font-mono text-[10.5px] text-muted-foreground sm:hidden"}>
+            {(app.company || place !== "—") && (
+                <span className={"truncate"}>{[app.company, place !== "—" && place].filter(Boolean).join(" · ")}</span>
+            )}
+            <span className={"flex min-w-0 items-center gap-1.5"}>
+                {app.match_score != null && <ScoreChip value={app.match_score} className={"px-1.5 py-0 text-[10px]"} />}
+                <span className={"truncate"}>{whenLabel(app)}{source !== "—" && ` · ${source}`}</span>
+            </span>
+        </span>
+    )
 }
 
 /** First load with nothing cached — the shape of the table, not a spinner. */

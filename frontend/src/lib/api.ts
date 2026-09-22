@@ -210,6 +210,11 @@ export function DeleteApplication(id: number): Promise<{ deleted: number }> {
     return authed("DELETE", `/dashboard/applications/${id}`, "Delete");
 }
 
+/** Deletes the saved, rejected and withdrawn ones; active applications are kept. */
+export function DeleteApplications(ids: number[]): Promise<{ deleted: number[]; kept: number[] }> {
+    return authed("POST", "/dashboard/applications/delete", "Delete", {ids});
+}
+
 /** Wipes cv, analyses and applications but keeps the account itself. */
 export function DeleteMyData(): Promise<{ deleted: boolean }> {
     return authed("DELETE", "/account/data", "Data deletion");

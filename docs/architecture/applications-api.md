@@ -12,7 +12,8 @@ Application tracking for the dashboard. All routes require
 | POST | `/dashboard/applications/extract` | `{"url": str}` | `ExtractedJob` — see [From a job link](#from-a-job-link) |
 | POST | `/dashboard/applications/from-url` | `UrlApplicationRequest` | `{"application_id": int}` |
 | POST | `/dashboard/applications/import/preview` | multipart: `file`, `mapping?`, `date_order?` | `ImportPreview` — see [From a spreadsheet](#from-a-spreadsheet) |
-| POST | `/dashboard/applications/import` | `ImportRequest` | `{"created", "application_ids", "skipped"}` |
+| POST | `/dashboard/applications/import` | `ImportRequest` | `{"created", "application_ids", "skipped", "matching"}` |
+| POST | `/dashboard/applications/delete` | `{"ids": [int]}` | `{"deleted": [id], "kept": [id]}` |
 | GET | `/dashboard/applications` | — | list of applications, most recently added first |
 | POST | `/dashboard/applications/{id}/transition` | `TransitionRequest` | `{"status": "<new>"}` |
 | DELETE | `/dashboard/applications/{id}` | — | `{"deleted": id}` |
@@ -110,8 +111,11 @@ second:
    required; `company`, `url` (http/https), `location`, `workplace`,
    `applied_at` (date), `status`, `employment_type`, `salary`, `source`,
    `notes`). Duplicates are checked again against the account as it is now, so a
-   double submit imports nothing twice. Each row is its own savepoint: one bad
-   row is reported in `skipped`, not fatal.
+   double submit imports nothing twice. A link to a job the user already
+   tracks another way is a duplicate too. The import is one transaction: all
+   confirmed rows or none. It is also a few statements whatever the sheet's
+   length, because every statement crosses from the API to the database
+   (`decisions/deployment.md`).
 
 **Duplicates.** Certain (skipped): the same job link — compared without
 `www`, trailing slash or tracking parameters — or the same company and role
@@ -123,7 +127,23 @@ the account and with earlier rows of the same file.
 **History.** An imported row at `interview` gets the timeline a user would have
 recorded: `saved` when added, `applied` on its date (noon UTC; the day is what
 the sheet knows), then `interview` — the last note saying it is the status when
-imported. A link that matches a job in the pool links the application to it.
+imported.
+
+**Matching, after the response.** `matching` counts the rows with a posting to
+find. For each, a background task reads the posting (the pool job its link
+matched, else the page behind the link, read the way a pasted link is),
+links the application to it, fills the columns the sheet left blank (the
+sheet's own values win), and scores it against the saved CV. Links take
+seconds each, so this runs after the import has returned; the dashboard
+refreshes a few times over the next minutes to pick the results up. Blocked
+or unreadable links, and rows without one, stay as the sheet had them.
+
+## Deleting several
+
+`POST /dashboard/applications/delete` follows the single delete's rule:
+saved, rejected and withdrawn applications are deleted with their history;
+active ones are left alone and listed in `kept`, as are ids that are not the
+user's.
 
 ## Status codes
 

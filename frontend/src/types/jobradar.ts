@@ -323,6 +323,8 @@ export interface ImportResult {
     created: number;
     application_ids: number[];
     skipped: { title: string; reason: string }[];
+    /** Rows with a posting to find: matched to the CV in the background, after the import. */
+    matching: number;
 }
 
 export interface BookmarkResult {

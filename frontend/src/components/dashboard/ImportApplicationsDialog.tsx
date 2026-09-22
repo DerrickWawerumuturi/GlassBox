@@ -12,6 +12,8 @@ import {Dialog, DialogContent, DialogTitle, DialogTrigger} from "@/components/ui
 import {StatusChip} from "@/components/dashboard/bits";
 
 const HOW: Record<string, string> = {header: "from its header", values: "from its cells", you: "your choice"};
+// Matching an import's links to the CV runs after it returns; these pick up its results.
+const MATCH_REFRESHES = [10, 30, 60, 120, 240].map((seconds) => seconds * 1000);
 const ROW_TONE: Record<ImportRowPreview["status"], string> = {
     ready: "text-success", warning: "text-chart-ramp-2", duplicate: "text-muted-foreground", error: "text-destructive"
 };
@@ -74,9 +76,13 @@ export default function ImportApplicationsDialog() {
         setBusy("importing");
         try {
             const result = await CommitImport(chosenRows.map((row) => row.values), preview.file_name);
-            const skipped = result.skipped.length ? ` — ${result.skipped.length} skipped as already tracked` : "";
-            toast(`Imported ${result.created} application${result.created === 1 ? "" : "s"}${skipped}`);
+            toast([
+                `Imported ${result.created} application${result.created === 1 ? "" : "s"}.`,
+                result.skipped.length ? `${result.skipped.length} already tracked.` : "",
+                result.matching ? "Matching the ones with links to your CV." : "",
+            ].filter(Boolean).join(" "));
             await refresh();
+            if (result.matching) for (const wait of MATCH_REFRESHES) window.setTimeout(() => void refresh(), wait);
             setOpen(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : "The import failed; nothing was saved.");
@@ -98,11 +104,12 @@ export default function ImportApplicationsDialog() {
                 {!preview ? (
                     <>
                         <DialogTitle className={"text-base font-bold"}>Import your applications</DialogTitle>
-                        <p className={"text-[13px] leading-relaxed text-muted-foreground"}>
-                            Upload the spreadsheet you&apos;ve been tracking applications in (.xlsx or .csv). JobRadar reads
-                            its columns — job title, company, link, date applied, status and the rest — and shows you
-                            exactly what it will import, and what it thinks is a duplicate, before anything is saved.
-                        </p>
+                        <ul className={"flex list-disc flex-col gap-1 pl-4 text-[13px] leading-relaxed text-muted-foreground marker:text-primary"}>
+                            <li>Upload the sheet you track applications in (.xlsx or .csv).</li>
+                            <li>You check every row before anything is saved.</li>
+                            <li>Jobs you already track are skipped.</li>
+                            <li>Rows with a job link get matched to your CV.</li>
+                        </ul>
                         <button
                             type={"button"}
                             disabled={busy !== null}
@@ -214,8 +221,9 @@ export default function ImportApplicationsDialog() {
                                         </span>
                                         {row.duplicate && (
                                             <span className={cn("block text-[11.5px]", row.duplicate.certain ? "text-muted-foreground" : "text-chart-ramp-2")}>
-                                                {row.duplicate.reason}{row.duplicate.kind === "file" ? ` as row ${row.duplicate.row}` : " as one you already track"}
-                                                {row.duplicate.certain ? " — skipped" : " — tick it to import anyway"}
+                                                {row.duplicate.certain
+                                                    ? `${row.duplicate.reason} as ${row.duplicate.kind === "file" ? `row ${row.duplicate.row}` : "one you already track"}. Skipped.`
+                                                    : `${row.duplicate.reason}. Tick it if you applied again.`}
                                             </span>
                                         )}
                                         {row.issues.map((issue) => (

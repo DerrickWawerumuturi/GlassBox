@@ -28,6 +28,7 @@ src/
     dashboard/                   dashboard pieces; ApplicationParts.tsx holds the tracker's cells
                                  and menus, AddApplicationDialog.tsx the paste-a-link flow,
                                  ImportApplicationsDialog.tsx the spreadsheet import,
+                                 ApplicationSheet.tsx a row's long-press sheet on phones,
                                  OpportunityCard/OpportunityPeek a match and its reasons
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/

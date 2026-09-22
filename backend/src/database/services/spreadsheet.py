@@ -280,7 +280,7 @@ def normalise_row(values: list, columns: list[dict], order: str, today: date) ->
     row["url"] = link(raw_link)[:2048] if link(raw_link) else None
     if raw_link and not row["url"]:
         notes.insert(0, f"Link: {raw_link}")
-        flag("url", "Not a web link — kept in notes")
+        flag("url", "Not a web link. Kept in notes")
 
     place = cell_text(cell.get("location"))
     arrangement = WORKPLACES.get(_words(cell.get("workplace"))) if cell.get("workplace") is not None else None
@@ -294,7 +294,7 @@ def normalise_row(values: list, columns: list[dict], order: str, today: date) ->
     stated = cell_text(cell.get("status"))
     status = _status(stated) if stated else None
     if stated and status is None and _words(stated) not in _WAITING:
-        flag("status", f"Status \"{stated}\" not recognised — imported as Applied")
+        flag("status", f"Status \"{stated}\" not recognised. Imported as Applied")
     if stated and _words(stated) in _WAITING:
         notes.append(f"Status: {stated}")
     outcome_text = cell_text(cell.get("outcome"))
@@ -306,7 +306,7 @@ def normalise_row(values: list, columns: list[dict], order: str, today: date) ->
     if cell.get("applied_at") not in (None, "") and applied is None:
         flag("applied_at", f"Couldn't read the date \"{cell_text(cell.get('applied_at'))}\"")
     elif applied and (applied > today + timedelta(days=1) or applied.year < 2000):
-        flag("applied_at", f"Date {applied.isoformat()} is not a plausible application date — left empty")
+        flag("applied_at", f"Date {applied.isoformat()} doesn't look like an application date. Left empty")
         applied = None
     row["status"] = _furthest(status or "applied", outcome)
     if row["status"] == "saved":
@@ -320,9 +320,9 @@ def normalise_row(values: list, columns: list[dict], order: str, today: date) ->
     row["notes"] = "\n".join(notes)[:2000] or None
 
     if not row["title"]:
-        flag("title", "No job title — can't import this row", "error")
+        flag("title", "No job title, so this row can't be imported", "error")
     if not row["company"]:
         flag("company", "No company")
     if row["status"] != "saved" and not row["applied_at"] and not any(i["field"] == "applied_at" for i in issues):
-        flag("applied_at", "No application date — it will show as unknown")
+        flag("applied_at", "No application date. It will show as unknown")
     return row, issues

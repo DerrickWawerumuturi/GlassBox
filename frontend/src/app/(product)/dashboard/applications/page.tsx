@@ -2,7 +2,6 @@
 
 import React, {useMemo, useRef, useState} from 'react'
 import Link from "next/link";
-import {AnimatePresence, motion} from "motion/react";
 import {toast} from "sonner";
 import StatusDisclosure from "@/components/dashboard/StatusDisclosure";
 import {
@@ -28,7 +27,8 @@ import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import SourceBadge from "@/components/dashboard/SourceBadge";
 import AddApplicationDialog from "@/components/dashboard/AddApplicationDialog";
 import ImportApplicationsDialog from "@/components/dashboard/ImportApplicationsDialog";
-import {ApplicationsSkeleton, CvSnapshot, RemoveCell, TrackJobMenu, workplaceLabel} from "@/components/dashboard/ApplicationParts";
+import ApplicationSheet from "@/components/dashboard/ApplicationSheet";
+import {ApplicationsSkeleton, CvSnapshot, RemoveCell, RowMeta, TrackJobMenu, workplaceLabel} from "@/components/dashboard/ApplicationParts";
 import {DeleteButton} from "@/components/ui/delete-button";
 import {Folder} from "@/components/ui/folder-component";
 
@@ -42,21 +42,45 @@ const VIEWS = [
 type ViewId = typeof VIEWS[number]["id"];
 
 export default function ApplicationsPage() {
-    const {apps, state, counts, refresh, remove, syncing} = useApplications();
+    const {apps, state, counts, refresh, removeMany, syncing} = useApplications();
     const [view, setView] = useState<ViewId>("all");
 
-    // Long-press on a row (touch only) opens the action sheet — the delete
+    // Several rows at once. A checkbox starts it on a computer; on a phone the
+    // long-press sheet's "Select" does. While any row is selected, tapping a
+    // row selects it instead of opening what is in it.
+    const [selected, setSelected] = useState<Set<number>>(new Set());
+    const selecting = selected.size > 0;
+    const toggle = (id: number) => setSelected((prev) => {
+        const next = new Set(prev);
+        if (!next.delete(id)) next.add(id);
+        return next;
+    });
+
+    // Long-press on a row (touch only) opens the action sheet: the delete
     // column is hidden on phones, this is its mobile home.
     const [sheet, setSheet] = useState<ApplicationRow | null>(null);
     const pressTimer = useRef<number | null>(null);
+    const longPressed = useRef(false);
     const startPress = (app: ApplicationRow) => {
-        pressTimer.current = window.setTimeout(() => setSheet(app), 450);
+        if (selecting) return;
+        longPressed.current = false;
+        pressTimer.current = window.setTimeout(() => {
+            pressTimer.current = null;
+            longPressed.current = true;
+            toast.dismiss();  // the last delete's toast would sit over this sheet's buttons
+            setSheet(app);
+        }, 450);
     };
     const cancelPress = () => {
         if (pressTimer.current != null) {
             clearTimeout(pressTimer.current);
             pressTimer.current = null;
         }
+    };
+    const endPress = (event: React.TouchEvent) => {
+        // The finger lifting must not also open the link the sheet opened over.
+        if (longPressed.current) event.preventDefault();
+        cancelPress();
     };
     // Optimistic updates replace rows, so read the live one while open.
     const sheetApp = sheet ? apps.find((a) => a.id === sheet.id) ?? sheet : null;
@@ -71,6 +95,7 @@ export default function ApplicationsPage() {
         [apps, view]);
 
     const closed = counts.rejected + counts.withdrawn;
+    const allSelected = visible.length > 0 && visible.every((app) => selected.has(app.id));
 
     return (
         <div className={"flex min-h-screen flex-col"}>
@@ -114,7 +139,7 @@ export default function ApplicationsPage() {
                                 <ViewChip
                                     key={v.id}
                                     active={view === v.id}
-                                    onClick={() => setView(v.id)}
+                                    onClick={() => { setView(v.id); setSelected(new Set()); }}
                                     count={v.id === "all" ? apps.length : v.id === "closed" ? closed : apps.length - closed}
                                 >
                                     {v.label}
@@ -138,9 +163,20 @@ export default function ApplicationsPage() {
                             <table className={"w-full border-collapse"}>
                                 <thead>
                                     <tr>
-                                        <GridTh icon={TypeIcon} className={"min-w-36 pl-4 sm:pl-5 md:min-w-44"}>Role</GridTh>
+                                        <GridTh className={cn("w-9 pl-4 sm:pl-5", !selecting && "max-sm:hidden")}>
+                                            <input
+                                                type={"checkbox"}
+                                                aria-label={"Select every application in this view"}
+                                                checked={allSelected}
+                                                ref={(box) => { if (box) box.indeterminate = selecting && !allSelected; }}
+                                                onChange={() => setSelected(allSelected ? new Set()
+                                                    : new Set(visible.filter((app) => app.id > 0).map((app) => app.id)))}
+                                                className={"accent-primary"}
+                                            />
+                                        </GridTh>
+                                        <GridTh icon={TypeIcon} className={cn("min-w-36 md:min-w-44", !selecting && "max-sm:border-l-0 max-sm:pl-4")}>Role</GridTh>
                                         <GridTh icon={BuildingIcon} className={"hidden min-w-32 md:table-cell"}>Company</GridTh>
-                                        <GridTh icon={GaugeIcon}>Match</GridTh>
+                                        <GridTh icon={GaugeIcon} className={"hidden sm:table-cell"}>Match</GridTh>
                                         <GridTh icon={MapPinIcon} className={"hidden lg:table-cell"}>Location</GridTh>
                                         <GridTh icon={GlobeIcon} className={"hidden md:table-cell"}>Source</GridTh>
                                         <GridTh icon={CircleDashedIcon}>Status</GridTh>
@@ -155,13 +191,33 @@ export default function ApplicationsPage() {
                                         <tr
                                             key={app.id}
                                             onTouchStart={() => startPress(app)}
-                                            onTouchEnd={cancelPress}
+                                            onTouchEnd={endPress}
                                             onTouchMove={cancelPress}
+                                            // A long press is ours, not the browser's copy menu or link preview.
+                                            onContextMenu={(event) => {
+                                                if (pressTimer.current != null || longPressed.current) event.preventDefault();
+                                            }}
+                                            onClickCapture={selecting ? (event) => {
+                                                event.preventDefault();
+                                                event.stopPropagation();
+                                                if (app.id > 0) toggle(app.id);
+                                            } : undefined}
                                             className={cn(
-                                                "transition-colors hover:bg-foreground/3",
-                                                CLOSED.includes(app.status) && "opacity-55"
+                                                "transition-colors hover:bg-foreground/3 [-webkit-touch-callout:none] max-sm:select-none",
+                                                CLOSED.includes(app.status) && "opacity-55",
+                                                selected.has(app.id) && "bg-primary/8 hover:bg-primary/10"
                                             )}>
-                                            <td className={cn(GRID_TD, "pl-4 sm:pl-5")}>
+                                            <td className={cn(GRID_TD, "w-9 pl-4 sm:pl-5", !selecting && "max-sm:hidden")}>
+                                                <input
+                                                    type={"checkbox"}
+                                                    aria-label={`Select ${app.title ?? "application"}`}
+                                                    checked={selected.has(app.id)}
+                                                    disabled={app.id < 0}
+                                                    onChange={() => toggle(app.id)}
+                                                    className={"accent-primary"}
+                                                />
+                                            </td>
+                                            <td className={cn(GRID_TD, !selecting && "max-sm:border-l-0 max-sm:pl-4")}>
                                                 {app.url ? (
                                                     <a
                                                         href={app.url}
@@ -181,10 +237,11 @@ export default function ApplicationsPage() {
                                                     </NotebookTextIcon>
                                                 )}
                                                 {app.company && (
-                                                    <span className={"mt-0.5 block truncate font-mono text-[10.5px] text-muted-foreground md:hidden"}>
+                                                    <span className={"mt-0.5 hidden truncate font-mono text-[10.5px] text-muted-foreground sm:block md:hidden"}>
                                                         {app.company}
                                                     </span>
                                                 )}
+                                                <RowMeta app={app} />
                                             </td>
                                             <td className={cn(GRID_TD, "hidden md:table-cell")}>
                                                 {app.company ? (
@@ -194,7 +251,7 @@ export default function ApplicationsPage() {
                                                     </span>
                                                 ) : <span className={"text-muted-foreground/50"}>—</span>}
                                             </td>
-                                            <td className={GRID_TD}><ScoreChip value={app.match_score} /></td>
+                                            <td className={cn(GRID_TD, "hidden sm:table-cell")}><ScoreChip value={app.match_score} /></td>
                                             <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground lg:table-cell")}>
                                                 {workplaceLabel(app)}
                                             </td>
@@ -241,66 +298,36 @@ export default function ApplicationsPage() {
                 </>
             )}
 
-            <AnimatePresence>
-                {sheetApp && (
-                    <>
-                        <motion.div
-                            key={"sheet-backdrop"}
-                            initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}}
-                            onClick={() => setSheet(null)}
-                            className={"fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"}
-                        />
-                        <motion.div
-                            key={"sheet"}
-                            initial={{y: "100%"}} animate={{y: 0}} exit={{y: "100%"}}
-                            transition={{type: "spring", bounce: 0.2, duration: 0.4}}
-                            className={"fixed inset-x-0 bottom-0 z-50 flex flex-col gap-4 rounded-t-2xl border-t border-input bg-popover p-5 pb-8"}
-                        >
-                            <div className={"mx-auto h-1 w-10 rounded-full bg-foreground/20"} />
-                            <div className={"flex items-center gap-3"}>
-                                <span className={"min-w-0 flex-1"}>
-                                    <span className={"block truncate font-medium"}>{sheetApp.title ?? "Untitled role"}</span>
-                                    <span className={"block truncate font-mono text-[11px] text-muted-foreground"}>{sheetApp.company ?? "—"}</span>
-                                </span>
-                                <ScoreChip value={sheetApp.match_score} />
-                            </div>
-                            <div className={"flex items-center gap-3"}>
-                                <span className={"font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"}>Status</span>
-                                <StatusDisclosure app={sheetApp} />
-                            </div>
-                            {sheetApp.notes && (
-                                <p className={"whitespace-pre-line rounded-md bg-foreground/4 px-3 py-2 text-[12px] text-muted-foreground"}>
-                                    {sheetApp.notes}
-                                </p>
-                            )}
-                            <div className={"flex items-center gap-3 border-t border-border pt-4"}>
-                                {sheetApp.url && (
-                                    <a
-                                        href={sheetApp.url}
-                                        target={"_blank"}
-                                        rel={"noreferrer noopener"}
-                                        className={"inline-flex items-center gap-1.5 rounded-md bg-accent-lime px-3.5 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-accent-lime-ink"}
-                                    >
-                                        View job <ArrowUpRightIcon className={"size-3"} />
-                                    </a>
-                                )}
-                                <DeleteButton
-                                    className={"ml-auto"}
-                                    onConfirm={() => {
-                                        const deletable = sheetApp.status === "saved" || CLOSED.includes(sheetApp.status);
-                                        if (deletable) {
-                                            remove(sheetApp);
-                                            setSheet(null);
-                                        } else {
-                                            toast.error("Active applications keep their history. Move it to Withdrawn first, then delete.");
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+            {selecting && (
+                <div className={"sticky bottom-0 z-30 mt-auto flex items-center gap-4 border-t border-input bg-popover px-4 py-2 sm:px-5"}>
+                    <span className={"font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground"}>
+                        <b className={"mr-1 text-[13px] font-bold tabular-nums text-foreground"}>{selected.size}</b>selected
+                    </span>
+                    <button
+                        type={"button"}
+                        onClick={() => setSelected(new Set())}
+                        className={"font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground"}
+                    >
+                        Cancel
+                    </button>
+                    <DeleteButton
+                        className={"ml-auto"}
+                        onConfirm={() => {
+                            removeMany(apps.filter((app) => selected.has(app.id)));
+                            setSelected(new Set());
+                        }}
+                    />
+                </div>
+            )}
+
+            <ApplicationSheet
+                app={sheetApp}
+                onClose={() => setSheet(null)}
+                onSelect={(app) => {
+                    setSheet(null);
+                    if (app.id > 0) setSelected(new Set([app.id]));
+                }}
+            />
         </div>
     )
 }

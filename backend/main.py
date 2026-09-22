@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from functools import cache
 from typing import Literal
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -26,8 +26,8 @@ from pdf_inspector import pdf_inspector
 
 from src.Agent.utils.location import LocationPreferences
 from src.Agent.utils.types import (
-    AnalysisPayload, BookmarkRequest, CVQuery, ExtractJobRequest, ImportRequest, LocationPreferencesRequest,
-    ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
+    AnalysisPayload, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
+    LocationPreferencesRequest, ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
 )
 from src.cv.current_user import current_user, optional_user
 from src.database.services import application_import
@@ -303,9 +303,17 @@ async def preview_import(file: UploadFile = File(...), mapping: str | None = For
 
 
 @app.post("/dashboard/applications/import")
-async def commit_import(body: ImportRequest, user=Depends(current_user)):
+async def commit_import(body: ImportRequest, background: BackgroundTasks, user=Depends(current_user)):
     rows = [row.model_dump(mode="json") for row in body.rows]
-    return await run_in_threadpool(application_import.commit, user, rows, body.file_name)
+    result = await run_in_threadpool(application_import.commit, user, rows, body.file_name)
+    # Reading each row's posting takes seconds a link: it runs after the response.
+    background.add_task(application_import.match_imported, user, result["application_ids"])
+    return result
+
+
+@app.post("/dashboard/applications/delete")
+async def delete_applications(body: DeleteApplicationsRequest, user=Depends(current_user)):
+    return await run_in_threadpool(application_service.remove_many, user, body.ids)
 
 
 @app.post("/dashboard/applications/{application_id}/transition")

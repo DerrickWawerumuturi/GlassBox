@@ -5,11 +5,17 @@ import {useSession} from "next-auth/react";
 import {toast} from "sonner";
 
 import {ApplicationRow, ApplicationStatus} from "@/types/jobradar";
-import {ApiError, CreateApplicationFromUrl, CreateManualApplication, DeleteApplication, ListApplications, ManualApplicationPayload, ToggleBookmark, TransitionApplication, UrlApplicationPayload} from "@/lib/api";
+import {ApiError, CreateApplicationFromUrl, CreateManualApplication, DeleteApplication, DeleteApplications, ListApplications, ManualApplicationPayload, ToggleBookmark, TransitionApplication, UrlApplicationPayload} from "@/lib/api";
 import {useCv} from "@/lib/cv-store";
 
 export const PIPELINE: ApplicationStatus[] = ["saved", "applied", "screening", "interview", "offer"];
 export const CLOSED: ApplicationStatus[] = ["rejected", "withdrawn"];
+/** What can be deleted: an active application keeps its history until it is withdrawn. */
+export const DELETABLE: ApplicationStatus[] = ["saved", ...CLOSED];
+
+// One "deleted" toast at a time, and a short one: deleting several rows in a
+// row must not stack toasts over the next row's delete button.
+const DELETED_TOAST = {id: "application-deleted", duration: 2500};
 
 export const STATUS_LABEL: Record<ApplicationStatus, string> = {
     saved: "Saved",
@@ -61,6 +67,8 @@ interface ApplicationsContextValue {
     addFromUrl: (entry: UrlApplicationPayload) => void;
     /** Deletes a terminal row (saved, withdrawn, rejected) with its history. */
     remove: (app: ApplicationRow) => void;
+    /** Deletes the terminal ones among these; active ones stay, and the toast says so. */
+    removeMany: (apps: ApplicationRow[]) => void;
     transition: (id: number, to: Exclude<ApplicationStatus, "saved">) => void;
     refresh: () => Promise<void>;
     /** The token was refused: this browser's session predates an app update. */
@@ -284,13 +292,28 @@ export function ApplicationsProvider({children}: { children: React.ReactNode }) 
     const remove = useCallback((app: ApplicationRow) => {
         if (app.id < 0) return;
         setApps((prev) => prev.filter((row) => row.id !== app.id));
-        toast(`Deleted ${app.title ?? "application"}`);
+        toast(`Deleted ${app.title ?? "application"}`, DELETED_TOAST);
         void sync(() => DeleteApplication(app.id));
     }, [sync]);
 
+    const removeMany = useCallback((targets: ApplicationRow[]) => {
+        const gone = targets.filter((app) => app.id > 0 && DELETABLE.includes(app.status));
+        const kept = targets.length - gone.length;
+        if (gone.length === 0) {
+            toast.error("Active applications keep their history. Move them to Withdrawn first, then delete.");
+            return;
+        }
+        const ids = new Set(gone.map((app) => app.id));
+        setApps((prev) => prev.filter((row) => !ids.has(row.id)));
+        toast(`Deleted ${gone.length} application${gone.length === 1 ? "" : "s"}`
+            + (kept ? `. ${kept} active ${kept === 1 ? "one stays" : "ones stay"} until withdrawn.` : ""),
+            {...DELETED_TOAST, duration: kept ? 4000 : DELETED_TOAST.duration});
+        void sync(() => DeleteApplications([...ids]));
+    }, [sync]);
+
     const value = useMemo<ApplicationsContextValue>(
-        () => ({apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, transition, refresh, staleSession, syncing}),
-        [apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, transition, refresh, staleSession, syncing]
+        () => ({apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, removeMany, transition, refresh, staleSession, syncing}),
+        [apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, removeMany, transition, refresh, staleSession, syncing]
     );
 
     return <ApplicationsContext.Provider value={value}>{children}</ApplicationsContext.Provider>;

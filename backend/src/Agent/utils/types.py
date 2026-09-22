@@ -276,6 +276,10 @@ class ImportRequest(BaseModel):
     rows: list[ImportRow] = Field(min_length=1, max_length=2000)
 
 
+class DeleteApplicationsRequest(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=2000)
+
+
 class TransitionRequest(BaseModel):
     to_status: Literal[
         "applied", "screening", "interview", "offer", "rejected", "withdrawn"

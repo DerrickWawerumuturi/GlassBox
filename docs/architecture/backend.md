@@ -50,7 +50,7 @@ src/database/
     users.py                         resolve_user_id, a user's data, their Candidate
     applications.py                  the application tracker
     spreadsheet.py                   reading a tracker spreadsheet (pure)
-    application_import.py            preview and import, with duplicate detection
+    application_import.py            preview and import, with duplicate detection; matching afterwards
 tests/                               pytest; test_api_user_data needs DATABASE_URL,
                                      test_api_pool_and_import a LOCAL database
 ```

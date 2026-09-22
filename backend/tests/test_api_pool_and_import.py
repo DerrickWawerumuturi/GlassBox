@@ -27,11 +27,13 @@ if not URL or not _is_local(URL):
     pytest.skip("writes jobs: needs DATABASE_URL pointing at a local Postgres", allow_module_level=True)
 
 import jwt  # noqa: E402
+import psycopg  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from openpyxl import Workbook  # noqa: E402
 
 import main  # noqa: E402
 from src.Agent.utils.types import Job, ProcessedJob  # noqa: E402
+from src.database.services import application_import  # noqa: E402
 from src.database.services.ingestion import JobIngestionService  # noqa: E402
 from src.database.session import connection  # noqa: E402
 
@@ -79,6 +81,14 @@ def client():
     with connection() as conn, conn.cursor() as cur:
         cur.execute("delete from users where sub = %s", (SUB,))
         cur.execute("delete from jobs where provider in (%s, %s)", (PROVIDER, PROVIDER + "b"))
+
+
+@pytest.fixture(autouse=True)
+def offline(monkeypatch):
+    """An import reads each row's link afterwards; tests never reach the internet."""
+    def refuse(url, candidate=None):
+        raise ConnectionError(f"offline: {url}")
+    monkeypatch.setattr(application_import.job_url_service, "extract", refuse)
 
 
 @pytest.fixture(scope="module")
@@ -307,6 +317,66 @@ def test_an_import_without_a_date_keeps_it_unknown(client):
 def test_unreadable_files_say_why(client, data, name, message):
     result = preview(client, data, name)
     assert result.status_code == 422 and message in result.json()["detail"]
+
+
+def test_an_import_takes_the_same_few_statements_however_long_the_sheet(client, monkeypatch):
+    calls = []
+    execute = psycopg.Cursor.execute
+    monkeypatch.setattr(psycopg.Cursor, "execute", lambda cur, *args, **kw: calls.append(1) or execute(cur, *args, **kw))
+
+    def statements(size, batch):
+        calls.clear()
+        rows = [{"title": f"Batch role {i}", "company": f"Batch {batch}", "status": "interview",
+                 "applied_at": "2026-09-01"} for i in range(size)]
+        assert application_import.commit({"sub": SUB, "name": "Pool test"}, rows, "batch.xlsx")["created"] == size
+        return len(calls)
+
+    # The API and the database are continents apart: statements, not rows, are what an import costs.
+    assert statements(3, "small") == statements(40, "large")
+
+
+def test_imported_rows_are_matched_to_their_postings_afterwards(client, pool, monkeypatch):
+    JobIngestionService().refresh_profiles(list(pool.values()))
+    assert client.put("/cv", json=CV).status_code == 200
+    by_n = {k.external_id: v for k, v in pool.items() if k.provider == PROVIDER}
+    read = []
+
+    def extract(url, candidate=None):
+        read.append(url)
+        return {"job_id": by_n["4"], "fields": {"company": "Found Co", "location": "Nairobi, Kenya",
+                                                "workplace": "remote", "employment_type": "Full-time"}}
+
+    monkeypatch.setattr(application_import.job_url_service, "extract", extract)
+    rows = [
+        {"title": "Junior Full-Stack Engineer", "company": "Acme", "status": "applied", "url": POOL[0].url},
+        {"title": "Frontend Developer", "status": "applied", "location": "Mombasa", "url": "https://careers.example.org/42"},
+        {"title": "Unlinked Role", "company": "Nowhere", "status": "applied"},
+    ]
+    result = client.post("/dashboard/applications/import", json={"rows": rows}).json()
+    assert result["created"] == 3 and result["matching"] == 2
+    assert read == ["https://careers.example.org/42"]                  # a pool job needs no fetch
+
+    listed = {r["title"]: r for r in client.get("/dashboard/applications").json()}
+    pooled, fetched = listed["Junior Full-Stack Engineer"], listed["Frontend Developer"]
+    assert pooled["match_score"] is not None and pooled["match_method"] == "jobradar-fit-v2"
+    assert fetched["job_id"] == by_n["4"] and fetched["match_score"] is not None
+    assert fetched["company"] == "Found Co" and fetched["location"] == "Mombasa"   # blanks filled, the sheet wins
+    assert listed["Unlinked Role"]["match_score"] is None
+
+
+def test_bulk_delete_removes_finished_rows_and_keeps_active_ones(client):
+    rows = [{"title": f"Bulk {status}", "company": "Bulk Co", "status": status}
+            for status in ("saved", "rejected", "interview")]
+    ids = client.post("/dashboard/applications/import", json={"rows": rows}).json()["application_ids"]
+
+    stranger = TestClient(main.app)
+    stranger.headers["Authorization"] = f"Bearer {token('7' + SUB[1:])}"
+    assert stranger.post("/dashboard/applications/delete", json={"ids": ids}).json()["deleted"] == []
+
+    result = client.post("/dashboard/applications/delete", json={"ids": [*ids, 999_999_999]}).json()
+    assert len(result["deleted"]) == 2 and 999_999_999 in result["kept"]
+    listed = {r["title"] for r in client.get("/dashboard/applications").json()}
+    assert "Bulk interview" in listed and not {"Bulk saved", "Bulk rejected"} & listed
 
 
 def test_commit_refuses_malformed_rows(client):

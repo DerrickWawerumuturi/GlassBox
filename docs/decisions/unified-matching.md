@@ -17,6 +17,7 @@ score is `match(candidate, profile_job(job), job)`:
 | A pasted link, on review | saved CV | computed in memory | `jobpool/service.py` |
 | A pasted link, when saved | saved CV | `job_profiles` | `services/applications.py::_score` |
 | A bookmark from Opportunities | the score the page showed | — | `toggle_bookmark` |
+| An imported row with a link, after the import | saved CV | `job_profiles` | `services/application_import.py::match_imported` |
 
 `application.match_method` records the scorer (`jobradar-fit-v2`) beside every
 stored `match_score`, so a later scorer is never compared with this one as if
@@ -29,9 +30,9 @@ A CV edit should change every match at once, and rebuilding the candidate is
 milliseconds. Nothing per user is stored: the expensive half — reading each
 posting — happens once per posting, in the daily run.
 
-## What is still not scored
+## Imported applications
 
-Imported applications (`services/application_import.py`) link to a pool job
-when their URL matches one, but are not scored at import: an import is history,
-and a score against today's CV would say little about an application made
-months ago with another one.
+An imported row is scored against the CV saved today, not the one the user
+applied with months ago, which JobRadar never saw. So its score reads "how you
+fit this job now", and its CV column stays empty rather than claiming a CV.
+Rows without a link have no posting to read and stay unscored.

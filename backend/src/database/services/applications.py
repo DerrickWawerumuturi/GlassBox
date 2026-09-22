@@ -55,7 +55,7 @@ def _start(conn, user_id: int, status: str = INITIAL_STATUS, **fields) -> int:
     return application_id
 
 
-def _score(conn, user_id: int, job_id: int | None) -> tuple[int | None, str | None]:
+def score_job(conn, user_id: int, job_id: int | None) -> tuple[int | None, str | None]:
     """The matcher's score for a pool job, when the user has a CV to match it against."""
     row = profile_repository.for_job(conn, job_id) if job_id is not None else None
     if not row or not row["profile"] or row["profiler_version"] != PROFILER_VERSION:
@@ -104,7 +104,7 @@ class ApplicationService:
             user_id = resolve_user_id(conn, payload)
             if job_id is not None and repo.find_by_user_and_job(conn, user_id, job_id):
                 raise ApplicationExists("This job is already in your applications")
-            score, method = _score(conn, user_id, job_id)
+            score, method = score_job(conn, user_id, job_id)
             return _start(conn, user_id, status, job_id=job_id, title=title, company=company, source=source,
                           url=url, location=location, workplace=workplace, employment_type=employment_type,
                           salary=salary, cv_snapshot=cv_snapshot, match_score=score, match_method=method)
@@ -135,6 +135,14 @@ class ApplicationService:
             if status_now not in DELETABLE:
                 raise BookmarkNotRemovable(f"application is {status_now}: withdraw it first, then delete")
             repo.delete(conn, user_id, application_id)
+
+    def remove_many(self, payload, ids: list[int]) -> dict:
+        """Several at once, by remove()'s rule: an active application stays, with its history."""
+        with connection() as conn:
+            user_id = resolve_user_id(conn, payload, create=False)
+            deleted = repo.delete_many(conn, user_id, ids, DELETABLE) if user_id else []
+        gone = set(deleted)
+        return {"deleted": deleted, "kept": [i for i in ids if i not in gone]}
 
     def history(self, payload, application_id) -> list[dict]:
         with connection() as conn:

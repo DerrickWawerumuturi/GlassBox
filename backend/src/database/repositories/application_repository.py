@@ -78,11 +78,48 @@ select id, url from jobs
 where archived_at is null and rtrim(lower(url), '/') = any(%s)
 """
 
-SET_IMPORTED_STATUS = """
-update application
-set status = %s, applied_at = %s, last_status_at = %s, updated_at = now()
-where id = %s
+# An imported row starts where the sheet left it: its status and dates are
+# written with the row, and its trail follows in one statement for the batch.
+IMPORT_COLUMNS = ("job_id", "title", "company", "source", "url", "location", "workplace",
+                  "employment_type", "salary", "notes", "status", "applied_at", "last_status_at")
+IMPORT_APPLICATIONS = f"""
+insert into application (user_id, {", ".join(IMPORT_COLUMNS)})
+values {{rows}}
+returning id, status, applied_at
 """
+INSERT_EVENTS = """
+insert into application_events(application_id, from_status, to_status, occurred_at, scheduled_for, note)
+values {rows}
+"""
+
+DELETE_MANY = """
+delete from application
+where user_id = %s and id = any(%s) and status = any(%s)
+returning id
+"""
+
+# Imported applications a posting can be found for: linked to a pool job, or with a link to read.
+FOR_MATCHING = """
+select id, job_id, url from application
+where user_id = %s and id = any(%s) and (job_id is not null or url is not null)
+"""
+
+# What the sheet said wins; the posting fills only what it left blank.
+ENRICH = """
+update application set
+    job_id          = coalesce(job_id, %(job_id)s),
+    company         = coalesce(company, %(company)s),
+    location        = coalesce(location, %(location)s),
+    workplace       = coalesce(workplace, %(workplace)s),
+    employment_type = coalesce(employment_type, %(employment_type)s),
+    salary          = coalesce(salary, %(salary)s),
+    match_score     = coalesce(%(match_score)s, match_score),
+    match_method    = coalesce(%(match_method)s, match_method),
+    updated_at      = now()
+where id = %(id)s and user_id = %(user_id)s
+"""
+
+BATCH_SIZE = 500
 
 def create(conn, user_id: int, **fields) -> int:
     unknown = set(fields) - set(CREATE_COLUMNS)
@@ -142,21 +179,64 @@ def jobs_by_link(conn, urls: list[str]) -> list[dict]:
         return cur.fetchall()
 
 
-def import_status(conn, application_id, status, applied_on: str | None, recorded_at, note) -> None:
+def _values(rows: int, columns: int) -> str:
+    return ", ".join(["(" + ", ".join(["%s"] * columns) + ")"] * rows)
+
+
+def import_many(conn, user_id: int, rows: list[dict], recorded_at, note: str) -> list[int]:
     """
-    An imported application's status and trail. The sheet's date is when the
-    user applied; everything else happened at some unknown time before the
-    import, so later steps are dated at the import and say so. A missing date
-    stays missing rather than becoming the import time.
+    Imported applications and their trails in two statements a batch. The API
+    and the database are continents apart, so a statement per row made a large
+    sheet take minutes.
+
+    The sheet's date is when the user applied. Everything after happened at
+    some unknown time before the import, so it is dated at the import and says
+    so. A missing date stays missing rather than becoming the import time.
     """
-    # Midday UTC keeps the calendar date the same in every timezone it is shown in.
-    applied = datetime.combine(datetime.fromisoformat(applied_on).date(), time(12), timezone.utc) \
-        if applied_on else None
-    insert_event(conn, application_id, None, "saved", applied or recorded_at, None, note)
-    if status != "saved":
-        insert_event(conn, application_id, "saved", "applied", applied or recorded_at, None,
-                     None if applied else "Application date not in the sheet")
-        if status != "applied":
-            insert_event(conn, application_id, "applied", status, recorded_at, None, "Status when imported")
+    ids = []
+    for start in range(0, len(rows), BATCH_SIZE):
+        chunk = rows[start:start + BATCH_SIZE]
+        params = []
+        for row in chunk:
+            # Midday UTC keeps the calendar date the same in every timezone it is shown in.
+            applied = datetime.combine(datetime.fromisoformat(row["applied_at"]).date(), time(12), timezone.utc) \
+                if row.get("applied_at") else None
+            params += [user_id, *(row.get(c) for c in IMPORT_COLUMNS[:-3]), row["status"], applied, recorded_at]
+        with conn.cursor() as cur:
+            cur.execute(IMPORT_APPLICATIONS.format(rows=_values(len(chunk), len(IMPORT_COLUMNS) + 1)), params)
+            created = cur.fetchall()
+
+        events = []
+        for app in created:
+            at = app["applied_at"] or recorded_at
+            events.append((app["id"], None, "saved", at, None, note))
+            if app["status"] != "saved":
+                events.append((app["id"], "saved", "applied", at, None,
+                               None if app["applied_at"] else "Application date not in the sheet"))
+            if app["status"] not in ("saved", "applied"):
+                events.append((app["id"], "applied", app["status"], recorded_at, None, "Status when imported"))
+        with conn.cursor() as cur:
+            cur.execute(INSERT_EVENTS.format(rows=_values(len(events), 6)), [v for event in events for v in event])
+        ids += [app["id"] for app in created]
+    return ids
+
+
+def delete_many(conn, user_id: int, ids: list[int], statuses) -> list[int]:
     with conn.cursor() as cur:
-        cur.execute(SET_IMPORTED_STATUS, (status, applied, recorded_at, application_id))
+        cur.execute(DELETE_MANY, (user_id, ids, list(statuses)))
+        return [row["id"] for row in cur.fetchall()]
+
+
+def for_matching(conn, user_id: int, ids: list[int]) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(FOR_MATCHING, (user_id, ids))
+        return cur.fetchall()
+
+
+def enrich(conn, user_id: int, application_id: int, job_id: int | None, fields: dict,
+           match_score: int | None, match_method: str | None) -> None:
+    with conn.cursor() as cur:
+        cur.execute(ENRICH, {"id": application_id, "user_id": user_id, "job_id": job_id,
+                             "match_score": match_score, "match_method": match_method,
+                             **{k: fields.get(k) for k in ("company", "location", "workplace",
+                                                           "employment_type", "salary")}})

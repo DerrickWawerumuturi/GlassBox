@@ -6,6 +6,14 @@ Deployed as a single container to **Azure Container Apps** — app
 `jobradar-backend`, resource group `jobradar-rg`, region `southafricanorth`,
 Consumption workload profile, image from `jobradarregistry.azurecr.io/jobradar`.
 
+The database is Neon in `eu-central-1` (Frankfurt), so every SQL statement the
+API sends crosses from South Africa to Europe and back. Code that talks to the
+database per item is slow for that reason alone: the spreadsheet import once
+took about six statements a row, which made a large sheet take minutes. Write
+batches (one statement for many rows) wherever a request touches many rows.
+Moving the API to a European region would make each statement near-free, at the
+cost of one longer hop per request for users in Africa.
+
 The ACA configuration lives in the portal, not in this repository. Nothing here
 declares it, which is why the sizing fault in
 `docs/changelog/2026-08-25-container-oom.md` was invisible to code review.
