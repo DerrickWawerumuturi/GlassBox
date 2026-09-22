@@ -86,6 +86,11 @@ export function skillKey(skill: string): string {
     return skill.trim().toLowerCase().replace(/\s*\(.*\)$/, "").replace(/\.js$/, "").trim();
 }
 
+/** A skill as people write it: the backend's qualifier dropped ("Python (Programming Language)" → "Python"). */
+export function skillLabel(skill: string): string {
+    return skill.replace(/\s*\(.*\)$/, "").trim() || skill;
+}
+
 export function toSkillKeys(skills: SkillStat[]): Set<string> {
     return new Set((skills ?? []).map((stat) => skillKey(stat.skill)));
 }

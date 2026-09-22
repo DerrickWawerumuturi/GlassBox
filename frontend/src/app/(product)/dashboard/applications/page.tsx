@@ -160,7 +160,9 @@ export default function ApplicationsPage() {
 
                     {visible.length > 0 ? (
                         <div className={"flex-1 overflow-x-auto"}>
-                            <table className={"w-full border-collapse"}>
+                            {/* Fixed on phones: the status column gets what its chip needs and the role
+                                column the rest, so both fit the screen and long lines truncate. */}
+                            <table className={"w-full border-collapse max-sm:table-fixed"}>
                                 <thead>
                                     <tr>
                                         <GridTh className={cn("w-9 pl-4 sm:pl-5", !selecting && "max-sm:hidden")}>
@@ -174,12 +176,12 @@ export default function ApplicationsPage() {
                                                 className={"accent-primary"}
                                             />
                                         </GridTh>
-                                        <GridTh icon={TypeIcon} className={cn("min-w-36 md:min-w-44", !selecting && "max-sm:border-l-0 max-sm:pl-4")}>Role</GridTh>
+                                        <GridTh icon={TypeIcon} className={cn("sm:min-w-36 md:min-w-44", !selecting && "max-sm:border-l-0 max-sm:pl-4")}>Role</GridTh>
                                         <GridTh icon={BuildingIcon} className={"hidden min-w-32 md:table-cell"}>Company</GridTh>
                                         <GridTh icon={GaugeIcon} className={"hidden sm:table-cell"}>Match</GridTh>
                                         <GridTh icon={MapPinIcon} className={"hidden lg:table-cell"}>Location</GridTh>
                                         <GridTh icon={GlobeIcon} className={"hidden md:table-cell"}>Source</GridTh>
-                                        <GridTh icon={CircleDashedIcon}>Status</GridTh>
+                                        <GridTh icon={CircleDashedIcon} className={"max-sm:w-32 max-sm:px-2"}>Status</GridTh>
                                         <GridTh icon={FileTextIcon} className={"hidden md:table-cell"}>CV</GridTh>
                                         <GridTh icon={CalendarIcon} className={"hidden xl:table-cell"}>Applied</GridTh>
                                         <GridTh icon={ClockIcon} className={"hidden sm:table-cell"}>Added</GridTh>
@@ -258,7 +260,7 @@ export default function ApplicationsPage() {
                                             <td className={cn(GRID_TD, "hidden md:table-cell")}>
                                                 <SourceBadge url={app.url} provider={app.provider} source={app.source} />
                                             </td>
-                                            <td className={GRID_TD}><StatusDisclosure app={app} /></td>
+                                            <td className={cn(GRID_TD, "max-sm:px-2")}><StatusDisclosure app={app} /></td>
                                             <td className={cn(GRID_TD, "hidden md:table-cell")}><CvSnapshot app={app} /></td>
                                             <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground xl:table-cell")}>
                                                 {app.status !== "saved" && app.applied_at

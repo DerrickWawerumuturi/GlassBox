@@ -22,14 +22,16 @@ src/
         page.tsx                 overview
         applications/page.tsx    the tracker table
         opportunities/page.tsx   the daily pool matched to the CV
-        market, gaps, scan, profile
+        market/page.tsx          the scan's market, one view per chip (?view=demand)
+        gaps, scan, profile
   components/
     Market/                      analysis charts, shared by /analysis and /dashboard
     dashboard/                   dashboard pieces; ApplicationParts.tsx holds the tracker's cells
                                  and menus, AddApplicationDialog.tsx the paste-a-link flow,
                                  ImportApplicationsDialog.tsx the spreadsheet import,
                                  ApplicationSheet.tsx a row's long-press sheet on phones,
-                                 OpportunityCard/OpportunityPeek a match and its reasons
+                                 OpportunityCard/OpportunityPeek a match and its reasons,
+                                 MarketParts.tsx + SkillStrip.tsx the Market tab's charts
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token

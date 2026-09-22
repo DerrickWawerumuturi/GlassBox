@@ -32,6 +32,8 @@
   --color-accent-lime: var(--accent-lime);
   --color-accent-lime-ink: var(--accent-lime-ink);
   --color-success: var(--success);
+  --color-chart-have: var(--chart-have);
+  --color-chart-gap: var(--chart-gap);
   --color-panel-green: var(--panel-green);
   --color-panel-green-border: var(--panel-green-border);
   --color-panel-green-ink: var(--panel-green-ink);
@@ -107,6 +109,11 @@
   --accent-lime-ink: oklch(0.28 0.07 152);
   /* Calm affirmative green — "you have this", statuses moving forward. */
   --success: oklch(0.55 0.12 158);
+  /* Chart identity: a skill on the CV vs missing from it. Validated as a pair
+     (dataviz validator, both themes): colour-blind ΔE ≥ 9.6, inside the
+     lightness band. The app's --success is too light to pass on dark. */
+  --chart-have: oklch(0.66 0.12 158);
+  --chart-gap: var(--primary);
   --panel-green: oklch(0.32 0.07 158);
   --panel-green-border: oklch(0.95 0.05 150 / 16%);
   --panel-green-grid: oklch(0.95 0.06 150 / 8%);

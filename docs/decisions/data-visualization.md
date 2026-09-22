@@ -1,6 +1,8 @@
 # Decision: data visualization
 
-**Files:** `src/components/Market/*`, `src/lib/market.ts`
+**Files:** `src/components/Market/*` (the landing flow's `/analysis` pages),
+`src/app/(product)/dashboard/market/page.tsx`, `src/components/dashboard/MarketParts.tsx`,
+`src/components/dashboard/SkillStrip.tsx` (the dashboard's Market tab), `src/lib/market.ts`
 
 ## The governing rule
 
@@ -16,6 +18,59 @@ has something to find out, not because the response contains numbers.
 | `SkillCoverage` | How much of the core skillset do I cover? |
 | `JobMatches` | Which jobs fit me? |
 | `SkillLandscape` | Where do I sit overall? |
+
+## The dashboard's Market tab: one question per view
+
+The tab used to be the landing flow's panels stacked in one long scroll. It
+now has view chips like Applications' filters (Overview, Demand, Your skills,
+Gaps, Landscape), each answering one question, and it uses the dashboard's
+own anatomy: hairline-ruled cells, mono labels, tables where rows carry more
+than a magnitude. The view is kept in the URL (`?view=gaps`), so a refresh or
+a link lands on the same chart.
+
+| View | Question | Form |
+|---|---|---|
+| Overview | Where do I stand, in brief? | stat cells (coverage with its meter), the top of each list |
+| Demand | What does the market ask for, and do I have it? | ranked bars, green = on the CV, orange = not |
+| Your skills | How much is each of my skills wanted? | ranked bars |
+| Gaps | What should I learn next? | a table: share, count and priority per skill |
+| Landscape | Do my skills sit where the demand is? | a strip plot: two lanes (on the CV, missing) on one demand axis |
+
+**Colour carries identity, not magnitude.** Bar length already shows demand.
+Colouring bars by it too (the landing flow's yellow-to-red ramp) repeats the
+length and leaves no colour for anything else. On the Market tab colour
+says one thing: on the CV (`--chart-have`) or not (`--chart-gap`). The pair
+was checked with the dataviz validator against the dark card surface:
+inside the lightness band, colour-blind ΔE 9.6, contrast above 3:1. The app's
+`--success` was too light to pass, so the chart green is its own token.
+
+**Every value is labelled, so there is no axis.** Bars are plain HTML rows
+(name, bar, value), which also removed the fixed-width category axis that
+truncated names on phones. Names drop the skill database's qualifier for
+display (`skillLabel`: "Python (Programming Language)" shows as "Python"; the
+full name stays in the row's title).
+
+**Landscape lanes are real.** The old scatter spread dots vertically for
+spacing only. The strip plot gives vertical position a meaning: the top lane
+is on the CV, the bottom lane is missing. Dots carry a ring in the surface
+colour and a hit area wider than the dot; only the three most asked-for in
+each lane are named (two on a phone), and a name that would run off the right
+edge sits left of its dot.
+
+**Coverage is a meter, not a donut.** One ratio against a limit reads better
+as a filled bar on a lighter track of the same hue. It sits in the coverage stat
+cell rather than a section of its own, which only repeated the cell.
+
+**Nothing else takes a hue.** Footnotes and "view all" links are muted ink, so
+green and orange keep their one meaning. A Priority column appears on Gaps only
+when some gap is high priority; a column reading "Medium" on every row says
+nothing.
+
+The layout was reviewed from rendered screenshots at 390px and 1280px, by a
+second model (Fable) as well; its six changes are in.
+
+The landing flow's `/analysis` pages still use the older panel components
+(`src/components/Market/*`), including the magnitude ramp.
 
 ## Form before styling
 
