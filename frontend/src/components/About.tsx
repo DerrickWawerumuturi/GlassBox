@@ -1,7 +1,6 @@
 'use client'
 import React, {useEffect, useRef} from 'react'
 import Image from "next/image";
-import {cn} from "@/lib/utils";
 import PanelHeader from "@/components/Market/PanelHeader";
 
 const STEPS = [
@@ -39,26 +38,11 @@ const STEPS = [
     }
 ] as const;
 
-const SNAPSHOTS: Record<string, {src: string; alt: string; imgClass?: string}> = {
-    upload: {
-        src: "/assets/snapshots/uploading_cv.png",
-        alt: "A CV attached and being read",
-        imgClass: "scale-[1.45] object-[0%_80%]",
-    },
-    scan: {
-        src: "/assets/snapshots/scanning_market.png",
-        alt: "Live job postings being scanned",
-        imgClass: "scale-[1.3] object-[5%_65%]",
-    },
-    compare: {
-        src: "/assets/snapshots/skillsvsmarket.png",
-        alt: "Your skills plotted against the market",
-    },
-    match: {
-        src: "/assets/snapshots/matches_list.png",
-        alt: "Job postings ranked by fit",
-        imgClass: "object-[center_30%]",
-    },
+const SNAPSHOTS: Record<string, {src: string; alt: string}> = {
+    upload: {src: "/assets/process01.png", alt: "A CV being read by Jobradar"},
+    scan: {src: "/assets/process02.png", alt: "Live job postings being scanned"},
+    compare: {src: "/assets/process03.png", alt: "Your skills plotted against the market"},
+    match: {src: "/assets/process04.png", alt: "Job postings ranked by how well they fit"},
 };
 
 const TABS = [
@@ -159,13 +143,14 @@ const About = () => {
                         {/* washi tape */}
                         <div className={"absolute -top-2.5 left-1/2 h-5 w-16 -translate-x-1/2 rotate-2 bg-[#d8d2c4]/80 shadow-sm"} />
 
-                        <div className={"relative aspect-[4/3] overflow-hidden rounded-[3px] border border-black/15 bg-[oklch(0.20_0.02_260)]"}>
+                        {/* 16:10 suits the screenshots' own shape, so the frame crops as little as possible. */}
+                        <div className={"relative aspect-[16/10] overflow-hidden rounded-[3px] border border-black/15 bg-[oklch(0.20_0.02_260)]"}>
                             <Image
                                 src={SNAPSHOTS[visual].src}
                                 alt={SNAPSHOTS[visual].alt}
                                 fill
                                 sizes={"260px"}
-                                className={cn("object-cover", SNAPSHOTS[visual].imgClass)}
+                                className={"object-cover object-top"}
                             />
                         </div>
 

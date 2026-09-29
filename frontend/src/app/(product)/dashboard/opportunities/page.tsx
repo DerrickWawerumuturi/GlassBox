@@ -10,7 +10,9 @@ import {useApplications} from "@/lib/applications-store";
 import {useOpportunities} from "@/lib/opportunities-store";
 import {ageLabel, OpportunityRow} from "@/lib/dashboard-data";
 import {PageBar, Toolbar, ViewChip} from "@/components/dashboard/bits";
+import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import OpportunityCard from "@/components/dashboard/OpportunityCard";
+import {Incoming} from "@/lib/opportunities-store";
 
 const VIEWS = [
     {id: "fits", label: "Good fits", tiers: ["strong", "good"]},
@@ -33,7 +35,7 @@ function ordered(rows: OpportunityRow[], sort: Sort): OpportunityRow[] {
 }
 
 function Opportunities() {
-    const {data, rows, state, syncing, refresh} = useOpportunities();
+    const {data, rows, state, syncing, incoming, showIncoming, refresh} = useOpportunities();
     const {byJobId} = useApplications();
     const [selected, setSelected] = useState<string | null>(useSearchParams().get("sel"));
     const [view, setView] = useState<ViewId>("fits");
@@ -136,6 +138,8 @@ function Opportunities() {
                         </div>
                     </Toolbar>
 
+                    {incoming && <NewJobs incoming={incoming} onShow={showIncoming} />}
+
                     <div className={"flex w-full flex-col gap-2.5 px-4 py-5 sm:px-5"}>
                         {view === "unlikely" && visible.length > 0 && (
                             <p className={"text-[12px] leading-relaxed text-muted-foreground"}>
@@ -172,6 +176,35 @@ function Opportunities() {
                     </div>
                 </>
             )}
+        </div>
+    )
+}
+
+/**
+ * Jobs that arrived while the list was being read. The list stays where it is
+ * until this is tapped, so nothing shifts under a finger mid-scroll.
+ */
+function NewJobs({incoming, onShow}: { incoming: Incoming; onShow: () => void }) {
+    return (
+        <div className={"pointer-events-none sticky top-2 z-20 -mb-4 flex justify-center px-4"}>
+            <button
+                type={"button"}
+                onClick={() => {
+                    onShow();
+                    window.scrollTo({top: 0, behavior: "smooth"});
+                }}
+                className={"pointer-events-auto flex items-center gap-2 rounded-full border border-input bg-popover py-1.5 pl-1.5 pr-4 shadow-xl shadow-black/40 transition-colors hover:border-foreground/30"}
+            >
+                <span className={"flex -space-x-2"}>
+                    {incoming.rows.slice(0, 3).map((row) => (
+                        <CompanyLogo key={row.key} company={row.company ?? row.role} url={row.url}
+                                     className={"size-5 rounded-full ring-2 ring-popover"} />
+                    ))}
+                </span>
+                <span className={"font-mono text-[11px] uppercase tracking-[0.08em]"}>
+                    {incoming.count} new {incoming.count === 1 ? "job" : "jobs"}
+                </span>
+            </button>
         </div>
     )
 }

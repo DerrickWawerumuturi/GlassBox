@@ -11,12 +11,25 @@ import {OpportunityRow, toRow} from "@/lib/dashboard-data";
 /*
  * The daily job pool matched to the saved CV. Nothing here waits for a scan:
  * the backend refreshes the pool every morning and matches it on request, so
- * this only fetches. Same shape as the applications store — paint the last
- * list from localStorage at once (the API can take ~30s to wake), then
- * reconcile — and it refetches when the CV changes, so an edit shows at once.
+ * this only fetches.
+ *
+ * The list is painted from localStorage at once (the API can take ~30s to
+ * wake) and never swapped under the reader afterwards: jobs that arrive while
+ * they read are announced, and shown when they ask. A CV edit is different —
+ * every match changes, so that repaints.
  */
 
 export type OpportunitiesState = "signed-out" | "loading" | "ready" | "no-cv" | "error";
+
+/** Jobs fetched since the list was painted, waiting for the reader to ask for them. */
+export interface Incoming {
+    count: number;
+    rows: OpportunityRow[];
+}
+
+// Enough to paint the first screen. The full list runs to hundreds of jobs, and
+// a cache write over the browser's quota stores nothing at all.
+const CACHED_ROWS = 40;
 
 interface OpportunitiesContextValue {
     data: OpportunitiesResponse | null;
@@ -24,6 +37,10 @@ interface OpportunitiesContextValue {
     state: OpportunitiesState;
     /** Showing cached rows while the server round-trip is in flight. */
     syncing: boolean;
+    /** Fetched jobs the list isn't showing yet, so the page can offer them. */
+    incoming: Incoming | null;
+    /** Show the announced jobs. */
+    showIncoming: () => void;
     refresh: () => Promise<void>;
 }
 
@@ -51,24 +68,49 @@ export function OpportunitiesProvider({children}: { children: React.ReactNode })
     const userId = session?.user?.id ?? null;
     const {cv} = useCv();
     const [data, setData] = useState<OpportunitiesResponse | null>(null);
+    const [fetched, setFetched] = useState<OpportunitiesResponse | null>(null);
     const [state, setState] = useState<OpportunitiesState>("loading");
     const [syncing, setSyncing] = useState(false);
     const request = useRef(0);
+    // What the page is painting, readable inside load() without re-creating it.
+    const showing = useRef<OpportunitiesResponse | null>(null);
 
-    const refresh = useCallback(async () => {
+    const paint = useCallback((next: OpportunitiesResponse | null) => {
+        showing.current = next;
+        setData(next);
+        setFetched(null);
+    }, []);
+
+    const cache = useCallback((next: OpportunitiesResponse) => {
+        if (!userId) return;
+        try {
+            localStorage.setItem(cacheKey(userId),
+                JSON.stringify({...next, opportunities: next.opportunities.slice(0, CACHED_ROWS)}));
+        } catch (err) {
+            // Over quota: drop the stale copy rather than leave one that never updates.
+            console.error("Could not cache opportunities:", err);
+            try { localStorage.removeItem(cacheKey(userId)) } catch {}
+        }
+    }, [userId]);
+
+    /** `announce`: leave the list alone and offer what arrived, instead of swapping it. */
+    const load = useCallback(async (announce: boolean) => {
         const id = ++request.current;
         setSyncing(true);
         try {
             const next = await GetOpportunities();
             if (id !== request.current) return;
-            setData(next);
+            const known = new Set((showing.current?.opportunities ?? []).map((job) => job.job_id));
+            const isNew = next.opportunities.some((job) => !known.has(job.job_id));
+            if (announce && showing.current && isNew) setFetched(next);
+            else paint(next);
             setState("ready");
-            if (userId) try { localStorage.setItem(cacheKey(userId), JSON.stringify(next)) } catch {}
+            cache(next);
         } catch (err) {
             if (id !== request.current) return;
             if (err instanceof ApiError && err.status === 404) {
                 // No CV yet: nothing to match, and nothing stale to show.
-                setData(null);
+                paint(null);
                 setState("no-cv");
                 if (userId) try { localStorage.removeItem(cacheKey(userId)) } catch {}
             } else {
@@ -78,18 +120,21 @@ export function OpportunitiesProvider({children}: { children: React.ReactNode })
         } finally {
             if (id === request.current) setSyncing(false);
         }
-    }, [userId]);
+    }, [userId, paint, cache]);
+
+    /** An explicit ask (retry, a finished scan) replaces the list; it is never a surprise. */
+    const refresh = useCallback(() => load(false), [load]);
 
     useEffect(() => {
         if (authStatus === "unauthenticated") setState("signed-out");
         if (authStatus !== "authenticated" || !userId) return;
         const cached = readCache(userId);
         if (cached) {
-            setData(cached);
+            paint(cached);
             setState("ready");
         }
-        void refresh();
-    }, [authStatus, userId, refresh]);
+        void load(true);
+    }, [authStatus, userId, load, paint]);
 
     // A saved or edited CV changes every match; ask again (first load excluded).
     const firstCv = useRef(true);
@@ -101,11 +146,22 @@ export function OpportunitiesProvider({children}: { children: React.ReactNode })
         if (authStatus === "authenticated" && cv) void refresh();
     }, [cv, authStatus, refresh]);
 
+    const incoming = useMemo<Incoming | null>(() => {
+        if (!fetched) return null;
+        const known = new Set((data?.opportunities ?? []).map((job) => job.job_id));
+        const rows = fetched.opportunities.filter((job) => !known.has(job.job_id)).map(toRow);
+        return rows.length > 0 ? {count: rows.length, rows} : null;
+    }, [fetched, data]);
+
+    const showIncoming = useCallback(() => {
+        if (fetched) paint(fetched);
+    }, [fetched, paint]);
+
     const rows = useMemo(() => (data?.opportunities ?? []).map(toRow), [data]);
 
     const value = useMemo<OpportunitiesContextValue>(
-        () => ({data, rows, state, syncing, refresh}),
-        [data, rows, state, syncing, refresh]
+        () => ({data, rows, state, syncing, incoming, showIncoming, refresh}),
+        [data, rows, state, syncing, incoming, showIncoming, refresh]
     );
     return <OpportunitiesContext.Provider value={value}>{children}</OpportunitiesContext.Provider>;
 }

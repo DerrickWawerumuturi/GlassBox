@@ -26,8 +26,10 @@ const Navbar = () => {
     // The dashboard brings its own shell — a second header would fight the sidebar.
     if (pathname.startsWith("/dashboard")) return null;
 
+    // Signed in is enough for the dashboard link: the CV may live on the
+    // account rather than in this browser. Nothing sends anyone there for them.
     const productLinks = [
-        ...(cv || analysis ? [{href: "/dashboard", label: "Dashboard"}] : []),
+        ...(session || cv || analysis ? [{href: "/dashboard", label: "Dashboard"}] : []),
         ...(cv ? [{href: "/onboarding", label: "Profile"}] : []),
         ...(analysis ? [{href: "/analysis", label: "Analysis"}] : []),
     ];

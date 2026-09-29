@@ -13,3 +13,8 @@ en_core_web_lg/
 
 # Growth strategy and market research: private plans, kept out of the repo.
 docs/growth/
+
+# Local-only pages: brand workbook, code reviews. The repo is public; these are
+# read on localhost and never committed.
+docs/brand/
+docs/local/

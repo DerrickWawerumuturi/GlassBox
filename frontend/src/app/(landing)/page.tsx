@@ -3,7 +3,6 @@ import Annotation from "@/components/Annotation";
 import LandscapePreview from "@/components/LandscapePreview";
 import About from "@/components/About";
 import Faq from "@/components/Faq";
-import LandingRedirect from "@/components/LandingRedirect";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -24,7 +23,6 @@ export default function Home() {
             type={"application/ld+json"}
             dangerouslySetInnerHTML={{__html: JSON.stringify(structuredData)}}
         />
-        <LandingRedirect />
         <main className={"flex flex-1 flex-col gap-14"}>
           <Hero />
           <div className={"flex flex-col gap-1"}>

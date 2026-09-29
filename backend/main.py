@@ -58,6 +58,14 @@ def _cv_parser():
     return GroqModel("cv")
 
 
+# Loading the models is pure Python and holds the GIL in long stretches, so on a
+# 2 vCPU container it slows every request beside it. A scale-from-zero starts
+# with the dashboard asking for the CV, the applications and the opportunities;
+# those answer in milliseconds and go first. /analyze loads the stack itself if
+# it arrives before this, so nothing waits twice.
+WARM_AFTER_SECONDS = float(os.getenv("JOBRADAR_WARM_AFTER_SECONDS", "20"))
+
+
 def _warm_analysis_stack():
     try:
         _agent()
@@ -67,10 +75,16 @@ def _warm_analysis_stack():
         print(f"analysis stack failed to load: {err}")
 
 
+async def _warm_when_quiet():
+    await asyncio.sleep(WARM_AFTER_SECONDS)
+    await asyncio.get_running_loop().run_in_executor(None, _warm_analysis_stack)
+
+
 @asynccontextmanager
 async def lifespan(_app):
-    asyncio.get_running_loop().run_in_executor(None, _warm_analysis_stack)
+    warm = asyncio.create_task(_warm_when_quiet())
     yield
+    warm.cancel()
 
 
 app = FastAPI(lifespan=lifespan)

@@ -61,8 +61,11 @@ export default function ApplicationsPage() {
     const [sheet, setSheet] = useState<ApplicationRow | null>(null);
     const pressTimer = useRef<number | null>(null);
     const longPressed = useRef(false);
-    const startPress = (app: ApplicationRow) => {
-        if (selecting) return;
+    const startPress = (event: React.TouchEvent, app: ApplicationRow) => {
+        // A touch that lands on a control belongs to it. The status menu renders
+        // inside the row, so without this a slow tap on "Withdrawn" opened the
+        // sheet and swallowed the tap instead of changing the status.
+        if (selecting || (event.target as HTMLElement).closest("button, a, input, label, select")) return;
         longPressed.current = false;
         pressTimer.current = window.setTimeout(() => {
             pressTimer.current = null;
@@ -192,7 +195,7 @@ export default function ApplicationsPage() {
                                     {visible.map((app) => (
                                         <tr
                                             key={app.id}
-                                            onTouchStart={() => startPress(app)}
+                                            onTouchStart={(event) => startPress(event, app)}
                                             onTouchEnd={endPress}
                                             onTouchMove={cancelPress}
                                             // A long press is ours, not the browser's copy menu or link preview.
@@ -206,7 +209,9 @@ export default function ApplicationsPage() {
                                             } : undefined}
                                             className={cn(
                                                 "transition-colors hover:bg-foreground/3 [-webkit-touch-callout:none] max-sm:select-none",
-                                                CLOSED.includes(app.status) && "opacity-55",
+                                                // Closed rows read quieter, but their controls stay legible:
+                                                // fading the whole row dimmed the status menu the user had just used.
+                                                CLOSED.includes(app.status) && "text-muted-foreground",
                                                 selected.has(app.id) && "bg-primary/8 hover:bg-primary/10"
                                             )}>
                                             <td className={cn(GRID_TD, "w-9 pl-4 sm:pl-5", !selecting && "max-sm:hidden")}>

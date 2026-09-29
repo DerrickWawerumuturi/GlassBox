@@ -56,9 +56,13 @@ to zero and a cold start takes ~30s, so nothing waits on it to render.
 - `CVProvider` — migrates a local CV up to the account on first sign-in.
 - `ApplicationsProvider` — cache keyed by user id; writes are optimistic and
   reverted on failure; `syncing` is true while the cached rows are unconfirmed.
-- `OpportunitiesProvider` — `GET /dashboard/opportunities`, cached per user;
-  refetched when the CV changes and after a dashboard scan, whose jobs join the
-  pool. `status` is `signed-out`, `loading`, `ready`,
+- `OpportunitiesProvider` — `GET /dashboard/opportunities`, cached per user
+  (the first 40 rows: the whole list would blow the browser's storage quota,
+  and a write over it stores nothing at all). The cached list paints at once
+  and is never swapped underneath the reader: jobs that arrive after it are
+  announced as `incoming`, and `showIncoming()` puts them in. An explicit
+  `refresh()` (retry, a finished scan) replaces the list, as does a CV edit,
+  which changes every match. `status` is `signed-out`, `loading`, `ready`,
   `no-cv` (the API's 404) or `error`. Opportunities, the overview's good fits,
   the gaps page and the sidebar count all read it; none of them needs a scan.
 
@@ -69,6 +73,11 @@ See `decisions/state-management.md`.
 The four `/analysis` routes share `analysis/layout.tsx`, which renders the tab
 nav and redirects to `/` when `hydrated && !analysis`. The `/dashboard` routes
 share the sidebar layout.
+
+**Nothing sends a signed-in visitor away from the landing page.** It used to
+redirect them to the dashboard on sight, which made the marketing page
+unreachable without signing out. The header carries the dashboard link
+instead, for anyone signed in or holding a local CV or analysis.
 
 Nested layouts must be typed with Next's generated `LayoutProps<"/analysis">`.
 An inline `{ children: React.ReactNode }` fails typed-route validation in
