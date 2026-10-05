@@ -26,6 +26,11 @@ MAX_COMPLETION_TOKENS = int(os.getenv("JOBRADAR_GROQ_MAX_COMPLETION_TOKENS", "40
 FALLBACK_REASONING_EFFORT = "low"
 FALLBACK_MAX_COMPLETION_TOKENS = 2048
 
+# Stored with every kept CV profile (latest_cvs). Bump it when USER_PROMPT or
+# ParsedQuery changes what a parse returns: a profile from an older version is
+# then refused for reuse, and the user uploads their CV again.
+PARSER_VERSION = "query-v1"
+
 # kind -> (user prompt, its placeholder, result model)
 KINDS = {
     "user": (USER_PROMPT, "query", ParsedQuery),

@@ -80,6 +80,30 @@ def test_cv_and_analysis_round_trip(client):
     assert client.get("/analysis").json()["file_name"] == "cv.pdf"
 
 
+def test_latest_cv_is_one_row_replaced_then_deleted(client):
+    from src.Agent.utils.types import ParsedQuery
+    from src.database.services.users import user_service
+    claims = {"sub": SUB}
+    assert client.get("/cv/latest").status_code == 404
+    assert client.post("/analyze/reuse").status_code == 404
+    user_service.store_latest_cv(claims, ParsedQuery(skills=["Python"]), "old.pdf", "first text")
+    user_service.store_latest_cv(claims, ParsedQuery(skills=["Go", "SQL"]), "new.pdf", "second text")
+    with connection() as conn, conn.cursor() as cur:
+        cur.execute("select count(*) as n from latest_cvs l join users u on u.id = l.user_id where u.sub = %s", (SUB,))
+        assert cur.fetchone()["n"] == 1
+    latest = client.get("/cv/latest").json()
+    assert latest["file_name"] == "new.pdf" and latest["skills"] == ["Go", "SQL"] and latest["reusable"] is True
+    assert user_service.profile_for_text(claims, "second text").skills == ["Go", "SQL"]
+    assert user_service.profile_for_text(claims, "first text") is None
+    assert client.delete("/cv/latest").json() == {"deleted": True}
+    assert client.get("/cv/latest").status_code == 404
+    # Wiping the user's data takes the kept profile with it.
+    user_service.store_latest_cv(claims, ParsedQuery(skills=["Python"]), "cv.pdf", "text")
+    assert client.delete("/account/data").json() == {"deleted": True}
+    assert client.get("/cv/latest").status_code == 404
+    assert client.put("/cv", json=CV).status_code == 200                # the tests below match against it
+
+
 def test_location_preferences(client):
     first = client.get("/profile/location-preferences").json()
     assert first["saved"] is False and first["source"] == "default"

@@ -3,6 +3,7 @@ The HTTP API. Routes only translate between HTTP and the services:
 authentication, request models and status codes live here; the work does not.
 
     /analyze, /cv/parse         CV analysis (src/Agent)
+    /analyze/reuse, /cv/latest  a rescan from the kept profile of the latest CV
     /cv, /analysis, /profile    the user's own data (services/users.py)
     /dashboard/opportunities    the job pool matched to the user's CV (src/jobpool)
     /dashboard/applications     the tracker (services/applications.py)
@@ -35,7 +36,7 @@ from src.database.services.applications import (
     ApplicationExists, ApplicationNotFound, BookmarkNotRemovable, JobNotFound, application_service,
 )
 from src.database.services.spreadsheet import MAX_BYTES, InvalidSpreadsheet
-from src.database.services.users import UserNotFound, user_service
+from src.database.services.users import NoLatestCV, StaleLatestCV, UserNotFound, user_service
 from src.jobpool.extract import InvalidJobUrl
 from src.jobpool.opportunities import NoProfile, opportunity_service
 from src.jobpool.service import job_url_service
@@ -144,8 +145,9 @@ app.add_middleware(
 
 # Expected failures, each with its status code. Handled inside CORS, like
 # HTTPException, and their messages are written for users.
-for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (NoProfile, 404), (UserNotFound, 401),
-                  (BookmarkNotRemovable, 409), (ApplicationExists, 409), (InvalidJobUrl, 422),
+for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (NoProfile, 404), (NoLatestCV, 404),
+                  (UserNotFound, 401), (BookmarkNotRemovable, 409), (ApplicationExists, 409),
+                  (StaleLatestCV, 409), (InvalidJobUrl, 422),
                   (InvalidSpreadsheet, 422)):
     app.add_exception_handler(
         exc,
@@ -171,27 +173,64 @@ async def health():
 
 # ------------------------------------------------------------ CV analysis
 
-@app.post("/analyze")
-async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
-    # Signed-in users rank by their saved location preferences; everyone else
-    # by the CV's location. A failed lookup must never cost the analysis.
-    preferences = None
+async def _location_preferences(user) -> dict | None:
+    """Signed-in users rank by their saved preferences. A failed lookup must never cost the analysis."""
+    if not user:
+        return None
+    try:
+        return await run_in_threadpool(user_service.fetch_location_preferences, user)
+    except Exception as err:
+        print(f"location preferences unavailable: {err}")
+        return None
+
+
+async def _parsed_cv(cv_text: str, file_name, user):
+    """
+    The CV as a matching profile. A signed-in user's kept profile is reused when
+    this is the same text; otherwise the LLM parses it, and for a signed-in user
+    the result replaces the kept one. Storage failing never costs the scan.
+    """
     if user:
         try:
-            preferences = await run_in_threadpool(user_service.fetch_location_preferences, user)
+            kept = await run_in_threadpool(user_service.profile_for_text, user, cv_text)
+            if kept is not None:
+                return kept
         except Exception as err:
-            print(f"location preferences unavailable: {err}")
+            print(f"kept CV profile unavailable: {err}")
+    query = await run_in_threadpool(_agent().parse, cv_text)
+    if user:
+        try:
+            await run_in_threadpool(user_service.store_latest_cv, user, query, file_name, cv_text)
+        except Exception as err:
+            print(f"CV profile not kept: {err}")
+    return query
 
+
+@app.post("/analyze")
+async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
+    preferences = await _location_preferences(user)
     # Both steps are synchronous and slow. Running them directly in this async
     # endpoint blocked the event loop, which made the whole API (including
     # /health) unreachable for the duration of every analysis.
     async with analysis_lock:
         cv_text = await _pdf_text(file)
-        result = await run_in_threadpool(_agent().run, cv_text, preferences)
+        query = await _parsed_cv(cv_text, file.filename, user)
+        result = await run_in_threadpool(_agent().match, query, preferences)
     if user:
         # The scan stored the jobs it found; Opportunities shows them now, not
         # when the user's cached list expires.
         opportunity_service.forget(user)
+    return result
+
+
+@app.post("/analyze/reuse")
+async def analyze_again(user=Depends(current_user)):
+    """A rescan from the kept profile of the latest CV: no upload, no LLM call. Same shape as /analyze."""
+    query = await run_in_threadpool(user_service.latest_profile, user)
+    preferences = await _location_preferences(user)
+    async with analysis_lock:
+        result = await run_in_threadpool(_agent().match, query, preferences)
+    opportunity_service.forget(user)
     return result
 
 
@@ -214,6 +253,19 @@ async def get_cv(user=Depends(current_user)):
     if data is None:
         raise HTTPException(status_code=404, detail="No Cv saved yet")
     return data
+
+
+@app.get("/cv/latest")
+async def get_latest_cv(user=Depends(current_user)):
+    data = await run_in_threadpool(user_service.fetch_latest_cv, user)
+    if data is None:
+        raise HTTPException(status_code=404, detail="No CV kept yet")
+    return data
+
+
+@app.delete("/cv/latest")
+async def delete_latest_cv(user=Depends(current_user)):
+    return {"deleted": await run_in_threadpool(user_service.delete_latest_cv, user)}
 
 
 @app.put("/analysis")

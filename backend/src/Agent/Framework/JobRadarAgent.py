@@ -6,7 +6,7 @@ from src.Agent.utils.embedder import SentenceEmbedder
 from src.Agent.utils.llm_client import GroqModel
 from src.Agent.Framework.SearchEngine import SearchEngine, MIN_JOBS_FLOOR
 from src.Agent.utils.parser import cv_skill_names, parse_retrieved_jobs
-from src.Agent.utils.types import SearchQuery
+from src.Agent.utils.types import ParsedQuery, SearchQuery
 from src.Agent.utils import location as loc
 from src.database.fingerprint import resolve_identity
 from src.database.services.ingestion import JobIngestionService
@@ -25,8 +25,17 @@ class JobRadarAgent:
 
 
     def run(self, user_input, location_preferences: dict | None = None):
-        query = self.query_interpreter.parse(user_input)
+        return self.match(self.parse(user_input), location_preferences)
 
+    def parse(self, cv_text) -> ParsedQuery:
+        """The CV as a matching profile. The one LLM call in a scan."""
+        return self.query_interpreter.parse(cv_text)
+
+    def match(self, query: ParsedQuery, location_preferences: dict | None = None):
+        """
+        Search, rank and summarise the market for a parsed profile. No LLM call,
+        so a profile kept from an earlier scan (latest_cvs) reruns from here.
+        """
         started_at = datetime.now(timezone.utc)
         run_log = []
         search_query = SearchQuery.from_parsed(query)

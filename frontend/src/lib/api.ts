@@ -256,3 +256,27 @@ export async function PreviewImport(
 export function CommitImport(rows: ImportValues[], fileName: string | null): Promise<ImportResult> {
     return authed("POST", "/dashboard/applications/import", "Import", {rows, file_name: fileName});
 }
+/** What is kept from the latest CV: the skills read from it, never the file. */
+export interface LatestCV {
+    file_name: string | null;
+    /** ISO timestamp of the parse. */
+    parsed_at: string;
+    skills: string[];
+    /** False when an older parser read it: AnalyzeReuse would 409, so ask for the CV again. */
+    reusable: boolean;
+}
+
+/** The kept profile of the latest CV, or null when nothing is kept. */
+export function GetLatestCV(): Promise<LatestCV | null> {
+    return nullIfMissing(authed<LatestCV>("GET", "/cv/latest", "Saved CV"));
+}
+
+/** Forgets the skills kept from the latest CV. The next scan needs an upload. */
+export function DeleteLatestCV(): Promise<{ deleted: boolean }> {
+    return authed("DELETE", "/cv/latest", "Saved CV deletion");
+}
+
+/** A rescan from the kept CV skills, no upload. 404 nothing kept, 409 kept by an older parser. */
+export function AnalyzeReuse(): Promise<JobRadarAnalysis> {
+    return authed<JobRadarAnalysis>("POST", "/analyze/reuse", "Analysis", undefined, ANALYZE_TIMEOUT_MS);
+}

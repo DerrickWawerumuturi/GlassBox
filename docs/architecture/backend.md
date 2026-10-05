@@ -50,7 +50,7 @@ src/database/
   repositories/                      SQL, one module per table group
   services/
     ingestion.py                     pipeline storage (searches, jobs, skills, profiles)
-    users.py                         resolve_user_id, a user's data, their Candidate
+    users.py                         resolve_user_id, a user's data, their Candidate, the kept CV profile
     applications.py                  the application tracker
     spreadsheet.py                   reading a tracker spreadsheet (pure)
     application_import.py            preview and import, with duplicate detection; matching afterwards
@@ -60,13 +60,22 @@ tests/                               pytest; test_api_user_data needs DATABASE_U
 
 ## Request lifecycle
 
-`main.py::analyze` reads the upload's text and runs the agent:
+`main.py::analyze` reads the upload's text, gets a parsed profile, and matches it:
 
 ```python
 async with analysis_lock:
     cv_text = await _pdf_text(file)
-    return await run_in_threadpool(_agent().run, cv_text, preferences)
+    query = await _parsed_cv(cv_text, file.filename, user)   # Groq, or the kept profile
+    result = await run_in_threadpool(_agent().match, query, preferences)
 ```
+
+The agent is two calls: `JobRadarAgent.parse` (the one Groq call) and
+`JobRadarAgent.match` (search, rank, market; no LLM). For a signed-in user,
+`_parsed_cv` reuses the profile kept in `latest_cvs` when the text's sha256
+matches and the parser version is current; otherwise it parses and replaces
+the kept row. `POST /analyze/reuse` runs `match` on the kept profile with no
+upload at all. Only the profile is kept, never the PDF or the text
+(`decisions/cv-storage.md`).
 
 Both steps are offloaded because they are synchronous and slow; running them
 inline pinned the event loop and made the whole API unreachable. The lock is
@@ -254,7 +263,8 @@ market_snapshots   (taken_on, profiler_version, family): daily counts, no job id
 ```
 
 and each user's data: `users` (with `location_preferences`) ─1─n─ `cvs`,
-`analyses`, `application` ─1─n─ `application_events`. `application.job_id`
+`analyses`, `latest_cvs` (the parsed profile of the latest CV, one row),
+`application` ─1─n─ `application_events`. `application.job_id`
 references `jobs` with `on delete restrict`. Job lifecycle signals
 (`last_shown_at`, `last_interaction_at`, `archived_at`) and the `job_retention`
 view are described in `decisions/job-retention.md`.

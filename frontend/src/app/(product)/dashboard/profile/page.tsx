@@ -11,11 +11,13 @@ import {useCv} from "@/lib/cv-store";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useApplications} from "@/lib/applications-store";
 import {DeleteAccount, DeleteMyData} from "@/lib/api";
+import {useLatestCV} from "@/lib/latest-cv";
 import {IconBadge, PageBar, Panel, SectionLabel, TagChip} from "@/components/dashboard/bits";
 import CVReviewForm from "@/components/Form";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
 import {Dialog, DialogContent, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
+import LastScanDialog from "@/components/dashboard/LastScanDialog";
 
 function ConfirmDialog({trigger, title, body, confirmLabel, onConfirm, destructive}: {
     trigger: React.ReactNode;
@@ -66,9 +68,12 @@ export default function ProfilePage() {
     const {cv, clear: clearCv} = useCv();
     const {analysis, fileName, clear: clearAnalysis} = useAnalysis();
     const {apps, refresh} = useApplications();
+    const {latest, forget} = useLatestCV();
+    const [lastScanOpen, setLastScanOpen] = useState(false);
 
     const wipeData = async () => {
         await DeleteMyData();
+        forget();
         clearCv();
         clearAnalysis();
         await refresh();
@@ -85,7 +90,7 @@ export default function ProfilePage() {
 
     const dataRows = [
         {icon: FileTextIcon, color: "#f76b15", label: "CV", value: cv ? (cv.name ?? "saved") : "none"},
-        {icon: RadarIcon, color: "#0091ff", label: "Last scan", value: analysis ? (fileName ?? "stored") : "none"},
+        {icon: RadarIcon, color: "#0091ff", label: "Last scan", value: analysis ? (fileName ?? "stored") : "none", open: () => setLastScanOpen(true)},
         {icon: ClipboardListIcon, color: "#30a46c", label: "Applications", value: `${apps.length} tracked`}
     ];
 
@@ -119,19 +124,27 @@ export default function ProfilePage() {
                         <SectionLabel>Your data</SectionLabel>
                     </div>
                     <div className={"grid gap-2 sm:grid-cols-3"}>
-                        {dataRows.map((row) => (
-                            <div key={row.label} className={"rounded-lg border border-border bg-background/40 px-3 py-2.5"}>
-                                <p className={"flex items-center gap-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground"}>
-                                    <IconBadge icon={row.icon} color={row.color} className={"size-4 rounded-[5px]"} /> {row.label}
-                                </p>
-                                <p className={"mt-1 truncate text-[13px] font-medium"}>{row.value}</p>
-                            </div>
-                        ))}
+                        {dataRows.map((row) => {
+                            const body = (
+                                <>
+                                    <p className={"flex items-center gap-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground"}>
+                                        <IconBadge icon={row.icon} color={row.color} className={"size-4 rounded-[5px]"} /> {row.label}
+                                    </p>
+                                    <p className={"mt-1 truncate text-[13px] font-medium"}>{row.value}</p>
+                                </>
+                            );
+                            const box = "rounded-lg border border-border bg-background/40 px-3 py-2.5 text-left";
+                            // "Last scan" opens its details: the CV, the skills kept, a delete.
+                            return "open" in row && row.open ? (
+                                <button key={row.label} type={"button"} onClick={row.open} aria-haspopup={"dialog"}
+                                        className={cn(box, "cursor-pointer transition-colors hover:border-foreground/30")}>{body}</button>
+                            ) : <div key={row.label} className={box}>{body}</div>;
+                        })}
                     </div>
                     <div className={"flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3"}>
                         <p className={"max-w-sm text-[11.5px] leading-snug text-muted-foreground"}>
                             Wipes the CV, stored scan and tracked applications from our servers
-                            and this browser. Your account and sign-in stay.
+                            and this browser. You stay signed in and keep your account.
                         </p>
                         <ConfirmDialog
                             trigger={
@@ -146,6 +159,8 @@ export default function ProfilePage() {
                         />
                     </div>
                 </Panel>
+
+                <LastScanDialog latest={latest} open={lastScanOpen} onOpenChange={setLastScanOpen} onDeleted={forget} />
 
                 {/* The CV itself */}
                 {cv ? (

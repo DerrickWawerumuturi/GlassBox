@@ -248,7 +248,11 @@ def test_a_scan_shows_its_jobs_in_opportunities_at_once(client, pool, monkeypatc
     found = posting(6, "Junior React Developer", "Requirements: 1+ years. React and TypeScript.", 0)
 
     class Scan:
-        def run(self, cv_text, preferences):
+        def parse(self, cv_text):
+            from src.Agent.utils.types import ParsedQuery
+            return ParsedQuery(primary_role="React Developer", skills=["React"])
+
+        def match(self, query, preferences):
             JobIngestionService().persist_jobs(None, [found])            # what a scan stores
             return {"market": {}, "ranked_jobs": [], "search": {}}
 

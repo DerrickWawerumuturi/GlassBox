@@ -1,12 +1,16 @@
 """
-A signed-in user's own data: their account, CV, saved analysis and location
-preferences — and the matching profile derived from those. `resolve_user_id` is
+A signed-in user's own data: their account, CV, saved analysis, the parsed
+profile of their latest CV, and location preferences — and the matching
+profile derived from those. `resolve_user_id` is
 the one way any request becomes a users.id — the applications service uses it
 too — so the stale-session guard cannot be skipped by one endpoint and not another.
 """
+import hashlib
 from types import SimpleNamespace
 
 from src.Agent.utils import location as loc
+from src.Agent.utils.llm_client import PARSER_VERSION
+from src.Agent.utils.types import ParsedQuery
 from src.database.repositories import user_repository
 from src.database.session import connection
 from src.matching.candidate import Candidate
@@ -14,6 +18,19 @@ from src.matching.candidate import Candidate
 
 class UserNotFound(Exception):
     pass
+
+
+class NoLatestCV(Exception):
+    pass
+
+
+class StaleLatestCV(Exception):
+    pass
+
+
+def text_sha256(cv_text: str) -> str:
+    """Identifies a CV's text without keeping it: same text, same profile."""
+    return hashlib.sha256(cv_text.encode("utf-8")).hexdigest()
 
 
 def _subject(payload: dict) -> str:
@@ -76,6 +93,52 @@ class UserService:
             user_id = resolve_user_id(conn, payload, create=False)
             return user_repository.get_analysis(conn, user_id) if user_id else None
 
+    def store_latest_cv(self, payload, query: ParsedQuery, file_name, cv_text: str) -> None:
+        """
+        Keeps what the parser read, never the file or its text. `notes` is the
+        parser's free text, which could repeat anything on the CV, and nothing
+        downstream reads it, so it is not kept either.
+        """
+        profile = query.model_dump(mode="json", exclude={"notes"})
+        with connection() as conn:
+            user_repository.save_latest_cv(conn, resolve_user_id(conn, payload), profile, file_name,
+                                           text_sha256(cv_text), PARSER_VERSION)
+
+    def fetch_latest_cv(self, payload) -> dict | None:
+        """What the profile page and the rescan prompt show: the file's name, when, the skills."""
+        row = self._latest_cv_row(payload)
+        if row is None:
+            return None
+        return {"file_name": row["file_name"], "parsed_at": row["parsed_at"],
+                "skills": row["profile"].get("skills") or [],
+                "reusable": row["parser_version"] == PARSER_VERSION}
+
+    def latest_profile(self, payload) -> ParsedQuery:
+        """The kept profile, to match again. Refused when absent or from another parser version."""
+        row = self._latest_cv_row(payload)
+        if row is None:
+            raise NoLatestCV("No CV kept yet. Upload one to scan.")
+        if row["parser_version"] != PARSER_VERSION:
+            raise StaleLatestCV("Your saved CV was read by an older version. Upload it again to scan.")
+        return ParsedQuery.model_validate(row["profile"])
+
+    def profile_for_text(self, payload, cv_text: str) -> ParsedQuery | None:
+        """The kept profile when this upload is the same CV, so it is not parsed twice."""
+        row = self._latest_cv_row(payload)
+        if row is None or row["parser_version"] != PARSER_VERSION or row["text_sha256"] != text_sha256(cv_text):
+            return None
+        return ParsedQuery.model_validate(row["profile"])
+
+    def delete_latest_cv(self, payload) -> bool:
+        with connection() as conn:
+            user_id = resolve_user_id(conn, payload, create=False)
+            return bool(user_id) and user_repository.delete_latest_cv(conn, user_id)
+
+    def _latest_cv_row(self, payload) -> dict | None:
+        with connection() as conn:
+            user_id = resolve_user_id(conn, payload, create=False)
+            return user_repository.get_latest_cv(conn, user_id) if user_id else None
+
     def candidate(self, payload) -> Candidate | None:
         with connection() as conn:
             return candidate_for(conn, resolve_user_id(conn, payload, create=False))
@@ -90,7 +153,7 @@ class UserService:
             user_repository.set_location_preferences(conn, resolve_user_id(conn, payload), preferences)
 
     def delete_data(self, payload) -> None:
-        """Wipes CV, analysis and applications; keeps the account."""
+        """Wipes CV, kept CV profile, analysis and applications; keeps the account."""
         with connection() as conn:
             user_id = resolve_user_id(conn, payload, create=False)
             if user_id:

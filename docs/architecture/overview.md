@@ -45,12 +45,15 @@ ON REQUEST
      ──► newest first (posted, else estimated, else fetched)
 
   POST /analyze   (a scan: the market around a CV)
-     PDF ──► Groq ──► ParsedQuery
+     PDF ──► Groq ──► ParsedQuery   (signed in: same text reuses latest_cvs, else kept there)
          ──► SearchEngine: JSearch · Muse · Jooble · the pool   (concurrent legs)
          ──► persist + profile ──► MiniLM off-market filter
          ──► skills: each posting's requirement profile (skills.txt), stored ones reused
          ──► MarketAnalyzer (demand, gaps, coverage)
          └─► match() per job on its stored profile (ranked_jobs)
+
+  POST /analyze/reuse   (signed in: the same scan from the kept profile)
+     latest_cvs.profile ──► SearchEngine ──► ... as above   (no PDF, no Groq)
 ```
 
 One match score everywhere: pool jobs, analysis jobs and pasted links all go
