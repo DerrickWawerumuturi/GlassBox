@@ -9,6 +9,7 @@ authentication, request models and status codes live here; the work does not.
     /dashboard/applications     the tracker (services/applications.py)
     .../extract                 pasted job links (src/jobpool)
     .../import                  a spreadsheet of past applications (services/application_import.py)
+    /market/look, /market/ad    public: today's count, a pasted ad's asks (src/api/market.py)
 """
 import asyncio
 import json
@@ -26,6 +27,7 @@ from fastapi.responses import JSONResponse
 from pdf_inspector import pdf_inspector
 
 from src.Agent.utils.location import LocationPreferences
+from src.api import market
 from src.Agent.utils.types import (
     AnalysisPayload, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
     LocationPreferencesRequest, ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
@@ -88,6 +90,7 @@ async def lifespan(_app):
 
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(market.router)
 
 # One analysis at a time. The work is moved off the event loop so the server
 # stays responsive, but it is CPU-bound (the embedder) on a 2 vCPU container,
@@ -146,8 +149,7 @@ app.add_middleware(
 # HTTPException, and their messages are written for users.
 for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (NoProfile, 404), (NoLatestCV, 404),
                   (UserNotFound, 401), (BookmarkNotRemovable, 409), (ApplicationExists, 409),
-                  (StaleLatestCV, 409), (InvalidJobUrl, 422),
-                  (InvalidSpreadsheet, 422)):
+                  (StaleLatestCV, 409), (InvalidJobUrl, 422), (InvalidSpreadsheet, 422)):
     app.add_exception_handler(
         exc,
         lambda request, err, code=code: JSONResponse(status_code=code, content={"detail": str(err)}),

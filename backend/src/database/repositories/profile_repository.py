@@ -33,11 +33,7 @@ on conflict (job_id) do update set
 # Liveness mirrors PoolProvider: a board the daily fetch reads in full must have
 # been seen in the last few days; anything else gets a plain age limit, because
 # a missed sighting says nothing about a posting only found by searching.
-POOL = """
-select j.id, j.provider, j.title, j.company, j.location, j.remote, j.remote_eligibility,
-       j.employment_type, j.salary_min, j.salary_max, j.salary_currency, j.salary_period, j.url,
-       j.posted_at, j.posted_at_raw, j.first_seen_at, j.last_seen_at, j.raw_payload ->> 'workplaceType' as workplace_type,
-       p.profile
+_LIVE = """
 from jobs j
 join job_profiles p on p.job_id = j.id and p.profiler_version = %(version)s
 where j.archived_at is null
@@ -50,6 +46,21 @@ where j.archived_at is null
 order by coalesce(j.posted_at, j.first_seen_at) desc
 limit %(limit)s
 """
+POOL = """
+select j.id, j.provider, j.title, j.company, j.location, j.remote, j.remote_eligibility,
+       j.employment_type, j.salary_min, j.salary_max, j.salary_currency, j.salary_period, j.url,
+       j.posted_at, j.posted_at_raw, j.first_seen_at, j.last_seen_at, j.raw_payload ->> 'workplaceType' as workplace_type,
+       p.profile""" + _LIVE
+
+# The same pool, with only what the market counts read (snapshot.py, market_look.py).
+# Reading raw_payload and the whole profile for ~13k rows moved ~8 MB and took
+# 4-9 s from Neon; this is a fraction of it.
+COUNTED = """
+select j.provider, j.title, j.company, j.location, j.remote, j.url, j.posted_at,
+       jsonb_build_object('family', p.profile -> 'family', 'seniority', p.profile -> 'seniority',
+                          'thin', p.profile -> 'thin', 'years', p.profile -> 'years',
+                          'years_kind', p.profile -> 'years_kind', 'required', p.profile -> 'required',
+                          'preferred', p.profile -> 'preferred', 'mentioned', p.profile -> 'mentioned') as profile""" + _LIVE
 
 # The opposite of STALE, for given jobs: profiles that still describe their posting.
 FRESH = f"""
@@ -96,6 +107,13 @@ def fresh(conn, version: str, ids: list[int]) -> dict[int, dict]:
 def pool(conn, params: dict) -> list[dict]:
     with conn.cursor() as cur:
         cur.execute(POOL, params)
+        return cur.fetchall()
+
+
+def counted_pool(conn, params: dict) -> list[dict]:
+    """The pool as the market counts read it: the POOL rows, fewer columns."""
+    with conn.cursor() as cur:
+        cur.execute(COUNTED, params)
         return cur.fetchall()
 
 

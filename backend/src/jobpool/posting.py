@@ -31,6 +31,14 @@ _BLOCK_TAGS = frozenset({
 _SKIP_CONTENT = frozenset({"script", "style", "noscript"})
 _HTML_MARKER = re.compile(r"<[a-zA-Z/!]")
 _ESCAPED_HTML_MARKER = re.compile(r"&(?:amp;)*lt;[a-zA-Z/!]")
+_CUT_TAG = re.compile(r"<[a-zA-Z/]")
+# A "<" that opens no complete tag: a name, attributes with balanced quotes and
+# no "<" or ">" inside them, then ">"; or a doctype or processing instruction.
+# The standard library's parser rescans to the end of the input for every such
+# "<", so 50 KB of "<a x " took over two minutes (measured 2026-10-05): a
+# pasted ad on a public route (/market/ad) must not be able to do that. Each
+# lookahead stops at the next "<" or ">", so this pass is linear.
+_NOT_A_TAG = re.compile(r"""<(?!/?[a-zA-Z](?:[^<>"']|"[^"<>]*"|'[^'<>]*')*>|![dD][oO][cC][tT][yY][pP][eE][^<>]*>|\?[^<>]*>)""")
 
 
 class _HTMLToText(HTMLParser):
@@ -56,6 +64,21 @@ class _HTMLToText(HTMLParser):
             self.parts.append(data)
 
 
+def _parseable(html: str) -> str:
+    """
+    HTML the parser reads in linear time, with the same text. Comments are cut
+    here (the parser drops them anyway, but searches to the end for an unclosed
+    one) and a stray "<" becomes "&lt;", which the parser turns back into "<".
+    """
+    out, i = [], 0
+    while (start := html.find("<!--", i)) != -1:
+        out.append(html[i:start])
+        end = html.find("-->", start + 4)
+        i = len(html) if end == -1 else end + 3
+    out.append(html[i:])
+    return _NOT_A_TAG.sub("&lt;", "".join(out))
+
+
 def html_to_text(text: str | None) -> str | None:
     """
     Flatten a description into paragraphs, keeping the blank lines.
@@ -75,7 +98,7 @@ def html_to_text(text: str | None) -> str | None:
         if _HTML_MARKER.search(text):
             parser = _HTMLToText()
             try:
-                parser.feed(text)
+                parser.feed(_parseable(text))
                 parser.close()
             except Exception:
                 break
@@ -86,8 +109,12 @@ def html_to_text(text: str | None) -> str | None:
             break
     if not parsed:
         text = unescape(text)
-    # A description stored cut off mid-tag ends in a fragment no parser removes.
-    text = re.sub(r"<[a-zA-Z/][^>]*$", "", text)
+    # A description stored cut off mid-tag ends in a fragment no parser removes:
+    # from the first "<" + letter after the last ">". (As a regex, "<[a-zA-Z/][^>]*$"
+    # backtracked from every "<" to the last ">", quadratic on "<a <a ... >".)
+    tail = _CUT_TAG.search(text, text.rfind(">") + 1)
+    if tail:
+        text = text[:tail.start()]
     text = text.replace("\xa0", " ")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r" *\n *", "\n", text)

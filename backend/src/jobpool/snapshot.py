@@ -34,6 +34,31 @@ POOL_LIMIT = 200_000
 KINDS = ("required", "preferred", "mentioned")
 
 
+def counted(rows):
+    """
+    The rows that count, in order: daily-fetch postings only, each role once.
+
+    The one place these rules live, so the stored snapshot and the live count
+    on the landing page (market_look.py) cannot drift apart.
+    """
+    seen: set[str] = set()
+    for row in rows:
+        if row.get("provider") not in DAILY_SOURCES:
+            continue
+        key = duplicate_key(row.get("company"), row.get("title"))
+        if key not in seen:
+            seen.add(key)
+            yield row
+
+
+def pool_rows(conn) -> list[dict]:
+    """Every live pool row with its current profile, newest first: what take() counts."""
+    return profile_repository.counted_pool(conn, {
+        **POOL_WINDOWS, "version": PROFILER_VERSION, "families": ALL_FAMILIES,
+        "too_senior": [], "refreshed": list(FULL_BOARDS), "limit": POOL_LIMIT,
+    })
+
+
 def summarise(rows: list[dict]) -> dict[str, dict]:
     """
     Pool rows (newest first) -> family -> {"postings", "readable", "seniority", "skills"}.
@@ -43,16 +68,8 @@ def summarise(rows: list[dict]) -> dict[str, dict]:
     profiles count as postings but not toward skills: a posting too short to
     read says nothing about what is required.
     """
-    seen: set[str] = set()
     out: dict[str, dict] = {}
-    for row in rows:
-        if row.get("provider") not in DAILY_SOURCES:
-            continue
-        key = duplicate_key(row.get("company"), row.get("title"))
-        if key in seen:
-            continue
-        seen.add(key)
-
+    for row in counted(rows):
         profile = row["profile"]
         summary = out.setdefault(profile["family"], {"postings": 0, "readable": 0, "seniority": Counter(), "skills": {}})
         summary["postings"] += 1
@@ -74,11 +91,7 @@ def take() -> int | None:
     if not is_configured():
         return None
     with connection() as conn:
-        rows = profile_repository.pool(conn, {
-            **POOL_WINDOWS, "version": PROFILER_VERSION, "families": ALL_FAMILIES,
-            "too_senior": [], "refreshed": list(FULL_BOARDS), "limit": POOL_LIMIT,
-        })
-        summaries = summarise(rows)
+        summaries = summarise(pool_rows(conn))
         taken_on = datetime.now(timezone.utc).date()
         return snapshot_repository.upsert(conn, taken_on, PROFILER_VERSION, summaries)
 

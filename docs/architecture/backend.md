@@ -7,6 +7,7 @@ FastAPI service. `main.py` holds the routes; everything they call lives under
 
 ```
 main.py                              routes, auth, status codes — no business logic
+src/api/market.py                    public routes: GET /market/look, POST /market/ad
 skill_db_relax_20.json               EMSI skill names, a dictionary for discover.py only (not in the image)
 src/Agent/                           CV analysis (a scan)
   Framework/
@@ -34,6 +35,9 @@ src/jobpool/                         jobs from outside an analysis
   posting.py                         provider fields -> clean values: HTML, dates, display
   daily.py                           the scheduled pool refresh and profiling
   snapshot.py                        the day's market snapshot: what the live pool asks for, per family
+  market_look.py                     the same count live, for the landing page (GET /market/look)
+  ad_reader.py                       a pasted ad or link -> its asks (POST /market/ad)
+  safe_fetch.py                      SSRF-guarded fetch for public routes: pinned IP, 8 s, 2 MB, 3 hops
   opportunities.py                   the pool matched to one user's CV
   extract.py                         a pasted URL -> job fields (SSRF-guarded fetch)
   service.py                         extract + pool lookup + match + storing the posting
@@ -218,6 +222,26 @@ employer are folded into one row (`also`). Default order is newest first by the
 posting's own date, else an estimate from a relative "2 days ago", else when
 JobRadar first fetched it — each row says which (`date_basis`). Results are
 cached per user and CV fingerprint for ten minutes.
+
+## Public market routes
+
+Two routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`):
+
+- `GET /market/look`: today's count per technical role family, for the landing
+  page. The live pool counted by the snapshot's rules (`snapshot.counted`):
+  daily sources only, a cross-posted role once, skills over readable jobs. Per
+  family: jobs, readable, seniority in four buckets, the top 150 skills, up to
+  14 titles a level and about 6 sample ads a level. Never any ad text. Cached
+  in process for an hour and sent with `Cache-Control: public, max-age=3600`.
+  503 when there is no database.
+- `POST /market/ad`: `{"text"}` (at most 50,000 characters, else 413) or
+  `{"url"}`. Read by `profile_job`; returns the title, family, level and the
+  skills asked as `req` or `opt`. Nothing is stored or logged. Links go through
+  `safe_fetch.py`: 400 for a private or non-web address, 422 when the page
+  can't be read.
+
+There is no rate limiter in the API yet; both routes are cheap (cached, or
+about a second of CPU at worst), but a limiter in front of them is still owed.
 
 ## The skill vocabulary
 

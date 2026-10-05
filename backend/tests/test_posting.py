@@ -1,4 +1,5 @@
 """The canonical posting-text helpers every job path shares."""
+import time
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -27,6 +28,25 @@ def test_timestamps_normalise_to_utc():
 ])
 def test_html_to_text(raw, expected):
     assert posting.html_to_text(raw) == expected
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("<p>Python</p><!-- a comment <b> --><p>SQL</p>", "Python\n\nSQL"),
+    ("<p>Python</p><!-- never closed <p>SQL</p>", "Python"),
+    ("<p>Pay: 5 < 6 and x <3 y</p>", "Pay: 5 < 6 and x <3 y"),
+    ('<!DOCTYPE html><a href="/x" title=\'q\'>Go</a>', "Go"),
+])
+def test_comments_and_stray_angle_brackets(raw, expected):
+    assert posting.html_to_text(raw) == expected
+
+
+@pytest.mark.parametrize("unit", ["<a x ", "<a", '<a x=" >', "<!-- >", "<a <b ... >"])
+def test_malformed_markup_is_read_in_linear_time(unit):
+    # The standard parser rescans to the end for every "<" that opens no tag:
+    # 50 KB of "<a x " took over two minutes before _parseable. /market/ad is public.
+    start = time.perf_counter()
+    posting.html_to_text(unit * (200_000 // len(unit)))
+    assert time.perf_counter() - start < 3
 
 
 def test_html_keeps_paragraphs_for_skill_extraction():
