@@ -36,6 +36,7 @@ from src.Agent.utils.types import Job, ProcessedJob  # noqa: E402
 from src.database.services import application_import  # noqa: E402
 from src.database.services.ingestion import JobIngestionService  # noqa: E402
 from src.database.session import connection  # noqa: E402
+from src.jobpool import snapshot  # noqa: E402
 
 SUB = f"8{int(time.time() * 1000)}{uuid.uuid4().int % 1000:03d}"
 PROVIDER = f"t{uuid.uuid4().hex[:8]}"
@@ -127,6 +128,57 @@ def test_updated_at_moves_only_when_the_stored_posting_changes(pool):
     after = stamps()
     assert after["updated_at"] == before["updated_at"] and after["first_seen_at"] == before["first_seen_at"]
     assert after["last_seen_at"] > before["last_seen_at"]
+
+
+# ---------------------------------------------------------- market snapshot
+
+def test_a_snapshot_is_one_row_per_family_a_day_and_counts_a_role_once(pool, monkeypatch):
+    """Relative checks: other modules may leave live jobs, so only differences are asserted."""
+    # This module's made-up providers stand in for daily boards.
+    monkeypatch.setattr(snapshot, "DAILY_SOURCES", frozenset({PROVIDER, PROVIDER + "b", PROVIDER + "c"}))
+    ingestion = JobIngestionService()
+    ingestion.refresh_profiles(list(pool.values()))
+    first = next(v for k, v in pool.items() if k.external_id == "1")
+    taken_on = datetime.now(timezone.utc).date()
+
+    def today():
+        with connection() as conn, conn.cursor() as cur:
+            cur.execute("select family, postings, readable, skills from market_snapshots where taken_on = %s", (taken_on,))
+            return {r["family"]: r for r in cur.fetchall()}
+
+    def store(job):
+        ingestion.persist_jobs(None, [job], observe=False, profile=True)
+
+    try:
+        with connection() as conn, conn.cursor() as cur:
+            cur.execute("select family from job_profiles where job_id = %s", (first,))
+            family = cur.fetchone()["family"]
+        assert snapshot.take() > 0
+        before = today()
+
+        store(posting(1, "Junior Full-Stack Engineer", "Requirements: 1-2 years. React, Node.js and PostgreSQL.", 1,
+                      provider=PROVIDER + "c"))                       # the same role, a third board
+        snapshot.take()
+        again = today()
+        assert again.keys() == before.keys()                          # replaced, not appended
+        assert again[family]["postings"] == before[family]["postings"]
+
+        # A new role, long enough to read (the pool's own postings above are thin,
+        # so they count as roles but not toward skills).
+        readable = ("About us: we build tools for small shops. " * 20
+                    + "Requirements: 1-2 years. React, Node.js and PostgreSQL.")
+        store(posting(6, "Junior Full-Stack Engineer", readable, 1, company="Beta"))
+        snapshot.take()
+        after = today()
+        react = lambda day: day[family]["skills"].get("react", [0, 0, 0])[0]   # noqa: E731
+        assert after[family]["postings"] == before[family]["postings"] + 1
+        assert after[family]["readable"] == before[family]["readable"] + 1
+        assert react(after) == react(before) + 1
+    finally:
+        with connection() as conn, conn.cursor() as cur:
+            cur.execute("delete from jobs where provider = %s or (provider = %s and external_id = '6')",
+                        (PROVIDER + "c", PROVIDER))
+            cur.execute("delete from market_snapshots where taken_on = %s", (taken_on,))
 
 
 # ---------------------------------------------------------------- opportunities

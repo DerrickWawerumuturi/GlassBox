@@ -43,8 +43,9 @@ protected, 42 shown, 5,744 active, 0 stale.
 2. Archive first (`archived_at = now()` for `stale`), delete only rows archived
    for longer than a grace period, and never delete `protected` rows — the
    foreign key already guarantees the last.
-3. Decide what a deleted job leaves behind. Aggregates (skill demand over time)
-   should be computed before the rows go.
+3. Decide what a deleted job leaves behind. Skill demand over time is already
+   kept: `market_snapshots` records the live pool's counts every day
+   (`decisions/market-snapshots.md`), so deleting jobs no longer loses it.
 4. Views of a job page are not recorded at all yet. If they become a signal they
    need their own table; `last_shown_at` is not a substitute.
 

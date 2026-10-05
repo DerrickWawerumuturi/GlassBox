@@ -38,6 +38,7 @@ def test_one_dead_source_does_not(monkeypatch):
 
     monkeypatch.setattr(daily, "fetch_all", lambda: ([job(1, 1), job(120, 2)], [("a", 2, None), ("b", 0, "TimeoutError")]))
     monkeypatch.setattr(daily, "JobIngestionService", Ingestion)
+    monkeypatch.setattr(daily.snapshot, "take", lambda: None)
     assert daily.main() == 0
     # Stored without observations, then profiled in one pass over everything stale.
     assert stored == {"search_id": None, "n": 1, "observe": False, "profile": False, "profiled_all": True}

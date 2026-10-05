@@ -5,8 +5,7 @@ from src.Agent.Framework.MarketAnalyzer import MarketAnalyzer
 from src.Agent.utils.embedder import SentenceEmbedder
 from src.Agent.utils.llm_client import GroqModel
 from src.Agent.Framework.SearchEngine import SearchEngine, MIN_JOBS_FLOOR
-from src.Agent.utils.skill_extractor import SkillExtractor
-from src.Agent.utils.parser import parse_retrieved_jobs
+from src.Agent.utils.parser import cv_skill_names, parse_retrieved_jobs
 from src.Agent.utils.types import SearchQuery
 from src.Agent.utils import location as loc
 from src.database.fingerprint import resolve_identity
@@ -20,7 +19,6 @@ class JobRadarAgent:
     def __init__(self):
         self.query_interpreter = GroqModel("user")
         self.search_engine = SearchEngine()
-        self.skill_extractor = SkillExtractor()
         self.sentence_embedder = SentenceEmbedder()
         self.market_analyzer = MarketAnalyzer()
         self.ingestion = JobIngestionService()
@@ -72,27 +70,19 @@ class JobRadarAgent:
         outcome.coverage["off_market_removed"] = len(off_market)
         outcome.coverage["jobs_analyzed"] = len(raw_jobs)
 
-        # Each posting is read once. What an earlier run extracted and profiled —
-        # and persist_jobs has just profiled whatever was new — is reused, so
-        # SkillNer only runs on postings no scan has read before.
+        # Each posting is read once, by the one vocabulary (src/matching/skills.txt):
+        # persist_jobs has just profiled whatever was new, and those stored
+        # profiles give the fit score and the market skills alike.
         stored_ids = [job.db_id for job in raw_jobs if job.db_id]
-        known_skills = self.ingestion.stored_skills(stored_ids)
-        jobs = parse_retrieved_jobs(raw_jobs, known_skills)
+        profiles = self.ingestion.stored_profiles(stored_ids)
+        jobs, readable = parse_retrieved_jobs(raw_jobs, profiles)
 
-        self.ingestion.persist_skills(job_ids, [p for p in jobs if p.job.db_id not in known_skills])
-
-        ranked_jobs = self.score_jobs(query, jobs, prefs, self.ingestion.stored_profiles(stored_ids))
+        ranked_jobs = self.score_jobs(query, jobs, prefs, profiles)
         outcome.coverage["location_preferences"] = prefs.to_dict()
 
-        # The CV skills arrive as free text from the LLM ("react", "aws") while
-        # job skills are canonical EMSI names ("React.js", "Amazon Web
-        # Services"). Put both on the same vocabulary before comparing them,
-        # otherwise coverage is understated and gaps are invented.
-        user_skills = self.skill_extractor.normalize(query.skills)
-
         market_intelligence = self.market_analyzer.analyze(
-            user_skills,
-            jobs
+            cv_skill_names(query.skills),
+            readable
         )
 
         # What was actually searched travels with the numbers. A six-job

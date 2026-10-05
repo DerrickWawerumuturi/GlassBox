@@ -1,0 +1,308 @@
+# Terms the skills discovery report must never suggest again: reviewed and
+# judged not to be skills (soft skills, generic nouns, company and product
+# names, job titles). One term per line, any case; a trailing "# why" is fine.
+#
+# skills.txt says what IS a skill; this file remembers what was already turned
+# down, so each monthly review only shows what is new.
+
+# First review, 2026-10-01: soft skills, generic engineering vocabulary, fields of
+# study, job titles, company names, and benefits/legal text read as skills.
+abstractions
+access controls
+account management
+accounting
+acting
+actuators
+advising
+afmboopkmph9d0dlblogzu8mx6do0dzjns8ejlfc4pqqqtdu6f8dgkbg
+agriculture
+algorithms
+analytics
+application development
+applied linguistics
+applied mathematics
+applied research
+applied science
+artificial intelligence
+auditing
+authorization
+automation
+b2b
+b2c
+back end
+balancing
+banking
+bare metal
+benchmarking
+bilingual
+billing
+biology
+blogs
+bq7w9h3iexrlicudwriwvg
+bridging
+build automation
+building automation
+business events
+business logic
+business model
+business priorities
+business process
+business systems
+c1
+calibration
+cancer
+cerebras.ai
+cerebras.net
+change control
+chemistry
+childbirth
+cloud database
+cloud infrastructure
+cloud services
+code review
+codebase
+commissioning
+competitor analysis
+computer engineering
+computer hardware
+computer science
+construction management
+contamination control
+corl
+corporate security
+cost control
+cross functional collaboration
+cross functional coordination
+cross product
+curation
+customer engagement
+customer experience
+customer insights
+customer success
+customer support
+dashboard
+data engineering
+data infrastructure
+data intelligence
+data processing
+data science
+data structures
+dataset
+debugging
+decagon.ai
+decoding
+dependency management
+design leadership
+devops
+devrel
+digital transformation
+disabilities
+diversity and inclusion
+diving
+dod
+draft
+drawing
+economics
+economy
+electrical engineering
+electrical systems
+embedding
+emergency support
+emerging technologies
+employee benefits
+encompass
+enforcement
+engineering management
+engineering support
+enterprise security
+ethernet
+evidence collection
+executable
+executive leadership
+family planning
+family support
+fault
+fault tolerance
+finance
+financial services
+financial systems
+forth
+framing
+front end
+ft3
+global logistics
+google form
+grading
+grinding
+hackerone
+healing
+indexing
+indicators
+industrial engineering
+inflection
+infrastructure automation
+infrastructure management
+inquiry
+instrumentation
+intellectual capital
+intelligent systems
+internal documentation
+internal pay equity
+inventory management
+investments
+journalism
+knowledge base
+kpi reporting
+ledgers
+less
+library
+life sciences
+lifecycle management
+linkedin
+live coding
+low latency
+maintainability
+manufacturing operations
+manufacturing processes
+market data
+massive
+mc1
+mechanical engineering
+memory management
+mental health
+milestones
+mitigation
+multiplatform
+neurips
+neurons
+nice
+on prem
+onboarding
+open source software
+operating systems
+operational efficiency
+operational excellence
+operational risk
+operational systems
+operations management
+optics
+patents
+peer review
+performance management
+performance tuning
+personalization
+perspective
+phase
+phd
+physics
+pocs
+power distribution
+pre sales engineering
+prediction
+presales
+process capability
+process improvements
+product engineering
+product leadership
+product lifecycle
+product management
+product quality
+production code
+production engineering
+production systems
+professional services
+programming
+project governance
+prototype
+psychology
+public cloud
+purchasing
+quality management
+raw data
+reconciliation
+reduction
+refining
+relationship building
+religious belief
+rendering
+reproducibility
+research design
+resource constraints
+resource management
+restricted stock
+reviewing applications
+revops
+risk management
+risk mitigation
+risk reduction
+risk register
+rolling
+sales engineering
+sales territory
+scalability
+scale
+scripting
+security engineering
+security strategies
+security systems
+server side
+service level
+sh1
+sms
+software deployment
+software design
+software development
+software engineering
+software features
+software quality
+software systems
+solution delivery
+solution design
+source
+sparse
+sr1
+storage systems
+storytelling
+strategic alignment
+supply chain
+support engineering
+surveys
+sustainability
+sync
+systems development
+systems engineering
+systems thinking
+technical communication
+technical consulting
+technical debt
+technical sales
+technical services
+technical support
+telemedicine
+templates
+test data
+test equipment
+thought leadership
+throughput
+tooling
+touchpoint
+traceability
+tracking
+transformation
+transmission
+transparency
+triage
+tutorials
+uea
+usb
+user accounts
+validation controls
+visual storytelling
+voice chat
+vulnerability
+web applications
+web development
+web ui
+workflow automation
+workflows
+youtube

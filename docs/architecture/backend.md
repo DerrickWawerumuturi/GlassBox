@@ -29,10 +29,13 @@ src/matching/                        how well a CV fits a job — the one match 
   requirements.py                    a posting -> JobProfile (years, skills by section, gates)
   candidate.py                       a CV -> Candidate (skills, years per track from dates)
   matcher.py                         gates, quality, multipliers, reasons
+  discover.py + discover_report.py   where skills.txt is thin, and candidates for a person to approve
+  skills_rejected.txt                terms reviewed and turned down; never suggested again
 src/jobpool/                         jobs from outside an analysis
   sources.py                         every daily-fetch board adapter, fetch_all, pool windows
   posting.py                         provider fields -> clean values: HTML, dates, display
   daily.py                           the scheduled pool refresh and profiling
+  snapshot.py                        the day's market snapshot: what the live pool asks for, per family
   opportunities.py                   the pool matched to one user's CV
   extract.py                         a pasted URL -> job fields (SSRF-guarded fetch)
   service.py                         extract + pool lookup + match + storing the posting
@@ -139,28 +142,24 @@ list excludes Kenya.
 
 See `decisions/location-aware-search.md`.
 
-### 3. Skill extraction → list[ProcessedJob]
+### 3. Skills from profiles → (jobs, readable)
 
-`parser.parse_retrieved_jobs` pairs every description with its skills as
-`ProcessedJob(job, skills)`. A posting an earlier run already extracted keeps
-its stored skills (`JobIngestionService.stored_skills`: same `EXTRACTOR_VERSION`,
-extracted after the posting's `updated_at`); only the rest go to
-`extraction_pool`. A scan mostly re-finds postings it has read before, and
-SkillNer costs seconds each. A board whose payload changes on every fetch moves
-`updated_at` each time, so its postings are read again: safe, just no saving.
+`parser.parse_retrieved_jobs(raw_jobs, profiles)` returns every posting with
+text as `ProcessedJob(job, skills)`, plus the readable subset. A posting's skills
+are its requirement profile's (required, preferred, mentioned, then the title's),
+named by the one vocabulary in `src/matching/skills.txt`: the same profile the fit
+score, Opportunities and the market snapshot read. Stored profiles are reused
+(`JobIngestionService.stored_profiles`); anything else is profiled in
+milliseconds. Only readable postings (profile not `thin`) feed `MarketAnalyzer`,
+since a short summary names few skills and would deflate every frequency. If a
+scan has nothing readable, every posting is used.
 
-`ExtractionPool` wraps a `ProcessPoolExecutor` whose initializer builds one
-`SkillExtractor` per worker and keeps it warm for the process lifetime. Workers
-default to `min(4, cpus - 1)`, overridable with `JOBRADAR_EXTRACTION_WORKERS`;
-the cap is a memory bound, since each worker holds its own `en_core_web_lg` and
-the 31k-entry matchers.
-
-Processes rather than threads: the work is pure CPU, so the GIL blocks any
-thread gain, and spaCy pipelines are unsafe to call concurrently on one object.
-
-A posting whose extraction raises is **dropped**, not kept with an empty skill
-list — keeping it counted a job toward `jobs_analyzed` that contributed no
-skills, deflating every frequency.
+Until 2026-10-01 this step ran SkillNer in an `ExtractionPool` of worker
+processes, at seconds a posting, and its open EMSI search kept surfacing
+"Custom Backend", "Workflows" and "Curiosity". `skill_extractor.py`,
+`extraction_pool.py`, `stored_skills` and `persist_skills` remain for a week as a
+rollback path, and the scan path no longer imports them. See
+`decisions/skill-vocabulary.md`.
 
 ### 4. The off-market filter
 
@@ -198,6 +197,14 @@ migration 014 or a rules change); `--dry-run` fetches and stores nothing.
 A source failing costs its own postings; the run fails (red in Actions) only
 when most sources fail or nothing could be stored.
 
+Last, `snapshot.take()` counts the profiled live pool into `market_snapshots`:
+one row per role family per day, with postings, readable postings, seniority mix
+and each skill as `[required, preferred, mentioned]`. It is the only record of
+what was asked for on a past day, since profiles are overwritten and jobs will
+not be kept forever. A failed snapshot is logged and does not fail the run;
+`python -m src.jobpool.snapshot` takes it again. See
+`decisions/market-snapshots.md`.
+
 `GET /dashboard/opportunities` matches the live pool (`sources.POOL_WINDOWS`:
 90 days old at most; boards read in full must have been seen in the last 3
 days, anything else in the last 30) against the saved CV, prefiltered in SQL to
@@ -209,17 +216,16 @@ cached per user and CV fingerprint for ten minutes.
 
 ## The skill vocabulary
 
-Everything downstream of extraction compares skill *strings*, so both sides must
-speak one vocabulary.
+Everything compares skill *strings*, so both sides speak one vocabulary:
+`src/matching/skills.txt`, a closed list grown by review
+(`decisions/skill-vocabulary.md`). Postings are read by `skills.scan`, and the
+CV's free-text skills by `parser.cv_skill_names`, which uses `resolve_all`.
+Both are displayed in the vocabulary's spelling ("React", "PostgreSQL"). Names
+the vocabulary does not know are kept as written: still the user's, never
+matched.
 
-`SkillExtractor` emits **canonical EMSI names** looked up by `skill_id` from
-`SKILL_DB` — not SkillNer's `doc_node_value`, which is the matched span from
-lemmatised text and arrives mangled (`big datum`, `machine learn`).
-
-CV skills arrive from the LLM as free text, so `JobRadarAgent` passes them
-through `skill_extractor.normalize()` before market analysis, mapping them onto
-the same canonical names. Unrecognised skills are kept verbatim rather than
-dropped.
+The SkillNer notes below describe the extractor the scan used until 2026-10-01.
+It is kept for a week as a rollback path.
 
 Two denylists filter known-bad matches:
 
@@ -243,6 +249,8 @@ PostgreSQL on Neon. The job pipeline's tables:
 searches ─1─n─ search_provider_runs
    │
    └─n─ job_observations ─1─ jobs ─n─ job_skills ─1─ skills
+
+market_snapshots   (taken_on, profiler_version, family): daily counts, no job ids
 ```
 
 and each user's data: `users` (with `location_preferences`) ─1─n─ `cvs`,

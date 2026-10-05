@@ -36,7 +36,7 @@ swift | Swift | language | ~Swift | swiftui=0.7, ios=0.7
 objective-c | Objective-C | language | objective c, objc, obj c | swift=0.5, ios=0.6
 dart | Dart | language | dart | flutter=0.8
 r | R | language | r programming, r language, rstudio, ~R | statistics=0.4
-sql | SQL | language | sql, t sql, tsql, pl sql, plsql, ansi sql | postgresql=0.7, mysql=0.7, sql server=0.7
+sql | SQL | language | sql, t sql, tsql, pl sql, plsql, ansi sql, relational databases, relational database, rdbms, query optimization | postgresql=0.7, mysql=0.7, sql server=0.7
 bash | Bash | language | bash, shell scripting, shell script, shell scripts, bash scripting | linux=0.4
 powershell | PowerShell | language | powershell, windows powershell |
 elixir | Elixir | language | elixir, phoenix framework |
@@ -56,7 +56,7 @@ vue | Vue.js | frontend | vue, vue.js, vuejs, vue 3, vue3 | nuxt=0.7, react=0.4
 nuxt | Nuxt | frontend | nuxt, nuxt.js, nuxtjs | vue=0.8
 angular | Angular | frontend | angular, angularjs, angular.js | react=0.3, typescript=0.4
 svelte | Svelte | frontend | svelte, sveltekit | react=0.3
-redux | Redux / state management | frontend | redux, redux toolkit, zustand, mobx | react=0.5
+redux | Redux / state management | frontend | redux, redux toolkit, zustand, mobx, ngrx | react=0.5
 jquery | jQuery | frontend | jquery | javascript=0.5
 tailwind | Tailwind CSS | frontend | tailwind, tailwindcss, tailwind css | css=0.7
 bootstrap | Bootstrap | frontend | ^Bootstrap | css=0.6
@@ -67,7 +67,7 @@ storybook | Storybook | frontend | storybook |
 three.js | Three.js | frontend | three.js, threejs, webgl, webgpu |
 accessibility | Accessibility | frontend | accessibility, a11y, wcag |
 figma | Figma | design | figma, sketch app | ui/ux design=0.6
-ui/ux design | UI/UX design | design | ui/ux, ui ux design, ux design, ui design, user experience design, user interface design, wireframing, wireframes | figma=0.6
+ui/ux design | UI/UX design | design | ui/ux, ui ux design, ux design, ui design, user experience design, user interface design, wireframing, wireframes, user centered design, user centred design, experience design | figma=0.6
 
 # ----------------------------------------------------------------- backend
 node.js | Node.js | backend | node.js, nodejs, node js, ^Node | express=0.8, nestjs=0.6, javascript=0.6
@@ -80,7 +80,7 @@ spring boot | Spring Boot | backend | spring boot, springboot, spring framework,
 ruby on rails | Ruby on Rails | backend | ruby on rails, rails, ror | ruby=0.9
 laravel | Laravel | backend | laravel | php=0.9
 .net | .NET | backend | .net, dotnet, .net core, .net framework, asp.net, asp.net core, asp.net mvc | c#=0.8
-rest api | REST APIs | backend | rest api, rest apis, restful, restful api, restful apis, restful services, rest services, api, apis, api design, api development, web api, web apis, application programming interface, ~REST | graphql=0.5
+rest api | REST APIs | backend | rest api, rest apis, restful, restful api, restful apis, restful services, rest services, api design, api development, build apis, building apis, develop apis, developing apis, design apis, designing apis, web api, web apis, application programming interface, ~REST | graphql=0.5
 graphql | GraphQL | backend | graphql, apollo graphql, apollo server | rest api=0.6
 grpc | gRPC | backend | grpc, protobuf, protocol buffers | rest api=0.4
 microservices | Microservices | backend | microservices, microservice, micro services, microservice architecture, microservices architecture | rest api=0.4
@@ -93,7 +93,7 @@ nginx | Nginx | devops | nginx, apache http server |
 prisma | Prisma | backend | prisma, drizzle, typeorm, sequelize | postgresql=0.3
 sqlalchemy | SQLAlchemy | backend | sqlalchemy, alembic | python=0.6
 hibernate | Hibernate | backend | hibernate, jpa | java=0.6
-oauth | Auth (OAuth, JWT) | security | oauth, oauth2, oauth 2.0, openid connect, oidc, jwt, saml | application security=0.3
+oauth | Auth (OAuth, JWT) | security | oauth, oauth2, oauth 2.0, openid connect, oidc, jwt, saml, webauthn, passkeys | application security=0.3
 payments | Payments integration (M-Pesa) | backend | m pesa, mpesa, daraja api, payment gateway, payment gateways, payment integration, payments integration |
 
 # --------------------------------------------------------------- databases
@@ -126,14 +126,14 @@ gitlab ci | GitLab CI | devops | gitlab ci, gitlab pipelines, gitlab runners | c
 jenkins | Jenkins / CI servers | devops | jenkins, circleci, circle ci, travis ci, teamcity, argo cd, argocd | ci/cd=0.9
 linux | Linux | devops | linux, unix, ubuntu, debian, centos, rhel, red hat linux | bash=0.4
 git | Git | tool | git, version control, github, gitlab, bitbucket |
-observability | Observability | devops | observability, prometheus, grafana, datadog, new relic, splunk, opentelemetry, sentry, elk, elk stack, monitoring and alerting |
+observability | Observability | devops | observability, prometheus, grafana, datadog, new relic, splunk, opentelemetry, sentry, elk, elk stack, monitoring and alerting, kibana | 
 vercel | Vercel | cloud | vercel | netlify=0.8
 netlify | Netlify | cloud | netlify | vercel=0.8
 heroku | Heroku | cloud | heroku, render.com, fly.io |
 cloudflare | Cloudflare | cloud | cloudflare, cloudflare workers |
 
 # -------------------------------------------------------------- data, ML
-machine learning | Machine Learning | ml | machine learning, ml, predictive modeling, predictive modelling, statistical learning | deep learning=0.5, scikit-learn=0.6
+machine learning | Machine Learning | ml | machine learning, ml, predictive modeling, predictive modelling, statistical learning, unsupervised learning, supervised learning | deep learning=0.5, scikit-learn=0.6
 deep learning | Deep Learning | ml | deep learning, neural networks, neural network, cnn, cnns, rnn, lstm, transformer models, transformer architecture | machine learning=0.8, pytorch=0.5, tensorflow=0.5
 pytorch | PyTorch | ml | pytorch, torch | tensorflow=0.7, deep learning=0.8
 tensorflow | TensorFlow | ml | tensorflow, tensor flow, keras | pytorch=0.7, deep learning=0.8
@@ -142,16 +142,16 @@ xgboost | XGBoost | ml | xgboost, lightgbm, catboost, gradient boosting | scikit
 pandas | pandas | data | pandas | numpy=0.5, data analysis=0.6
 numpy | NumPy | data | numpy | pandas=0.5
 scipy | SciPy | data | scipy | numpy=0.5
-nlp | NLP | ml | nlp, natural language processing, text mining, text classification, spacy, nltk, named entity recognition | llm=0.6
+nlp | NLP | ml | nlp, natural language processing, text mining, text classification, spacy, nltk, named entity recognition, information retrieval | llm=0.6
 computer vision | Computer Vision | ml | computer vision, opencv, image processing, object detection, image recognition, image classification | deep learning=0.5
-llm | LLMs | ml | llm, llms, large language model, large language models, language model, generative ai, genai, gen ai, openai api, gpt 4, gpt, prompt engineering, fine tuning llms | nlp=0.6, rag=0.7
-rag | RAG | ml | rag, retrieval augmented generation, semantic search, vector search | llm=0.8, vector databases=0.6
-langchain | LangChain | ml | langchain, llamaindex, llama index, langgraph, crewai, autogen | llm=0.8, rag=0.7
+llm | LLMs | ml | llm, llms, large language model, large language models, language model, generative ai, genai, gen ai, openai api, gpt 4, gpt, prompt engineering, fine tuning llms, conversational ai | nlp=0.6, rag=0.7
+rag | RAG | ml | rag, retrieval augmented generation, semantic search, vector search, embeddings, text embeddings, embedding models | llm=0.8, vector databases=0.6
+langchain | LangChain | ml | langchain, llamaindex, llama index, langgraph, crewai, autogen, langsmith, langfuse | llm=0.8, rag=0.7
 hugging face | Hugging Face | ml | hugging face, huggingface, hugging face transformers, sentence transformers | llm=0.5, nlp=0.6, pytorch=0.4
 vector databases | Vector databases | ml | vector database, vector databases, vector db, vector store, vector stores, pinecone, weaviate, chroma, chromadb, faiss, pgvector, milvus, qdrant | rag=0.6
 mlops | MLOps | ml | mlops, ml ops, mlflow, kubeflow, model deployment, model serving, sagemaker, amazon sagemaker, vertex ai, bentoml | docker=0.3
 reinforcement learning | Reinforcement learning | ml | reinforcement learning, rlhf |
-statistics | Statistics | data | statistics, statistical analysis, statistical modeling, statistical modelling, hypothesis testing, a/b testing, ab testing, mathematical statistics, applied statistics | data analysis=0.6
+statistics | Statistics | data | statistics, statistical analysis, statistical modeling, statistical modelling, hypothesis testing, a/b testing, ab testing, mathematical statistics, applied statistics, statistical methods, statistical inference, experimental design, experiment design, online experiments, multivariate testing | data analysis=0.6
 data analysis | Data analysis | data | data analysis, data analytics, exploratory data analysis, eda | statistics=0.5, sql=0.3
 data visualization | Data visualization | data | data visualization, data visualisation, matplotlib, seaborn, plotly, d3.js | tableau=0.5, power bi=0.5
 tableau | Tableau | data | tableau | power bi=0.7, data visualization=0.8
@@ -174,7 +174,7 @@ jupyter | Jupyter | data | jupyter, jupyter notebook, jupyter notebooks, jupyter
 react native | React Native | mobile | react native, expo go | react=0.7, flutter=0.4
 flutter | Flutter | mobile | flutter | dart=0.9, react native=0.4
 android | Android | mobile | android, android sdk, android development, jetpack compose, android studio | kotlin=0.6, java=0.4
-ios | iOS | mobile | ios, ios development, xcode, uikit, cocoapods | swift=0.7
+ios | iOS | mobile | ios, ios development, xcode, uikit, cocoapods, cocoa touch | swift=0.7
 swiftui | SwiftUI | mobile | swiftui, swift ui | swift=0.8, ios=0.7
 
 # ---------------------------------------------------------------- testing
@@ -182,12 +182,12 @@ unit testing | Automated testing | testing | unit testing, unit tests, unit test
 jest | Jest / Vitest | testing | jest, vitest, mocha, jasmine, react testing library, testing library | unit testing=0.8
 pytest | pytest | testing | pytest | unit testing=0.8
 junit | JUnit | testing | junit, testng, mockito | unit testing=0.8
-e2e testing | End-to-end testing | testing | end to end testing, e2e testing, e2e tests, cypress, playwright, selenium, puppeteer, webdriver, appium | unit testing=0.5
+e2e testing | End-to-end testing | testing | end to end testing, e2e testing, e2e tests, cypress, playwright, selenium, puppeteer, webdriver, appium, regression testing | unit testing=0.5
 
 # --------------------------------------------------- security, infra, other
-application security | Application security | security | application security, appsec, owasp, secure coding, penetration testing, pen testing, vulnerability assessment, threat modeling, threat modelling |
-cybersecurity | Cybersecurity | security | cybersecurity, cyber security, information security, infosec, siem, soc 2, iso 27001 | application security=0.4
-networking | Computer networking | infra | computer networking, network engineering, tcp/ip, ccna, routing and switching, lan wan, dns, vpn, firewalls |
+application security | Application security | security | application security, appsec, owasp, secure coding, penetration testing, pen testing, vulnerability assessment, threat modeling, threat modelling, offensive security, red teaming, red team, burp suite, security testing | 
+cybersecurity | Cybersecurity | security | cybersecurity, cyber security, information security, infosec, siem, soc 2, iso 27001, fedramp, pci dss, nist 800 53, nist csf | application security=0.4
+networking | Computer networking | infra | computer networking, network engineering, tcp/ip, ccna, routing and switching, lan wan, dns, vpn, firewalls, cisco meraki, network infrastructure, network protocols, network automation, network segmentation | 
 active directory | Active Directory | infra | active directory, azure ad, entra id, ldap, group policy |
 jira | Jira | tool | jira, confluence |
 wordpress | WordPress | cms | wordpress, woocommerce | php=0.4
@@ -198,5 +198,94 @@ intersystems | InterSystems (Caché, IRIS) | enterprise | intersystems, intersys
 unity | Unity | game | unity3d, unity 3d, unity engine, ^Unity | c#=0.5
 unreal engine | Unreal Engine | game | unreal engine, unreal, ue5, ue4 | c++=0.5
 blockchain | Blockchain | blockchain | blockchain, web3, ethereum, smart contracts, smart contract, defi | solidity=0.6
-embedded systems | Embedded systems | embedded | embedded systems, embedded software, embedded c, firmware, microcontrollers, rtos, arduino, raspberry pi, stm32 | c=0.6
+embedded systems | Embedded systems | embedded | embedded systems, embedded software, embedded c, firmware, microcontrollers, rtos, arduino, raspberry pi, stm32, freertos, zephyr rtos, real time operating systems, real time operating system | c=0.6
 fpga | FPGA | embedded | fpga, verilog, vhdl, systemverilog |
+# ------------------------------------------- added 2026-10-01, discovery report
+# Chosen from python -m src.matching.discover on the live pool (decisions/skill-vocabulary.md).
+typography | Typography | design | typography |
+visual design | Visual design | design | visual design |
+product design | Product design | design | product design | ui/ux design=0.6
+prototyping | Prototyping | design | prototyping, rapid prototyping, interactive prototypes, framer | figma=0.3
+interaction design | Interaction design | design | interaction design, ixd | ui/ux design=0.6
+information architecture | Information architecture | design | information architecture, information design | 
+design systems | Design systems | design | design system, design systems, visual systems | figma=0.3
+adobe creative suite | Adobe Creative Suite | design | adobe creative suite, adobe creative cloud, creative cloud, adobe cc, adobe suite, photoshop, adobe photoshop, adobe illustrator, indesign, adobe indesign, after effects, adobe after effects, premiere pro, adobe premiere, adobe xd |
+user research | User research | design | user research, ux research, usability testing, usability studies, user interviews, human computer interaction, hci, design research | ui/ux design=0.4
+brand design | Brand design | design | brand design, brand identity, branding |
+graphic design | Graphic design | design | graphic design | adobe creative suite=0.4
+illustration | Illustration | design | illustration, digital illustration |
+web design | Web design | design | web design | ui/ux design=0.4
+motion design | Motion design | design | motion graphics, motion design |
+art direction | Art direction | design | art direction | brand design=0.3
+project management | Project management | product | project management, pmp, project planning, prince2, pgmp | 
+change management | Change management | product | change management |
+agile | Agile / Scrum | product | scrum, kanban, agile methodology, agile methodologies, agile development, agile practices, agile scrum |
+product requirements | Product requirements (PRDs) | product | product requirements, product requirements document, product requirements documents, product requirement documents, prd, prds |
+release management | Release management | devops | release management, release engineering | 
+smartsheet | Smartsheet | tool | smartsheet |
+primavera p6 | Primavera P6 | tool | primavera p6, primavera, oracle primavera |
+ai assistants | AI assistants (ChatGPT, Copilot) | tool | chatgpt, github copilot, ai coding assistants, ai coding tools, ai assisted development, claude code |
+root cause analysis | Root cause analysis | testing | root cause analysis |
+load testing | Load testing | testing | load testing, performance testing, stress testing, jmeter, gatling, locust |
+chaos engineering | Chaos engineering | devops | chaos engineering |
+robotics | Robotics | embedded | robotics, ^ROS, ros2 |
+hardware protocols | Hardware protocols (I2C, SPI, UART) | embedded | i2c, spi, uart, can bus, modbus | embedded systems=0.4
+bluetooth | Bluetooth | embedded | bluetooth, ble, bluetooth low energy |
+iot | IoT | embedded | iot, internet of things | embedded systems=0.3
+help desk tools | Help desk tools (Zendesk, ServiceNow) | tool | zendesk, freshdesk, servicenow, jira service management |
+google workspace | Google Workspace | tool | google workspace, g suite, gsuite, google slides, google sheets, google docs | 
+microsoft 365 | Microsoft 365 | tool | microsoft 365, office 365, o365, m365 |
+macos | macOS | infra | macos, mac os, os x, osx |
+device management | Device management (Jamf, Intune) | infra | jamf, intune, mdm, mobile device management |
+identity and access management | Identity and access management | security | identity and access management, iam, okta, access management | active directory=0.4
+devsecops | DevSecOps | security | devsecops |
+incident response | Incident response | devops | incident response, incident management, on call rotation |
+gitops | GitOps | devops | gitops | kubernetes=0.3
+configuration management | Configuration management | devops | configuration management, puppet | ansible=0.5
+disaster recovery | Disaster recovery | devops | disaster recovery, backup and recovery |
+system hardening | System hardening | security | hardening, system hardening, security hardening, cis benchmarks |
+load balancing | Load balancing | devops | load balancing, load balancers, load balancer |
+webhooks | Webhooks | backend | webhooks, webhook |
+ddos mitigation | DDoS mitigation | security | ddos mitigation, ddos protection, ddos |
+vulnerability management | Vulnerability management | security | vulnerability management, vulnerability scanning | application security=0.3
+network security | Network security | security | network security | networking=0.4
+endpoint security | Endpoint security | security | endpoint security, edr, crowdstrike |
+threat detection | Threat detection | security | threat detection, detection engineering, threat hunting | cybersecurity=0.3
+supply chain security | Software supply chain security | security | supply chain security, software supply chain, sbom |
+digital forensics | Digital forensics | security | digital forensics, dfir, malware analysis | 
+cryptography | Cryptography | security | cryptography, encryption, pki, key management | 
+business intelligence | Business intelligence | data | business intelligence, bi tools, bi reporting | tableau=0.3, power bi=0.3
+data governance | Data governance | data | data governance, data lineage, data catalog |
+data quality | Data quality | data | data quality, data validation, great expectations |
+workday | Workday | enterprise | workday |
+hubspot | HubSpot | crm | hubspot | salesforce=0.3
+causal inference | Causal inference | data | causal inference, econometrics | statistics=0.5
+operations research | Operations research | data | operations research, mathematical optimization, linear programming |
+forecasting | Forecasting / time series | data | forecasting, time series, time series analysis, time series forecasting, demand forecasting | statistics=0.3
+anomaly detection | Anomaly detection | ml | anomaly detection, outlier detection | machine learning=0.3
+feature engineering | Feature engineering | ml | feature engineering, feature store, feature stores | machine learning=0.4
+recommender systems | Recommender systems | ml | recommender systems, recommendation systems, recommendation engines, recsys | machine learning=0.4
+model optimization | Model optimization (quantization, distillation) | ml | quantization, model quantization, distillation, knowledge distillation, tensorrt, model compression | deep learning=0.3
+llm serving | LLM serving (vLLM, TGI) | ml | vllm, tgi, triton inference server, llm inference, inference optimization | llm=0.4
+compilers | Compilers | systems | compilers, compiler design, llvm, mlir | c++=0.3
+rxjs | RxJS | frontend | rxjs | angular=0.4
+internationalization | Internationalization (i18n) | frontend | internationalization, i18n, l10n, software localization |
+system design | System design | backend | system design, systems design, distributed system design, software architecture |
+# ------------------------------------------- second pass, same report
+cloud security | Cloud security | security | cloud security, cloudtrail, guardduty, cspm | cybersecurity=0.3
+api testing | API testing | testing | api testing, postman, insomnia | rest api=0.3
+twilio | Twilio | backend | twilio |
+hpc | High-performance computing | infra | high performance computing, hpc, slurm, infiniband, supercomputing |
+workflow automation tools | Workflow automation (Zapier, n8n) | tool | zapier, n8n, workato, ipaas |
+virtualization | Virtualization | infra | virtualization, vmware, hyper v, kvm, proxmox |
+video editing | Video editing | design | video editing, final cut pro, davinci resolve |
+speech ai | Speech AI | ml | speech synthesis, text to speech, speech recognition, asr | deep learning=0.3
+system administration | System administration | infra | system administration, sysadmin, systems administration | linux=0.5
+technical writing | Technical writing | product | technical writing, technical documentation, api documentation |
+business analysis | Business analysis | product | business analysis, requirements gathering, requirements elicitation |
+distributed systems | Distributed systems | backend | distributed systems, distributed computing, fault tolerant systems |
+ai agents | AI agents | ml | ai agents, agentic ai, agentic systems, agentic workflows, multi agent systems, llm agents, agent frameworks | llm=0.5
+# ------------------------------------------- round two, same report
+lean six sigma | Lean / Six Sigma | product | lean six sigma, six sigma, lean manufacturing |
+knowledge graphs | Knowledge graphs | data | knowledge graph, knowledge graphs |
+reverse engineering | Reverse engineering | security | reverse engineering, ghidra, ida pro |

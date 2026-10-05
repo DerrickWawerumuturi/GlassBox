@@ -48,7 +48,7 @@ ON REQUEST
      PDF ──► Groq ──► ParsedQuery
          ──► SearchEngine: JSearch · Muse · Jooble · the pool   (concurrent legs)
          ──► persist + profile ──► MiniLM off-market filter
-         ──► skills: stored ones reused, SkillNer (worker processes) for the rest
+         ──► skills: each posting's requirement profile (skills.txt), stored ones reused
          ──► MarketAnalyzer (demand, gaps, coverage)
          └─► match() per job on its stored profile (ranked_jobs)
 ```
@@ -93,9 +93,9 @@ mirrors this exactly (`frontend/src/types/jobradar.ts`).
 
 ## Performance shape
 
-- **A scan** takes roughly 45 seconds warm when its postings are new; SkillNer
-  extraction for the market statistics is ~80% of it, and postings an earlier
-  run read skip it. Matching the scan's jobs is milliseconds. A scan's jobs join
+- **A scan** used to spend ~80% of its time in SkillNer extraction for the
+  market statistics. Since 2026-10-01, skills come from requirement profiles, at
+  milliseconds a posting, so the search and the LLM read of the CV dominate. Matching the scan's jobs is milliseconds. A scan's jobs join
   the pool as they are stored, and the user's cached Opportunities list is
   dropped when the scan finishes, so they show there at once.
 - **Opportunities** read up to 5,000 stored profiles and score them in about

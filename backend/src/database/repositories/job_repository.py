@@ -193,6 +193,13 @@ def row_to_job(row):
     )
 
 
+def descriptions(conn, ids: list[int]) -> dict[int, str]:
+    """Posting text by job id, for reading tools that start from pool rows (which carry no text)."""
+    with conn.cursor() as cur:
+        cur.execute("select id, description from jobs where id = any(%s::bigint[])", (ids,))
+        return {row["id"]: row["description"] or "" for row in cur.fetchall()}
+
+
 def search_pool(conn, params: dict) -> list:
     with conn.cursor() as cur:
         cur.execute(SEARCH_POOL, params)

@@ -65,6 +65,15 @@ jobs:
           "
           docker run --rm -e DATABASE_URL "$IMAGE" python -m src.database.migrate
 
+      # Opportunities reads only profiles from this image's PROFILER_VERSION. When
+      # a release bumps it (a rules or skills.txt change), the pool must be
+      # re-read now, not at the next 05:00 run, or Opportunities is empty until
+      # then. Incremental: with nothing stale it takes about a second.
+      - name: Re-profile stale jobs
+        env:
+          DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
+        run: docker run --rm -e DATABASE_URL "$IMAGE" python -m src.jobpool.daily --profile-only
+
       - name: Update container app
         # -o none: the default output dumps the full app config, env values
         # included — never printable on a public repo's Actions log.

@@ -49,9 +49,12 @@ comparisons here are exact string matching. Matching across two independently
 produced label sets **fails silently** — it does not error, it just reports the
 user has nothing in common with the market.
 
-The fix lives upstream: `JobRadarAgent` runs CV skills through
-`skill_extractor.normalize()` so both sides share one vocabulary before
-`analyze()` is called. `MarketAnalyzer` assumes this has happened.
+The fix lives upstream. Since 2026-10-01 both sides come from one closed
+vocabulary (`src/matching/skills.txt`): job skills are the postings' requirement
+profiles, and CV skills go through `parser.cv_skill_names`, both in the
+vocabulary's display spelling. Before that, CV skills went through SkillNer's
+`normalize()` to meet its EMSI names. `MarketAnalyzer` assumes this has happened.
+See `decisions/skill-vocabulary.md`.
 
 This bug predated canonical names (`aws` never matched `amazon web service`
 either) but adopting canonical names would have made it far worse, so both

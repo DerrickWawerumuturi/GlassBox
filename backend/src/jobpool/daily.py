@@ -18,12 +18,16 @@ quietly leaving the pool stale.
 Profiling is incremental. Only postings whose text changed, or that were read
 by older rules (PROFILER_VERSION), are profiled again; the first run after a
 rules change backfills the whole pool.
+
+Last, the profiled pool is counted into the day's market snapshot (snapshot.py),
+the record that later comparisons ("since last month") are made from.
 """
 import sys
 import time
 from datetime import datetime, timedelta, timezone
 
 from src.database.services.ingestion import JobIngestionService
+from src.jobpool import snapshot
 from src.jobpool.sources import POOL_WINDOWS, fetch_all
 
 # 30 days (the first cut) threw away live requisitions: 10 of 29 open Kenya
@@ -77,7 +81,20 @@ def main(dry_run: bool = False) -> int:
     started = time.monotonic()
     profiled = ingestion.refresh_profiles()
     print(f"profiled {profiled:,} new or changed postings in {time.monotonic() - started:.0f}s")
+    take_snapshot()
     return 0
+
+
+def take_snapshot() -> None:
+    # After profiling, so the counts describe today's pool. A failure here must
+    # not turn a good refresh red: the pool is fine, only today's record is
+    # missing, and `python -m src.jobpool.snapshot` can take it later that day.
+    try:
+        written = snapshot.take()
+        if written is not None:
+            print(f"snapshot: {written} families")
+    except Exception as err:
+        print(f"snapshot failed: {err}")
 
 
 if __name__ == "__main__":

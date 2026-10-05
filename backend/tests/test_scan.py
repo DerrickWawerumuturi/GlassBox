@@ -14,28 +14,48 @@ def posting(db_id, title, description="Requirements: Python and PostgreSQL."):
     return Job(title=title, description=description, location="Nairobi, Kenya", db_id=db_id)
 
 
-def test_only_postings_nothing_has_read_go_to_skillner(monkeypatch):
-    sent = []
+READABLE = "About the team. " * 60 + "Requirements: Python, PostgreSQL and Docker."
 
-    def extract_many(descriptions):
-        sent.extend(descriptions)
-        return [["Python (Programming Language)"] if "Python" in d else None for d in descriptions]
 
-    monkeypatch.setattr(parser.extraction_pool, "extract_many", extract_many)
-    read_before = posting(1, "Backend Engineer", "Stored before.")
-    unread = posting(2, "Data Engineer", "Requirements: Python.")
-    unstored = posting(None, "ML Engineer", "Requirements: Python and PyTorch.")
-    failing = posting(3, "Platform Engineer", "SkillNer fails on this one.")
+def test_a_scans_skills_come_from_profiles_stored_ones_reused(monkeypatch):
+    reads = []
+    monkeypatch.setattr(parser, "profile_job", lambda job: reads.append(job.title) or profile_job(job))
+    stored = posting(1, "Backend Engineer", "Stored before.")
+    stored_profile = profile_job(posting(1, "Backend Engineer", READABLE.replace("Python", "Go")))
+    unread = posting(2, "Data Engineer", READABLE)
+    unstored = posting(None, "ML Engineer", "Requirements: Python and PyTorch.")       # short: thin
     empty = posting(4, "Nothing to read", "")
 
-    jobs = parser.parse_retrieved_jobs([read_before, unread, unstored, failing, empty],
-                                       known={1: ["PostgreSQL"], 4: ["Go"]})
+    jobs, readable = parser.parse_retrieved_jobs([stored, unread, unstored, empty], {1: stored_profile})
 
-    assert sent == [unread.description, unstored.description, failing.description]
+    assert reads == ["Data Engineer", "ML Engineer"]                     # the stored one is not read again
     assert [(p.job.title, p.skills) for p in jobs] == [
-        ("Backend Engineer", ["PostgreSQL"]), ("Data Engineer", ["Python (Programming Language)"]),
-        ("ML Engineer", ["Python (Programming Language)"]),
+        ("Backend Engineer", ["Go", "PostgreSQL", "Docker"]),
+        ("Data Engineer", ["Python", "PostgreSQL", "Docker"]),
+        ("ML Engineer", ["Machine Learning", "Python", "PyTorch"]),     # the title names one too
     ]
+    # Market statistics count readable postings only; the thin one is still ranked.
+    assert [p.job.title for p in readable] == ["Backend Engineer", "Data Engineer"]
+
+
+def test_a_scan_of_only_thin_postings_still_has_a_market():
+    jobs, readable = parser.parse_retrieved_jobs([posting(1, "Analyst", "Requirements: SQL.")])
+    assert readable == jobs and jobs[0].skills == ["SQL"]
+
+
+def test_cv_skills_are_named_like_posting_skills():
+    # "React.js" and "react" are one skill; a name the vocabulary does not know is kept.
+    assert parser.cv_skill_names(["react.js", "Postgres", "Underwater basket weaving"]) == \
+        {"React", "PostgreSQL", "Underwater basket weaving"}
+
+
+def test_the_scan_path_no_longer_loads_skillner():
+    import subprocess
+    import sys
+    out = subprocess.run([sys.executable, "-c", "import sys, src.Agent.utils.parser; "
+                          "print('src.Agent.utils.skill_extractor' in sys.modules)"],
+                         capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "False"
 
 
 def test_a_stored_profile_is_scored_and_only_unstored_jobs_are_read(monkeypatch):

@@ -1,37 +1,48 @@
-from src.Agent.utils.extraction_pool import extraction_pool
 from src.Agent.utils.types import Job, ProcessedJob
+from src.matching.requirements import JobProfile, profile_job
+from src.matching.skills import display, resolve_all
 
 
-def parse_retrieved_jobs(raw_jobs: list[Job], known: dict[int, list[str]] | None = None) -> list[ProcessedJob]:
+def skill_names(profile: JobProfile) -> list[str]:
+    """Every skill a posting names, display spelling, each once: required, preferred, mentioned, then the title's."""
+    keys = dict.fromkeys((*profile.required, *profile.preferred, *profile.mentioned, *profile.core))
+    return [display(key) for key in keys]
+
+
+def cv_skill_names(names: list[str] | None) -> set[str]:
     """
-    Skills for every posting: `known` ones (by db_id) as stored by an earlier
-    run, SkillNer in parallel for the rest. A scan mostly re-finds postings it
-    has read before, and SkillNer costs seconds a posting.
-
-    Postings whose extraction fails are dropped rather than kept with an empty
-    skill list. Keeping them counted a job in jobs_analyzed that contributed no
-    skills, which deflated every frequency in the market analysis.
+    A CV's skills in the same display spelling as skill_names, so "React" on the
+    CV and "React.js" in a posting are one skill. Names the vocabulary does not
+    know are kept as written: still the user's, just never matched.
     """
-    known = known or {}
-    try:
-        with_description = [job for job in raw_jobs if job.description]
-        unread = [job for job in with_description if job.db_id not in known]
-        extracted = iter(extraction_pool.extract_many([job.description for job in unread]))
+    known, unknown = resolve_all(names)
+    return {display(key) for key in known} | set(unknown)
 
-        cleaned_jobs = []
-        failed = 0
 
-        for job in with_description:
-            skills = known[job.db_id] if job.db_id in known else next(extracted)
-            if skills is None:
-                failed += 1
-                continue
-            cleaned_jobs.append(ProcessedJob(job=job, skills=skills))
+def parse_retrieved_jobs(raw_jobs: list[Job], profiles: dict[int, JobProfile] | None = None,
+                         ) -> tuple[list[ProcessedJob], list[ProcessedJob]]:
+    """
+    (every posting with text, the readable ones) with skills from the one vocabulary.
 
-        if failed:
-            print(f"Dropped {failed} of {len(unread)} postings: skill extraction failed")
+    A scan's skills are its postings' requirement profiles: the same read the
+    fit score, Opportunities and the market snapshot use, so the Market tab and
+    the rest of the app agree on what a skill is (decisions/skill-vocabulary.md).
+    `profiles` are the stored ones by db_id; anything else is read here in
+    milliseconds. SkillNer no longer runs.
 
-        return cleaned_jobs
-
-    except Exception as err:
-        raise ValueError(f"Error parsing the fetched jobs: {err}") from err
+    Only readable postings feed the market statistics. A thin posting (a short
+    summary) names few skills, so counting it would deflate every frequency; it
+    is still ranked. When a scan returned nothing readable, every posting is
+    used rather than showing an empty market.
+    """
+    profiles = profiles or {}
+    processed, readable = [], []
+    for job in raw_jobs:
+        if not job.description:
+            continue
+        profile = profiles.get(job.db_id) or profile_job(job)
+        item = ProcessedJob(job=job, skills=skill_names(profile))
+        processed.append(item)
+        if not profile.thin:
+            readable.append(item)
+    return processed, readable or processed

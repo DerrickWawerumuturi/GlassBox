@@ -167,3 +167,18 @@ the full Neon connection string via `az containerapp show`. They belong in
 container app secrets, referenced as `secretref:`. Note that `GROQ_API_KEY` is
 import-fatal (`llm_client.py:14`), so it must not be absent during a migration
 to secrets; every other key merely disables its provider.
+
+## A deploy prepares the database before the new revision
+
+`deploy.yml` runs two one-off containers from the new image before
+`az containerapp update`, both against `JOBRADAR_DATABASE_URL`:
+
+1. `python -m src.database.migrate`: additive migrations, so the old revision
+   keeps working.
+2. `python -m src.jobpool.daily --profile-only`: re-profiles jobs whose profile
+   is from another `PROFILER_VERSION`. Opportunities reads only current-version
+   profiles, so a release that bumps the version (a rules or `skills.txt` change)
+   would otherwise show an empty list until the 05:00 pool run. It is
+   incremental: about a second when nothing is stale, 1–2 minutes for the whole
+   pool (~11k jobs). While it runs, the old revision's list thins out as its
+   profiles are replaced.

@@ -21,9 +21,10 @@ from src.jobpool.posting import html_to_text
 from src.matching.roles import classify_family, classify_seniority, track
 from src.matching.skills import find_skills, scan
 
-# Bump when any rule here changes: the daily run re-profiles every stored job
-# whose profile carries another version.
-PROFILER_VERSION = "requirements-v1"
+# Bump when any rule here or the vocabulary (skills.txt) changes: the daily run
+# re-profiles every stored job whose profile carries another version, and market
+# snapshots start a new series. v2: 66 skills added from the discovery report.
+PROFILER_VERSION = "requirements-v2"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
