@@ -1,37 +1,51 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Schibsted_Grotesk, JetBrains_Mono, Caveat } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import {Toaster} from "sonner";
 import {AnalysisProvider} from "@/lib/analysis-store";
 import CVProvider from "@/lib/cv-store";
 import {SessionProvider} from "next-auth/react";
 import Navbar from "@/components/Navbar";
+import {ThemeWatcher} from "@/components/ThemeMenu";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
+import {themeScript} from "@/lib/theme";
 
 
-const spaceGrotesk = Space_Grotesk({
-    subsets: ["latin"],
+/*
+ * The brand faces, self-hosted (app/fonts, OFL licences beside them): nothing
+ * is fetched from Google at build or dev time, and the dev server no longer
+ * falls back to Arial when it can't reach it. Each file is the variable font
+ * cut to weights 400-700 and Latin + Latin Extended (how: the 2026-10-05
+ * fonts changelog). The variable names are unchanged, so no CSS had to move.
+ */
+const spaceGrotesk = localFont({
+    src: "./fonts/space-grotesk.woff2",
+    weight: "400 700",
     variable: "--font-space-grotesk",
-    display: "swap"
+    display: "swap",
 })
 
 // Reading text: warmer and calmer at 14-16px than Space Grotesk, whose quirks
 // suit headlines (docs/decisions/design-system.md).
-const schibstedGrotesk = Schibsted_Grotesk({
-    subsets: ["latin"],
+const schibstedGrotesk = localFont({
+    src: "./fonts/schibsted-grotesk.woff2",
+    weight: "400 700",
     variable: "--font-schibsted-grotesk",
-    display: "swap"
+    display: "swap",
 })
 
-const jetBrainsMono = JetBrains_Mono({
-    subsets: ["latin"],
+const jetBrainsMono = localFont({
+    src: "./fonts/jetbrains-mono.woff2",
+    weight: "400 700",
     variable: "--font-jetbrains-mono",
-    display: "swap"
+    display: "swap",
 })
 
-const caveat = Caveat({
-    subsets: ["latin"],
+const caveat = localFont({
+    src: "./fonts/caveat.woff2",
+    weight: "400 700",
     variable: "--font-caveat",
-    display: "swap"
+    display: "swap",
 })
 
 export const viewport: Viewport = {
@@ -50,19 +64,19 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   description:
-      "Upload your CV and Jobradar scans live job postings, shows the skills your market really wants, the ones you have, and the gaps worth closing, all in about a minute.",
+      "Upload your CV and Jobradar scans live jobs. In about a minute it shows the skills your market wants, the ones you have, and the ones you don't yet.",
   openGraph: {
     type: "website",
     siteName: "Jobradar",
     title: "Jobradar: your job market, mapped",
     description:
-        "Your CV vs the live job market: most-wanted skills, your coverage, the gaps worth closing, and real postings ranked by fit.",
+        "Your CV vs the live job market: top skills, the ones you have, the ones you don't yet, and real jobs ranked by fit.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Jobradar: your job market, mapped",
     description:
-        "Your CV vs the live job market: most-wanted skills, your coverage, the gaps worth closing, and real postings ranked by fit.",
+        "Your CV vs the live job market: top skills, the ones you have, the ones you don't yet, and real jobs ranked by fit.",
   },
 };
 
@@ -70,10 +84,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${spaceGrotesk.variable} ${schibstedGrotesk.variable} ${jetBrainsMono.variable} ${caveat.variable} h-full antialiased`}
+      // The theme class is set before paint by the script below, so the server's
+      // className and the live one differ on purpose.
+      suppressHydrationWarning
+      className={`${spaceGrotesk.variable} ${schibstedGrotesk.variable} ${jetBrainsMono.variable} ${caveat.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{__html: themeScript()}} />
+      </head>
       <body className="min-h-full bg-background font-sans text-foreground">
+      <ThemeWatcher />
       <SessionProvider>
+          <AnalyticsProvider />
           <AnalysisProvider>
               <CVProvider>
                   <Navbar />
