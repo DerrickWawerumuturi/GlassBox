@@ -1,18 +1,8 @@
 /**
- * Presentation-only colour helpers for the warm sequential data ramp
- * (`--chart-ramp-1` … `--chart-ramp-5` in globals.css).
- *
- * The ramp encodes magnitude: hotter = larger, scaled to the data's own
- * maximum so every chart uses the full yellow → red sweep.
+ * Axis helpers for the Recharts charts on the anonymous /analysis pages.
+ * (The warm yellow-to-red data ramp was retired on 2026-10-05: orange acts,
+ * it never marks data. Bars use --chart-ink, --chart-have or the gap hatch.)
  */
-
-const RAMP_STEPS = 5;
-
-export function rampColour(value: number, max: number): string {
-    const t = max > 0 ? value / max : 0;
-    const step = Math.min(RAMP_STEPS, Math.max(1, Math.ceil(t * RAMP_STEPS)));
-    return `var(--chart-ramp-${step})`;
-}
 
 /*
  * Percentage axis scaled to the data: the max value rounded up to the next

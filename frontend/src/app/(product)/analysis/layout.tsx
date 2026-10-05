@@ -59,8 +59,8 @@ export default function AnalysisLayout({children}: LayoutProps<"/analysis">) {
                 </nav>
 
                 <p className={"font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground"}>
-                    <span className={"text-primary"}>{analysis.market.jobs_analyzed.toLocaleString()}</span>
-                    {" "}postings analyzed
+                    <span className={"text-foreground"}>{analysis.market.jobs_analyzed.toLocaleString()}</span>
+                    {" "}jobs analyzed
                     {fileName ? ` · ${fileName}` : ""}
                 </p>
             </header>

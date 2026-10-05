@@ -58,7 +58,7 @@ function ScoreMeter({label, value, inert}: {
                         width: `${percent}%`,
                         background: inert
                             ? undefined
-                            : "linear-gradient(90deg, var(--chart-ramp-2), var(--chart-ramp-4))"
+                            : "var(--chart-have)"
                     }}
                 />
             </div>
@@ -75,8 +75,8 @@ function SkillChips({skills, tone}: { skills: string[]; tone: "have" | "missing"
                     className={cn(
                         "rounded-full px-2.5 py-0.5 text-xs",
                         tone === "have"
-                            ? "bg-accent-lime/10 text-foreground ring-1 ring-accent-lime/45"
-                            : "bg-muted text-muted-foreground ring-1 ring-chart-ramp-4/25"
+                            ? "bg-[var(--chart-have)]/12 text-foreground ring-1 ring-[var(--chart-have)]/45"
+                            : "text-muted-foreground ring-1 ring-[var(--chart-gap)]/45"
                     )}
                 >
                     {skill}
@@ -120,7 +120,7 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
                 aria-expanded={open}
                 className={"flex w-full items-center gap-4 px-4 py-3 text-left"}
             >
-                <span className={"w-14 shrink-0 font-mono text-lg font-bold tracking-tight tabular-nums text-primary"}>
+                <span className={"w-14 shrink-0 font-mono text-lg font-bold tracking-tight tabular-nums text-foreground"}>
                     {toPercent(ranked.overall_score)}%
                 </span>
                 <span className={"flex min-w-0 flex-col"}>
@@ -163,7 +163,7 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
                                 .join(" and ")}{" "}
                             {inertScores.size === 1 ? "scores are" : "scores are"} identical
                             for every match here, so they don&apos;t separate one job from
-                            another, the postings carry no data to compare on.
+                            another. These jobs carry no data to compare on.
                         </p>
                     )}
 
@@ -174,7 +174,7 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
                         {matched.length > 0
                             ? <SkillChips skills={matched} tone={"have"} />
                             : <p className={"text-xs text-muted-foreground"}>
-                                None of this posting&apos;s listed skills are on your CV.
+                                None of this job&apos;s listed skills are on your CV.
                             </p>}
                     </div>
 
@@ -197,7 +197,7 @@ function JobRow({ranked, userSkillKeys, inertScores, topMatch}: {
                             rel={"noreferrer noopener"}
                             className={"inline-flex w-fit items-center gap-1.5 text-xs font-medium text-primary hover:underline"}
                         >
-                            View posting <ExternalLinkIcon className={"h-3 w-3"} />
+                            View job ad <ExternalLinkIcon className={"h-3 w-3"} />
                         </a>
                     )}
                 </div>
@@ -236,12 +236,12 @@ const JobMatches = ({jobs, userSkills}: JobMatchesProps) => {
         <section className={"flex flex-col gap-4"}>
             <div className={"flex flex-col gap-1"}>
                 <h2 className={"flex items-center gap-2.5 font-heading text-base font-bold uppercase tracking-[0.06em]"}>
-                    <span aria-hidden className={"h-3.5 w-1 shrink-0 bg-primary"} />
+                    <span aria-hidden className={"h-3.5 w-1 shrink-0 bg-foreground/40"} />
                     Job matches
                 </h2>
                 <p className={"font-mono text-xs text-muted-foreground"}>
-                    Job postings sorted by how well they fit your CV, best first,
-                    click one to see why
+                    Jobs sorted by how well they fit your CV, best first. Click one to
+                    see why.
                 </p>
             </div>
 
@@ -271,10 +271,10 @@ const JobMatches = ({jobs, userSkills}: JobMatchesProps) => {
 
             <PanelNote
                 points={[
-                    <>Each row is a real job posting, the big percentage is how well you fit it — best fits first.</>,
+                    <>Each row is a real job. The big percentage is how well you fit it. Best fits first.</>,
                     <>It measures fit, not how similar the texts are: a senior role, too many years short, or a job you can&apos;t hold from where you are scores low however well the skills overlap.</>,
                     <>Click a row for the reasons behind the number, and the required skills you have and lack.</>,
-                    <>Learning, or simply listing, the missing required skills is what moves a match.</>
+                    <>A match rises with each required skill your CV lists.</>
                 ]}
             />
         </section>

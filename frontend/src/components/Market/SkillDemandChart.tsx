@@ -17,16 +17,16 @@ const SkillDemandChart = ({skills}: SkillDemandChartProps) => {
             <PanelHeader
                 title={"Market skill demand"}
                 qualifier={"most requested"}
-                lead={"The skills that appear most often in the job postings we analyzed"}
+                lead={"The skills that appear most often in the jobs we read"}
             />
             <SkillBarChart skills={skills} />
 
             <PanelNote
                 points={[
                     <>Each bar is one skill, the longer it is, the more jobs have it as a requirement.</>,
-                    <>The number at the end is the exact share: 40% means 4 in 10 postings ask for that skill.</>,
-                    <>Yellow bars are requested less often; the closer to red, the hotter the skill is in this market.</>,
-                    <>Hover a bar to see the actual number of job postings behind it.</>
+                    <>The number at the end is the exact share: 40% means 4 in 10 jobs ask for that skill.</>,
+                    <>Bar length is the only measure. Colour doesn&apos;t rank anything here.</>,
+                    <>Hover a bar to see how many jobs ask for it.</>
                 ]}
             />
         </section>

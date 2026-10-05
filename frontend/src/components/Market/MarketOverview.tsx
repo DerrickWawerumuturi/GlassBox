@@ -31,50 +31,44 @@ const MarketOverview = ({market}: MarketOverviewProps) => {
         <section className={"flex flex-col gap-4"}>
             <div className={"flex items-baseline justify-between gap-4"}>
                 <h2 className={"flex items-center gap-2.5 font-heading text-base font-bold uppercase tracking-[0.06em]"}>
-                    <span aria-hidden className={"h-3.5 w-1 shrink-0 bg-primary"} />
+                    <span aria-hidden className={"h-3.5 w-1 shrink-0 bg-foreground/40"} />
                     Market overview
                 </h2>
                 <p className={"font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground"}>
-                    Based on {jobs_analyzed.toLocaleString()} job postings
+                    Based on {jobs_analyzed.toLocaleString()} jobs
                 </p>
             </div>
 
             <div className={"grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5"}>
-                {/* The five tiles sweep the warm ramp left to right, yellow → red. */}
                 <MarketCard
                     label={"Jobs analyzed"}
                     value={jobs_analyzed.toLocaleString()}
-                    hint={"postings in this snapshot"}
-                    className={"[--tile-accent:var(--chart-ramp-1)]"}
+                    hint={"jobs read in this scan"}
                 />
                 <MarketCard
                     label={"Skill coverage"}
                     value={`${coveragePercent(skill_coverage)}%`}
-                    hint={`${skill_coverage.covered} of ${skill_coverage.total} tracked skills`}
+                    hint={`${skill_coverage.covered} of the ${skill_coverage.total} top skills are on your CV`}
                     accent
-                    className={"[--tile-accent:var(--chart-ramp-2)]"}
                 />
                 <MarketCard
                     label={"Most demanded"}
                     value={leader ? leader.skill : "—"}
                     hint={
                         leader
-                            ? `${formatPercent(leader.frequency)} of jobs · ${leader.job_count.toLocaleString()} postings`
+                            ? `in ${leader.job_count.toLocaleString()} of ${jobs_analyzed.toLocaleString()} jobs (${formatPercent(leader.frequency)})`
                             : "no skills returned"
                     }
-                    className={"[--tile-accent:var(--chart-ramp-3)]"}
                 />
                 <MarketCard
                     label={"Your skills in market"}
                     value={mySkills.length}
-                    hint={"matched against this market"}
-                    className={"[--tile-accent:var(--chart-ramp-4)]"}
+                    hint={"of your CV skills appear in these jobs"}
                 />
                 <MarketCard
                     label={"Skill gaps"}
                     value={gaps.length}
-                    hint={`missing, in ${toPercent(GAP_FREQUENCY_THRESHOLD)}%+ of jobs`}
-                    className={"[--tile-accent:var(--chart-ramp-5)]"}
+                    hint={`skills not on your CV, each in ${toPercent(GAP_FREQUENCY_THRESHOLD)}% of jobs or more`}
                 />
             </div>
         </section>

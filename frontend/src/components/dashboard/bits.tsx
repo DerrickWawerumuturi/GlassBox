@@ -97,7 +97,7 @@ export function TagChip({children, tone = "neutral"}: {
             className={cn(
                 "inline-flex items-center whitespace-nowrap rounded-[4px] px-1.5 py-px font-mono text-[10.5px]",
                 tone === "have" && "bg-success/15 text-success",
-                tone === "gap" && "bg-primary/15 text-primary",
+                tone === "gap" && "border border-dashed border-[var(--chart-gap)] text-muted-foreground",
                 tone === "neutral" && "bg-foreground/6 text-muted-foreground"
             )}
         >
@@ -160,7 +160,7 @@ export function SectionLabel({children, className}: { children: React.ReactNode;
     )
 }
 
-/** Attio-style score chip — lime saturation tracks the match strength. */
+/** Score chip: lime for strong matches; weaker ones stay neutral (orange only acts). */
 export function ScoreChip({value, className}: { value: number | string | null; className?: string }) {
     const score = Math.round(Number(value ?? NaN));
     if (Number.isNaN(score)) return <span className={"text-muted-foreground"}>—</span>;
@@ -171,8 +171,8 @@ export function ScoreChip({value, className}: { value: number | string | null; c
                 "inline-block rounded-[4px] px-2 py-0.5 font-mono text-xs font-bold tabular-nums",
                 score >= 85 && "bg-accent-lime text-accent-lime-ink",
                 score >= 70 && score < 85 && "bg-accent-lime/15 text-accent-lime",
-                score >= 50 && score < 70 && "bg-chart-ramp-2/15 text-chart-ramp-2",
-                score < 50 && "bg-primary/15 text-primary",
+                score >= 50 && score < 70 && "bg-foreground/8 text-foreground/80",
+                score < 50 && "bg-foreground/5 text-muted-foreground",
                 className
             )}
         >
@@ -184,8 +184,8 @@ export function ScoreChip({value, className}: { value: number | string | null; c
 const STATUS_STYLE: Record<ApplicationStatus, { chip: string; dot: string }> = {
     saved: {chip: "bg-[#3e63dd]/18 text-[#93b0ff]", dot: "bg-[#93b0ff]"},
     applied: {chip: "bg-success/12 text-success", dot: "bg-success"},
-    screening: {chip: "bg-chart-ramp-2/12 text-chart-ramp-2", dot: "bg-chart-ramp-2"},
-    interview: {chip: "bg-primary/12 text-primary", dot: "bg-primary"},
+    screening: {chip: "bg-[#00a2c7]/15 text-[#5ccce6]", dot: "bg-[#5ccce6]"},
+    interview: {chip: "bg-[#12a594]/15 text-[#0bd8b6]", dot: "bg-[#0bd8b6]"},
     offer: {chip: "bg-accent-lime font-bold text-accent-lime-ink", dot: "bg-accent-lime-ink"},
     rejected: {chip: "bg-destructive/15 text-destructive", dot: "bg-destructive"},
     withdrawn: {chip: "bg-[#8e4ec6]/15 text-[#c395e8]", dot: "bg-[#c395e8]"}
@@ -263,7 +263,7 @@ export function DemandMeter({percent, tone, className}: {
                     className={cn(
                         "h-2 flex-1 rounded-[2px]",
                         cell < filled
-                            ? tone === "have" ? "bg-success" : "bg-primary"
+                            ? tone === "have" ? "bg-success" : "bar-gap ring-1 ring-inset ring-[var(--chart-gap)]/60"
                             : "bg-foreground/8"
                     )}
                 />
@@ -278,7 +278,7 @@ export function SkillTag({skill, tone}: { skill: string; tone: "have" | "gap" })
         <span
             className={cn(
                 "inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] px-2 py-0.5 font-mono text-[10.5px]",
-                tone === "have" ? "bg-success/15 text-success" : "bg-primary/15 text-primary"
+                tone === "have" ? "bg-success/15 text-success" : "border border-dashed border-[var(--chart-gap)] text-muted-foreground"
             )}
         >
             <span aria-hidden>{tone === "have" ? "✓" : "△"}</span>

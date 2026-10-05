@@ -5,7 +5,7 @@ interface MarketCardInfo {
     label: string,
     value: string | number,
     hint?: string,
-    /** Draws the value in the primary accent — reserve it for the headline metric. */
+    /** Marks the headline metric with a hairline on top. */
     accent?: boolean,
     className?: string,
 }
@@ -18,13 +18,13 @@ const MarketCard = ({label, value, hint, accent, className}: MarketCardInfo) => 
                 className
             )}
         >
-            {/* Top hairline reads `--tile-accent` set by the parent (ramp sweep); accent cards fall back to primary. */}
+            {/* Top hairline: neutral. Orange acts, so it never marks a number. */}
             <span
                 aria-hidden
                 className={"absolute inset-x-0 top-0 h-0.5"}
                 style={{
                     background: accent
-                        ? "var(--tile-accent, var(--primary))"
+                        ? "var(--tile-accent, var(--border))"
                         : "var(--tile-accent, transparent)"
                 }}
             />
@@ -35,7 +35,7 @@ const MarketCard = ({label, value, hint, accent, className}: MarketCardInfo) => 
                 <p
                     className={cn(
                         "truncate font-mono text-2xl leading-none font-bold tracking-tight tabular-nums xl:text-3xl",
-                        accent && "text-primary"
+                        accent && "text-foreground"
                     )}
                     title={typeof value === "string" ? value : undefined}
                 >

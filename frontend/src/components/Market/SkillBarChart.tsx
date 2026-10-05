@@ -16,7 +16,7 @@ import {
 
 import {SkillStat} from "@/types/jobradar";
 import {byDemand, toPercent} from "@/lib/market";
-import {axisDomainMax, axisTicks, GridGeneratorArgs, interiorLines, rampColour} from "@/lib/chart-ramp";
+import {axisDomainMax, axisTicks, GridGeneratorArgs, interiorLines} from "@/lib/chart-ramp";
 import {FrameRect, FrameRectProps} from "@/components/Market/PanelFrame";
 import {Button} from "@/components/ui/button";
 
@@ -75,7 +75,7 @@ function SkillTooltip({active, payload}: {
         <div className={"rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg shadow-black/30"}>
             <p className={"font-medium"}>{datum.skill}</p>
             <p className={"font-mono text-[11px] text-muted-foreground"}>
-                {datum.jobCount.toLocaleString()} {datum.jobCount === 1 ? "job" : "jobs"} · {datum.percent}% of postings
+                {datum.jobCount.toLocaleString()} {datum.jobCount === 1 ? "job" : "jobs"} · {datum.percent}% of all jobs read
             </p>
         </div>
     )
@@ -93,7 +93,7 @@ function SkillTooltip({active, payload}: {
 const SkillBarChart = ({
     skills,
     initialCount = 12,
-    fill = "var(--chart-3)",
+    fill = "var(--chart-ink)",
     outlined = false
 }: SkillBarChartProps) => {
     const [showAll, setShowAll] = useState(false);
@@ -112,13 +112,11 @@ const SkillBarChart = ({
 
     const visible = showAll ? ranked : ranked.slice(0, initialCount);
     const hiddenCount = ranked.length - visible.length;
-    /* Bars ride the warm ramp scaled to this chart's own maximum. */
-    const maxPercent = Math.max(0, ...ranked.map((datum) => datum.percent));
     /*
      * The axis is scaled to the data, not locked to 0–100%: bars stretch the
      * full width so differences between skills stay visible.
      */
-    const xMax = axisDomainMax(maxPercent);
+    const xMax = axisDomainMax(Math.max(0, ...ranked.map((datum) => datum.percent)));
 
     return (
         <div className={"flex flex-col gap-3"}>
@@ -156,7 +154,7 @@ const SkillBarChart = ({
                             tickLine={false}
                             height={44}
                             label={{
-                                value: "SHARE OF POSTINGS REQUESTING THE SKILL (%)",
+                                value: "SHARE OF JOBS ASKING FOR THE SKILL (%)",
                                 position: "insideBottom",
                                 offset: 0,
                                 style: {
@@ -190,16 +188,12 @@ const SkillBarChart = ({
                             radius={[0, 2, 2, 0]}
                             maxBarSize={18}
                         >
-                            {/* Colour = magnitude: each bar steps the yellow → red ramp. */}
+                            {/* One colour per chart: market-only ink, or green when every bar is a skill of yours. Length carries magnitude. */}
                             {visible.map((datum) => (
                                 <Cell
                                     key={datum.skill}
-                                    fill={outlined
-                                        ? "var(--chart-hollow-fill)"
-                                        : rampColour(datum.percent, maxPercent)}
-                                    stroke={outlined
-                                        ? rampColour(datum.percent, maxPercent)
-                                        : undefined}
+                                    fill={outlined ? "var(--chart-hollow-fill)" : fill}
+                                    stroke={outlined ? fill : undefined}
                                 />
                             ))}
                             <LabelList

@@ -32,19 +32,18 @@ const SkillCoverage = ({coverage}: SkillCoverageProps) => {
             <PanelHeader
                 title={"Skill coverage"}
                 qualifier={"of this market"}
-                lead={"How many of this market's most-wanted skills are already on your CV"}
+                lead={"How many of this market's top skills are already on your CV"}
             />
 
             <div className={"chart-grid-paper flex flex-col items-center gap-5 rounded-xl border border-border bg-card p-5 sm:flex-row sm:gap-8"}>
                 <div className={"relative h-[180px] w-[180px] shrink-0"}>
                     <ResponsiveContainer width={"100%"} height={"100%"}>
                         <PieChart>
-                            {/* Covered arc sweeps the warm ramp, yellow → red. */}
+                            {/* The covered arc counts your skills, so it is the "have" green. */}
                             <defs>
                                 <linearGradient id={"coverage-arc"} x1={"0"} y1={"0"} x2={"1"} y2={"1"}>
-                                    <stop offset={"0%"} stopColor={"var(--chart-ramp-1)"} />
-                                    <stop offset={"55%"} stopColor={"var(--chart-ramp-3)"} />
-                                    <stop offset={"100%"} stopColor={"var(--chart-ramp-5)"} />
+                                    <stop offset={"0%"} stopColor={"var(--chart-have)"} />
+                                    <stop offset={"100%"} stopColor={"var(--chart-have)"} />
                                 </linearGradient>
                             </defs>
                             <Pie
@@ -73,16 +72,15 @@ const SkillCoverage = ({coverage}: SkillCoverageProps) => {
 
                 <div className={"flex flex-col gap-2"}>
                     <p className={"text-sm"}>
-                        You have{" "}
+                        Your CV has{" "}
                         <span className={"font-medium"}>
-                            {coverage.covered} of the top {coverage.total} skills
+                            {coverage.covered} of the {coverage.total} skills
                         </span>{" "}
-                        appearing in this market.
+                        these jobs ask for most.
                     </p>
                     <p className={"text-sm text-muted-foreground"}>
-                        This measures overlap with the skills these particular postings ask
-                        for most. A low number points at what to learn next, it is not a
-                        measure of how employable you are.
+                        This measures overlap with the skills these jobs ask for most. It is
+                        not a measure of how employable you are.
                     </p>
                 </div>
             </div>
@@ -90,8 +88,8 @@ const SkillCoverage = ({coverage}: SkillCoverageProps) => {
             <PanelNote
                 points={[
                     <>The ring is this market&apos;s top skills split in two: the warm part is what your CV already covers, the faint part is what&apos;s missing.</>,
-                    <>The middle number says the same thing as a percentage, 60% would mean 6 of every 10 top skills.</>,
-                    <>It only compares you against this batch of postings, a low number is a to-learn list, not a verdict on you.</>
+                    <>The middle number says the same as a percentage: 60% means 6 of every 10 top skills.</>,
+                    <>It only compares you with this batch of jobs. A low number is not a verdict on you.</>
                 ]}
             />
         </section>

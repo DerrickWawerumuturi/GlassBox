@@ -91,7 +91,7 @@ function LandscapeTooltip({active, payload}: {
         <div className={"rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg shadow-black/30"}>
             <p className={"font-medium"}>{point.skill}</p>
             <p className={"font-mono text-[11px] text-muted-foreground"}>
-                {point.jobCount.toLocaleString()} {point.jobCount === 1 ? "job" : "jobs"} · {point.percent}% of postings
+                {point.jobCount.toLocaleString()} {point.jobCount === 1 ? "job" : "jobs"} · {point.percent}% of all jobs read
             </p>
         </div>
     )
@@ -101,7 +101,7 @@ function LandscapeLegend() {
     return (
         <div className={"flex flex-wrap items-center gap-x-5 gap-y-1 pb-2"}>
             <span className={"flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-panel-green-ink-muted"}>
-                <span aria-hidden className={"h-2.5 w-2.5 shrink-0 rounded-full bg-chart-ramp-3"} />
+                <span aria-hidden className={"h-2.5 w-2.5 shrink-0 rounded-full bg-chart-have"} />
                 On your CV
             </span>
             <span className={"flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-panel-green-ink-muted"}>
@@ -301,7 +301,7 @@ const SkillLandscape = ({userSkills, gaps}: SkillLandscapeProps) => {
                             tickLine={false}
                             height={46}
                             label={{
-                                value: "SHARE OF POSTINGS REQUESTING THE SKILL (%)",
+                                value: "SHARE OF JOBS ASKING FOR THE SKILL (%)",
                                 position: "insideBottom",
                                 offset: 0,
                                 style: {
@@ -354,13 +354,13 @@ const SkillLandscape = ({userSkills, gaps}: SkillLandscapeProps) => {
                         <Scatter
                             name={"On your CV"}
                             data={mine}
-                            fill={"var(--chart-ramp-3)"}
+                            fill={"var(--chart-have)"}
                             isAnimationActive={false}
                             shape={(props: DotShapeProps) => (
                                 <LandscapeDot
                                     {...props}
                                     hollow={false}
-                                    colour={"var(--chart-ramp-3)"}
+                                    colour={"var(--chart-have)"}
                                     label={props.payload ? labelKind(props.payload) : undefined}
                                     flip={props.payload ? flips(props.payload) : false}
                                 />
@@ -387,10 +387,10 @@ const SkillLandscape = ({userSkills, gaps}: SkillLandscapeProps) => {
 
             <PanelNote
                 points={[
-                    <>Each dot is one skill, the further right it sits, the more of these postings ask for it (a dot at 40% means 4 in 10 jobs).</>,
-                    <>Solid orange dots are skills already on your CV; lime rings are ones you don&apos;t have yet.</>,
+                    <>Each dot is one skill. The further right it sits, the more jobs ask for it: 40% means 4 in 10 jobs.</>,
+                    <>Solid green dots are skills on your CV. Rings are ones you don&apos;t have yet.</>,
                     <>Up and down positions mean nothing, they only keep dots from covering each other.</>,
-                    <>The lime tag marks the most-wanted skill missing from your CV. Hover any dot for its exact numbers.</>
+                    <>The lime tag marks the top skill not on your CV. Hover any dot for its exact numbers.</>
                 ]}
             />
         </section>

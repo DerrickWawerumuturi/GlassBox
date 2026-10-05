@@ -24,10 +24,7 @@ function GapRow({gap, jobsAnalyzed, leading}: {
     leading: boolean;
 }) {
     const percent = toPercent(gap.frequency);
-    /* Meter colour tracks priority: high burns orange → red, medium stays yellow → amber. */
-    const meterGradient = gapPriority(gap) === "high"
-        ? "linear-gradient(90deg, var(--chart-ramp-3), var(--chart-ramp-5))"
-        : "linear-gradient(90deg, var(--chart-ramp-1), var(--chart-ramp-2))";
+    /* Not on the CV: the neutral hatch, like every gap. The group heading says how often it is asked. */
 
     return (
         <li className={"flex flex-col gap-1.5 border-b border-border py-3 last:border-b-0"}>
@@ -44,14 +41,14 @@ function GapRow({gap, jobsAnalyzed, leading}: {
                 role={"presentation"}
             >
                 <div
-                    className={"h-full rounded-full"}
-                    style={{width: `${percent}%`, background: meterGradient}}
+                    className={"bar-gap h-full rounded-full ring-1 ring-inset ring-[var(--chart-gap)]/60"}
+                    style={{width: `${percent}%`}}
                 />
             </div>
 
             <p className={"text-xs text-muted-foreground"}>
-                Requested in {gap.job_count} of {jobsAnalyzed} postings analyzed
-                {leading && ", the most common skill missing from your CV"}.
+                Asked for in {gap.job_count} of {jobsAnalyzed} jobs.
+                {leading && " The top skill not on your CV."}
             </p>
         </li>
     )
@@ -68,19 +65,19 @@ const SkillGapChart = ({gaps, jobsAnalyzed}: SkillGapChartProps) => {
             <PanelHeader
                 title={"Skill gaps"}
                 qualifier={"missing from your CV"}
-                lead={<>Skills that at least {toPercent(GAP_FREQUENCY_THRESHOLD)}% of these job postings ask for but your CV doesn&apos;t mention</>}
+                lead={<>Skills that {toPercent(GAP_FREQUENCY_THRESHOLD)}% or more of these jobs ask for and your CV doesn&apos;t mention</>}
             />
 
             {ranked.length === 0 ? (
                 <p className={"rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground"}>
-                    No skill appears in {toPercent(GAP_FREQUENCY_THRESHOLD)}% or more of
-                    these postings without already being on your CV.
+                    Your CV has every skill that {toPercent(GAP_FREQUENCY_THRESHOLD)}% or more of
+                    these jobs ask for.
                 </p>
             ) : (
                 <div className={"flex flex-col gap-5"}>
                     {[
-                        {label: "High priority", items: high},
-                        {label: "Medium priority", items: medium}
+                        {label: "Asked for most", items: high},
+                        {label: "Asked for often", items: medium}
                     ].filter((bucket) => bucket.items.length > 0).map((bucket) => (
                         <div key={bucket.label} className={"flex flex-col gap-2"}>
                             <h3 className={"font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground"}>
@@ -104,9 +101,9 @@ const SkillGapChart = ({gaps, jobsAnalyzed}: SkillGapChartProps) => {
                     <PanelNote
                         points={[
                             <>Each row is a skill employers keep asking for that your CV doesn&apos;t mention.</>,
-                            <>The percentage and the coloured bar show how many postings want it: 30% means 3 in 10 jobs.</>,
-                            <>Most-requested comes first, so the top row is usually the best thing to learn next.</>,
-                            <>&quot;High priority&quot; simply means more postings ask for it than the &quot;medium&quot; ones.</>
+                            <>The percentage and the bar show how many jobs ask for it: 30% means 3 in 10 jobs.</>,
+                            <>Top skills come first.</>,
+                            <>&quot;Asked for most&quot; means more jobs ask for it than for the &quot;often&quot; ones.</>
                         ]}
                     />
                 </div>
