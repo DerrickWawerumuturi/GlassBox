@@ -94,7 +94,7 @@ export function dateLabel(iso: string, basis: DateBasis): {text: string; title: 
         return {text: `≈ ${age}`, title: `Estimated from the source's relative date ("posted N days ago"), around ${on}`};
     }
     if (basis === "fetched") {
-        return {text: `Found ${age.charAt(0).toLowerCase()}${age.slice(1)}`, title: `The source gives no date for this job. JobRadar found it on ${on}`};
+        return {text: `Found ${age.charAt(0).toLowerCase()}${age.slice(1)}`, title: `The source gives no date for this job. Glassbox found it on ${on}`};
     }
     return {text: age, title: `Posted ${on}, according to the source`};
 }

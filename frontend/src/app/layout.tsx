@@ -55,26 +55,26 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://jobradar-frontend-pearl.vercel.app"),
-  applicationName: "Jobradar",
+  applicationName: "Glassbox",
   title: {
-    default: "Jobradar",
-    template: "%s · Jobradar",
+    default: "Glassbox",
+    template: "%s · Glassbox",
   },
   alternates: {
     canonical: "/",
   },
   description:
-      "Upload your CV and Jobradar scans live jobs. In about a minute it shows the skills your market wants, the ones you have, and the ones you don't yet.",
+      "Upload your CV and Glassbox scans live jobs. In about a minute it shows the skills your market wants, the ones you have, and the ones you don't yet.",
   openGraph: {
     type: "website",
-    siteName: "Jobradar",
-    title: "Jobradar: your job market, mapped",
+    siteName: "Glassbox",
+    title: "Glassbox: your job market, mapped",
     description:
         "Your CV vs the live job market: top skills, the ones you have, the ones you don't yet, and real jobs ranked by fit.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Jobradar: your job market, mapped",
+    title: "Glassbox: your job market, mapped",
     description:
         "Your CV vs the live job market: top skills, the ones you have, the ones you don't yet, and real jobs ranked by fit.",
   },

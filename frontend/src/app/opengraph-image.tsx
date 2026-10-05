@@ -1,6 +1,12 @@
+import {readFileSync} from "node:fs";
+import {join} from "node:path";
+
 import {ImageResponse} from "next/og";
 
-export const alt = "Jobradar: your job market, mapped";
+// The brand wordmark (docs/brand/assets/logo, on dark), as an image the card can draw.
+const WORDMARK = `data:image/svg+xml;base64,${readFileSync(join(process.cwd(), "public/brand/wordmark-on-dark.svg")).toString("base64")}`;
+
+export const alt = "Glassbox: your job market, mapped";
 export const size = {width: 1200, height: 630};
 export const contentType = "image/png";
 
@@ -36,9 +42,8 @@ export default function OgImage() {
                 </div>
 
                 <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
-                    <div style={{display: "flex", fontSize: 40, fontWeight: 800}}>
-                        Jobradar<span style={{color: "#e8672e"}}>.</span>
-                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={WORDMARK} width={274} height={40} alt={"Glassbox"} />
                     <div
                         style={{
                             display: "flex",

@@ -7,7 +7,7 @@ const STEPS = [
     {
         step: "01",
         title: "your CV goes in",
-        body: "A PDF is enough. Jobradar reads it and pulls out the skills you already have.",
+        body: "A PDF is enough. Glassbox reads it and pulls out the skills you already have.",
         rotate: "-rotate-2",
         offset: "lg:translate-y-0",
         visual: "upload" as const,
@@ -39,7 +39,7 @@ const STEPS = [
 ] as const;
 
 const SNAPSHOTS: Record<string, {src: string; alt: string}> = {
-    upload: {src: "/assets/process01.png", alt: "A CV being read by Jobradar"},
+    upload: {src: "/assets/process01.png", alt: "A CV being read by Glassbox"},
     scan: {src: "/assets/process02.png", alt: "Live jobs being scanned"},
     compare: {src: "/assets/process03.png", alt: "Your skills plotted against the market"},
     match: {src: "/assets/process04.png", alt: "Jobs ranked by how well they fit"},
@@ -103,12 +103,12 @@ const About = () => {
     return (
     <section
         id={"about"}
-        aria-label={"About Jobradar"}
+        aria-label={"About Glassbox"}
         className={"border-b-0"}
     >
         <div className={"mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-10 sm:py-12 lg:px-8"}>
         <PanelHeader
-            title={"What Jobradar does"}
+            title={"What Glassbox does"}
             qualifier={""}
             lead={"A market report for your career: your CV on one side, live jobs on the other"}
         />

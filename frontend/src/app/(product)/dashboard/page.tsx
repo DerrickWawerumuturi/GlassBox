@@ -137,7 +137,7 @@ export default function OverviewPage() {
             </header>
 
             {!analysis ? (
-                <EmptyScan message={"Your dashboard fills itself from a scan. Upload your CV and JobRadar maps the market around it."} />
+                <EmptyScan message={"Your dashboard fills itself from a scan. Upload your CV and Glassbox maps the market around it."} />
             ) : (
                 <>
                     <div className={"grid grid-cols-2 gap-3 lg:grid-cols-4"}>

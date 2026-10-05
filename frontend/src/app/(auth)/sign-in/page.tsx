@@ -5,6 +5,7 @@ import Link from "next/link";
 import {signIn} from "next-auth/react";
 import {Button} from "@/components/ui/button";
 import Annotation from "@/components/Annotation";
+import SiteFooter from "@/components/SiteFooter";
 
 const GoogleIcon = () => (
     <svg viewBox={"0 0 24 24"} className={"size-4"} aria-hidden>
@@ -17,6 +18,7 @@ const GoogleIcon = () => (
 
 const Page = () => {
     return (
+        <>
         <div className={"grid min-h-[calc(100dvh-96px)] lg:grid-cols-2"}>
             {/* The pitch, in house colors */}
             <aside className={"chart-band chart-grid-paper relative hidden flex-col justify-between overflow-hidden border-0 p-10 lg:flex chart-panel-green"}>
@@ -82,6 +84,8 @@ const Page = () => {
                 </div>
             </main>
         </div>
+        <SiteFooter />
+        </>
     )
 }
 export default Page

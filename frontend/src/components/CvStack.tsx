@@ -102,7 +102,7 @@ const CvStack = () => (
                     <circle cx={"32"} cy={"32"} r={"30"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.5"} />
                     <circle cx={"32"} cy={"32"} r={"20"} fill={"none"} stroke={"currentColor"} strokeWidth={"1"} />
                     <text className={"font-mono"} fontSize={"6.2"} letterSpacing={"1.6"} fill={"currentColor"}>
-                        <textPath href={"#stamp-arc"}>JOBRADAR · READ · JOBRADAR ·</textPath>
+                        <textPath href={"#stamp-arc"}>GLASSBOX · READ · GLASSBOX ·</textPath>
                     </text>
                     {/* radar sweep */}
                     <circle cx={"32"} cy={"32"} r={"13"} fill={"none"} stroke={"currentColor"} strokeWidth={"0.75"} opacity={"0.6"} />

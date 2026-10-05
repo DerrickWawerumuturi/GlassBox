@@ -3,16 +3,17 @@ import Annotation from "@/components/Annotation";
 import LandscapePreview from "@/components/LandscapePreview";
 import About from "@/components/About";
 import Faq from "@/components/Faq";
+import SiteFooter from "@/components/SiteFooter";
 
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Jobradar",
+  name: "Glassbox",
   url: "https://jobradar-frontend-pearl.vercel.app",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
-      "Upload your CV and Jobradar scans live jobs. It shows the skills your market really wants, the ones you have, and the ones you don't yet.",
+      "Upload your CV and Glassbox scans live jobs. It shows the skills your market really wants, the ones you have, and the ones you don't yet.",
   offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},
 };
 
@@ -59,14 +60,7 @@ export default function Home() {
         </main>
 
         {/* The footer lives inside the green band, closing the page. */}
-        <footer className={"chart-band chart-panel-green flex flex-wrap items-center justify-between gap-3 border-b-0 px-5 py-6 lg:px-8"}>
-          <span className={"font-heading text-sm font-bold uppercase tracking-tight"}>
-            Jobradar<span className={"text-primary"}>.</span>
-          </span>
-          <span className={"font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"}>
-            Upload a CV · read the market · see where you stand
-          </span>
-        </footer>
+        <SiteFooter variant={"full"} />
       </div>
   )
 }

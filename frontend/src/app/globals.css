@@ -143,6 +143,12 @@
   --accent-lime-edge: oklch(0.28 0.07 152 / 28%);
   /* The plot frame's inset: a faint warm shade on paper. */
   --chart-well: oklch(0.25 0.02 70 / 4%);
+  /* The logo's dot on paper (brand: #b83a18). */
+  --logo-dot: #b83a18;
+  /* A skill missing for one specific job (Opportunities): soft red, never the
+     action orange. Line and fill use --missing, text --missing-ink (4.5:1). */
+  --missing: oklch(0.58 0.19 25);
+  --missing-ink: oklch(0.45 0.17 25);
   --panel-green: oklch(0.32 0.07 158);
   --panel-green-border: oklch(0.95 0.05 150 / 16%);
   --panel-green-grid: oklch(0.95 0.06 150 / 8%);
@@ -239,6 +245,9 @@
   --chart-have-ink: oklch(0.86 0.08 160);
   --accent-lime-edge: transparent;
   --chart-well: oklch(0 0 0 / 14%);
+  --logo-dot: #f5532a;
+  --missing: oklch(0.63 0.2 25);
+  --missing-ink: oklch(0.78 0.13 25);
   --chart-gap: oklch(0.68 0.012 80);
   --chart-ink: oklch(0.88 0.006 80);
   /* The Search-Party yellow-green annotation accent (≈ #d8f34a). */

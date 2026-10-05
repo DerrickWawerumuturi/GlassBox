@@ -3,7 +3,7 @@
 import React, {useEffect, useRef, useState} from 'react'
 import Link from "next/link";
 import {usePathname} from "next/navigation";
-import {signOut, useSession} from "next-auth/react";
+import {useSession} from "next-auth/react";
 import {
     ActivityIcon,
     ChevronRightIcon,
@@ -11,7 +11,6 @@ import {
     PanelLeftOpenIcon,
     ClipboardListIcon,
     HomeIcon,
-    LogOutIcon,
     PlusIcon,
     RadarIcon,
     TrendingUpIcon,
@@ -21,7 +20,6 @@ import {
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -33,7 +31,8 @@ import {useApplications} from "@/lib/applications-store";
 import {useOpportunities} from "@/lib/opportunities-store";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import InstallApp from "@/components/dashboard/InstallApp";
-import {ThemeMenu} from "@/components/ThemeMenu";
+import {GlassboxWordmark} from "@/components/brand/Logo";
+import AccountMenuItems from "@/components/AccountMenuItems";
 
 interface NavItem {
     href: string;
@@ -152,23 +151,7 @@ export default function Sidebar() {
                     </button>
                 )} />
                 <DropdownMenuContent align={"start"} className={"w-56"}>
-                    <DropdownMenuItem
-                        render={(props) => (
-                            <Link {...props} href={"/dashboard/profile"} className={cn(props.className, "cursor-pointer")}>
-                                <UserIcon className={"size-4 opacity-70"} /> My profile
-                            </Link>
-                        )}
-                    />
-                    <InstallApp />
-                    <DropdownMenuSeparator />
-                    <ThemeMenu />
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                        onClick={() => signOut({redirectTo: "/"})}
-                        className={"cursor-pointer"}
-                    >
-                        <LogOutIcon className={"size-4 opacity-70"} /> Sign out
-                    </DropdownMenuItem>
+                    <AccountMenuItems extra={<InstallApp />} />
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
@@ -194,15 +177,11 @@ export default function Sidebar() {
                 "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-200 lg:flex",
                 collapsed ? "w-[66px]" : "w-60"
             )}>
-                <div className={cn("flex items-start pb-4 pt-5", collapsed ? "justify-center px-0" : "justify-between px-4")}>
+                <div className={cn("flex items-center pb-4 pt-5", collapsed ? "justify-center px-0" : "justify-between px-4")}>
                     {!collapsed && (
                         <Link href={"/"} className={"flex flex-col gap-0.5"}>
-                            <span className={"font-heading text-lg font-bold uppercase leading-none tracking-tight"}>
-                                Jobradar<span className={"text-primary"}>.</span>
-                            </span>
-                            <span className={"font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground"}>
-                                Market intelligence
-                            </span>
+                            {/* Logo exception: the size of the old 18px text wordmark's capitals. */}
+                            <GlassboxWordmark className={"h-[13px] w-auto self-start"} />
                         </Link>
                     )}
                     <button
@@ -232,8 +211,8 @@ export default function Sidebar() {
             {/* Mobile: wordmark row + a scrollable nav strip. */}
             <div className={"sticky top-0 z-30 border-b border-border bg-background lg:hidden"}>
                 <div className={"flex items-center justify-between px-4 pt-3"}>
-                    <Link href={"/"} className={"font-heading text-lg font-bold uppercase leading-none tracking-tight"}>
-                        Jobradar<span className={"text-primary"}>.</span>
+                    <Link href={"/"} aria-label={"Glassbox home"}>
+                        <GlassboxWordmark className={"h-[13px] w-auto self-start"} />
                     </Link>
                     {session?.user ? (
                         <DropdownMenu>
@@ -253,15 +232,7 @@ export default function Sidebar() {
                                     <p className={"text-xs text-muted-foreground"}>{session.user.email}</p>
                                 </div>
                                 <DropdownMenuSeparator />
-                                <InstallApp />
-                                <ThemeMenu />
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={() => signOut({redirectTo: "/"})}
-                                    className={"cursor-pointer"}
-                                >
-                                    <LogOutIcon className={"size-4 opacity-70"} /> Sign out
-                                </DropdownMenuItem>
+                                <AccountMenuItems extra={<InstallApp />} />
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (

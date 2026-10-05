@@ -84,7 +84,7 @@ function Opportunities() {
             )}
             {state === "no-cv" && (
                 <Notice
-                    text={"Add your CV once. JobRadar matches it against the thousands of jobs it collects every morning. No scan to wait for."}
+                    text={"Add your CV once. Glassbox matches it against the thousands of jobs it collects every morning. No scan to wait for."}
                     href={"/dashboard/scan"}
                     action={"Upload your CV"}
                 />

@@ -6,6 +6,7 @@ import {usePathname, useRouter} from "next/navigation";
 
 import {useAnalysis} from "@/lib/analysis-store";
 import {cn} from "@/lib/utils";
+import SiteFooter from "@/components/SiteFooter";
 
 const TABS = [
     {href: "/analysis", label: "Overview"},
@@ -66,6 +67,7 @@ export default function AnalysisLayout({children}: LayoutProps<"/analysis">) {
             </header>
 
             {children}
+            <SiteFooter className={"mt-10"} />
         </div>
     )
 }

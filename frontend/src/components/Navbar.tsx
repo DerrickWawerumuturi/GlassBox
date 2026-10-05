@@ -4,7 +4,7 @@ import React from 'react'
 import Link from "next/link";
 import {MenuIcon} from "lucide-react";
 import {usePathname} from "next/navigation";
-import {signOut, useSession} from "next-auth/react";
+import {useSession} from "next-auth/react";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
 import {cn} from "@/lib/utils";
@@ -15,8 +15,9 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
-import {ThemeMenu} from "@/components/ThemeMenu";
 import {initials} from "@/lib/utils";
+import {GlassboxWordmark} from "@/components/brand/Logo";
+import AccountMenuItems from "@/components/AccountMenuItems";
 
 const Navbar = () => {
     const {data: session} = useSession();
@@ -43,15 +44,10 @@ const Navbar = () => {
     return (
         <header className={"flex items-center justify-between gap-4  px-5 py-5 lg:px-8"}>
             <div className={"flex flex-col gap-1"}>
-                <Link
-                    href={"/"}
-                    className={"font-heading text-2xl font-bold uppercase leading-none tracking-tight"}
-                >
-                    Jobradar<span className={"text-primary"}>.</span>
+                <Link href={"/"} aria-label={"Glassbox home"} className={"block w-fit"}>
+                    {/* Logo exception: the size of the old 24px text wordmark's capitals. */}
+                    <GlassboxWordmark className={"h-[17px] w-auto"} />
                 </Link>
-                <span className={"font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground"}>
-                    Market intelligence
-                </span>
             </div>
 
 
@@ -130,11 +126,7 @@ const Navbar = () => {
                                     <p className={"text-xs text-muted-foreground"}>{session.user?.email}</p>
                                 </div>
                                 <DropdownMenuSeparator />
-                                <ThemeMenu />
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => signOut({ redirectTo: "/" })} className={"hover:cursor-pointer"}>
-                                    Sign out
-                                </DropdownMenuItem>
+                                <AccountMenuItems />
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ): (
