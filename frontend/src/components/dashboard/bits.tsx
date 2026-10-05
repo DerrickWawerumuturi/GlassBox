@@ -1,6 +1,6 @@
 import React from 'react'
 import Link from "next/link";
-import {LucideIcon} from "lucide-react";
+import {LucideIcon, MinusIcon} from "lucide-react";
 
 import {cn} from "@/lib/utils";
 import {ApplicationStatus} from "@/types/jobradar";
@@ -90,7 +90,7 @@ export function Panel({children, className}: { children: React.ReactNode; classN
 /** Attio-style soft-filled tag chip — categories, skills, statuses-at-rest. */
 export function TagChip({children, tone = "neutral"}: {
     children: React.ReactNode;
-    tone?: "have" | "gap" | "neutral";
+    tone?: "have" | "gap" | "missing" | "neutral";
 }) {
     return (
         <span
@@ -98,6 +98,8 @@ export function TagChip({children, tone = "neutral"}: {
                 "inline-flex items-center whitespace-nowrap rounded-[4px] px-1.5 py-px font-mono text-[10.5px]",
                 tone === "have" && "bg-success/15 text-success",
                 tone === "gap" && "border border-dashed border-[var(--chart-gap)] text-muted-foreground",
+                // Missing for this one job: soft red with a minus, so colour is not the only signal.
+                tone === "missing" && "gap-1 border border-[var(--missing)]/55 bg-[var(--missing)]/10 text-[var(--missing-ink)]",
                 tone === "neutral" && "bg-foreground/6 text-muted-foreground"
             )}
         >
@@ -273,15 +275,18 @@ export function DemandMeter({percent, tone, className}: {
 }
 
 /** ✓ you have it / △ the posting wants it and your CV doesn't show it. */
-export function SkillTag({skill, tone}: { skill: string; tone: "have" | "gap" }) {
+export function SkillTag({skill, tone}: { skill: string; tone: "have" | "gap" | "missing" }) {
     return (
         <span
             className={cn(
                 "inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] px-2 py-0.5 font-mono text-[10.5px]",
-                tone === "have" ? "bg-success/15 text-success" : "border border-dashed border-[var(--chart-gap)] text-muted-foreground"
+                tone === "have" ? "bg-success/15 text-success"
+                    : tone === "missing" ? "border border-[var(--missing)]/55 bg-[var(--missing)]/10 text-[var(--missing-ink)]"
+                        : "border border-dashed border-[var(--chart-gap)] text-muted-foreground"
             )}
         >
-            <span aria-hidden>{tone === "have" ? "✓" : "△"}</span>
+            {tone === "missing" ? <MinusIcon aria-hidden className={"size-3 shrink-0"} /> : <span aria-hidden>{tone === "have" ? "✓" : "△"}</span>}
+            {tone === "missing" && <span className={"sr-only"}>Missing:</span>}
             {skill}
         </span>
     )

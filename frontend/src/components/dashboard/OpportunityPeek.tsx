@@ -121,9 +121,9 @@ export function BreakdownContent({row, onClose}: BreakdownProps) {
 
             <SkillSection title={`Required skills you have (${row.have.length})`} skills={row.have} tone={"have"}
                           empty={row.required ? "None of the required skills are on your CV." : "This job lists no specific skills."} />
-            {row.missing.length > 0 && <SkillSection title={`Required skills not on your CV (${row.missing.length})`} skills={row.missing} tone={"gap"} />}
+            {row.missing.length > 0 && <SkillSection title={`Required skills not on your CV (${row.missing.length})`} skills={row.missing} tone={"missing"} />}
             {detail.preferred.missing.length > 0 && (
-                <SkillSection title={`Optional skills not on your CV (${detail.preferred.missing.length})`} skills={detail.preferred.missing} tone={"gap"} />
+                <SkillSection title={`Optional skills not on your CV (${detail.preferred.missing.length})`} skills={detail.preferred.missing} tone={"missing"} />
             )}
 
             {row.also.length > 0 && (
@@ -181,7 +181,7 @@ export function BreakdownContent({row, onClose}: BreakdownProps) {
     )
 }
 
-function SkillSection({title, skills, tone, empty}: { title: string; skills: string[]; tone: "have" | "gap"; empty?: string }) {
+function SkillSection({title, skills, tone, empty}: { title: string; skills: string[]; tone: "have" | "gap" | "missing"; empty?: string }) {
     return (
         <div>
             <SectionLabel>{title}</SectionLabel>

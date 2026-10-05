@@ -104,6 +104,15 @@ deeper so white button text reads, and a lime-ink hairline on lime pills
 turns to the lime ink. Chart panels re-scope to dark alphas; the plot well is
 `--chart-well`. Measured in `docs/changelog/2026-10-05-paper-light-mode.md`.
 
+## Missing for one job: soft red (2026-10-05)
+
+One exception to "gaps are grey and hatched". On Opportunities, where a
+missing skill decides whether one specific job fits, it is a soft red chip:
+outline and faint fill in `--missing` (oklch 0.63 0.2 25 on the desk), text in
+`--missing-ink` for 4.5:1, and a minus icon so colour is not the only signal.
+It is never the action orange. Gaps in the market (charts, Overview, Your
+skills, /analysis) stay grey and hatched or dashed.
+
 ## Typography
 
 - **Space Grotesk** (`font-space`, `font-heading`) — display. Bold, tight,

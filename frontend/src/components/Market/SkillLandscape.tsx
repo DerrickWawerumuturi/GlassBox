@@ -105,7 +105,7 @@ function LandscapeLegend() {
                 On your CV
             </span>
             <span className={"flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-panel-green-ink-muted"}>
-                <span aria-hidden className={"h-2.5 w-2.5 shrink-0 rounded-full border-2 border-accent-lime bg-chart-hollow"} />
+                <span aria-hidden className={"h-2.5 w-2.5 shrink-0 rounded-full border-2 border-dashed border-chart-gap bg-chart-hollow"} />
                 Not on your CV
             </span>
         </div>
@@ -176,15 +176,21 @@ interface LandscapeDotOptions {
 }
 
 /**
- * One scatter mark. Colour = ownership: solid orange discs are skills on the
- * CV, hollow lime rings (with a faint disc so they stay visible on the green)
- * are skills the market wants that the CV lacks. The annotated callout point
- * is filled solid lime to tie it to its pill.
+ * How a mark is drawn. Solid green discs are skills on the CV; skills the CV
+ * lacks are dashed grey rings on a faint disc (the gap grammar). Lime marks
+ * one skill at most: the annotated callout, filled to tie it to its pill.
  */
+export function dotStyle(hollow: boolean, callout: boolean, colour: string) {
+    if (callout) return {fill: "var(--accent-lime)", stroke: "var(--panel-green)", strokeWidth: 1, dash: undefined};
+    if (hollow) return {fill: "var(--chart-hollow-fill)", stroke: colour, strokeWidth: 2, dash: "2.5 2"};
+    return {fill: colour, stroke: "var(--panel-green)", strokeWidth: 1, dash: undefined};
+}
+
+/** One scatter mark, drawn by dotStyle. */
 function LandscapeDot({cx, cy, payload, hollow, colour, label, flip}: DotShapeProps & LandscapeDotOptions) {
     if (cx == null || cy == null || !payload) return <g />;
 
-    const calloutDot = label === "callout";
+    const style = dotStyle(hollow, label === "callout", colour);
 
     return (
         <g>
@@ -192,13 +198,10 @@ function LandscapeDot({cx, cy, payload, hollow, colour, label, flip}: DotShapePr
                 cx={cx}
                 cy={cy}
                 r={DOT_RADIUS}
-                fill={
-                    calloutDot
-                        ? "var(--accent-lime)"
-                        : hollow ? "var(--chart-hollow-fill)" : colour
-                }
-                stroke={hollow ? colour : "var(--panel-green)"}
-                strokeWidth={hollow && !calloutDot ? 2 : 1}
+                fill={style.fill}
+                stroke={style.stroke}
+                strokeWidth={style.strokeWidth}
+                strokeDasharray={style.dash}
             />
             {label === "plain" && (
                 <text
@@ -375,7 +378,7 @@ const SkillLandscape = ({userSkills, gaps}: SkillLandscapeProps) => {
                                 <LandscapeDot
                                     {...props}
                                     hollow
-                                    colour={"var(--accent-lime)"}
+                                    colour={"var(--chart-gap)"}
                                     label={props.payload ? labelKind(props.payload) : undefined}
                                     flip={props.payload ? flips(props.payload) : false}
                                 />

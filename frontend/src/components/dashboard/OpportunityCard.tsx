@@ -9,6 +9,7 @@ import {useApplications} from "@/lib/applications-store";
 import {ScoreChip, StatusChip, TagChip} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import {BreakdownContent} from "@/components/dashboard/OpportunityPeek";
+import {MinusIcon} from "lucide-react";
 
 interface OpportunityCardProps {
     row: OpportunityRow;
@@ -70,7 +71,9 @@ export default function OpportunityCard({row, open, onOpen, onClose}: Opportunit
                 {row.tier !== "unlikely" && (row.have.length > 0 || row.missing.length > 0) && (
                     <span className={"flex w-full min-w-0 flex-wrap items-center gap-1.5"}>
                         {row.have.slice(0, 3).map((skill) => <TagChip key={skill} tone={"have"}>✓ {skill}</TagChip>)}
-                        {row.missing.slice(0, 2).map((skill) => <TagChip key={skill} tone={"gap"}>△ {skill}</TagChip>)}
+                        {row.missing.slice(0, 2).map((skill) => (
+                            <TagChip key={skill} tone={"missing"}><MinusIcon aria-hidden className={"size-2.5"} /><span className={"sr-only"}>Missing:</span>{skill}</TagChip>
+                        ))}
                     </span>
                 )}
             </motion.button>
