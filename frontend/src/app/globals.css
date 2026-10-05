@@ -7,9 +7,25 @@
 @theme inline {
   --font-space: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-schibsted-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
   --font-hand: var(--font-caveat), "Comic Sans MS", cursive;
+  /* The seven-step type scale (docs/decisions/design-system.md): text-display … text-label. */
+  --text-display: 3.5rem;
+  --text-display--line-height: 1.02;
+  --text-h1: 2.5rem;
+  --text-h1--line-height: 1.05;
+  --text-h2: 1.75rem;
+  --text-h2--line-height: 1.15;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.25;
+  --text-body: 1rem;
+  --text-body--line-height: 1.55;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.3;
+  --color-chart-ink: var(--chart-ink);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -38,6 +54,7 @@
   --color-panel-green-border: var(--panel-green-border);
   --color-panel-green-ink: var(--panel-green-ink);
   --color-panel-green-ink-muted: var(--panel-green-ink-muted);
+  --color-panel-chart-ink-faint: var(--panel-chart-ink-faint);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -112,14 +129,30 @@
   /* Chart identity: a skill on the CV vs missing from it. Validated as a pair
      (dataviz validator, both themes): colour-blind ΔE ≥ 9.6, inside the
      lightness band. The app's --success is too light to pass on dark. */
-  --chart-have: oklch(0.66 0.12 158);
-  --chart-gap: var(--primary);
+  --chart-have: oklch(0.53 0.10 158);
+  /* Not on the CV yet: neutral, always with a hatch (.bar-gap) or a hollow ring.
+     Orange is the brand and never marks data. */
+  --chart-gap: oklch(0.55 0.01 80);
+  /* Market-only data, no "you" in it. */
+  --chart-ink: oklch(0.35 0.01 80);
   --panel-green: oklch(0.32 0.07 158);
   --panel-green-border: oklch(0.95 0.05 150 / 16%);
   --panel-green-grid: oklch(0.95 0.06 150 / 8%);
   --panel-green-frame: oklch(0.96 0.04 140 / 45%);
   --panel-green-ink: oklch(0.985 0.01 120);
   --panel-green-ink-muted: oklch(0.88 0.05 148);
+  /* The Market tab's chart panels, "an object on the desk" (docs/brand/charts.html):
+     a forest green-black ground, darker than --panel-green, with its own ink,
+     grid and frame scale. One look in both themes, like the other panels. */
+  --panel-chart-top: oklch(0.25 0.045 160);
+  --panel-chart: oklch(0.19 0.03 160);
+  --panel-chart-border: oklch(0.79 0.13 160 / 16%);
+  --panel-chart-ink: oklch(0.96 0.008 150);
+  --panel-chart-ink-muted: oklch(0.82 0.018 155);
+  --panel-chart-ink-faint: oklch(0.63 0.018 160);
+  --panel-chart-grid: oklch(0.93 0.02 150 / 6%);
+  --panel-chart-grid-major: oklch(0.93 0.02 150 / 14%);
+  --panel-chart-frame: oklch(0.93 0.02 150 / 28%);
   --panel-navy: oklch(0.30 0.055 265);
   --panel-navy-border: oklch(0.93 0.03 260 / 16%);
   --panel-navy-ink: oklch(0.985 0.005 260);
@@ -151,19 +184,21 @@
  *            ordinal on the card surface); chart-3 is the accent itself.
  */
 .dark {
-  --background: oklch(0.155 0.004 260);
+  /* The desk: a warm charcoal, not black, so the green chart panels sit on it
+     rather than cut out of it (2026-10-02). Surfaces step up from it in hue 70. */
+  --background: oklch(0.205 0.006 70);
   --foreground: oklch(0.955 0.004 80);
-  --card: oklch(0.19 0.005 260);
+  --card: oklch(0.235 0.006 70);
   --card-foreground: oklch(0.955 0.004 80);
-  --popover: oklch(0.225 0.006 260);
+  --popover: oklch(0.265 0.007 70);
   --popover-foreground: oklch(0.955 0.004 80);
   --primary: oklch(0.66 0.205 35);
   --primary-foreground: oklch(0.16 0.015 35);
-  --secondary: oklch(0.265 0.006 260);
+  --secondary: oklch(0.30 0.007 70);
   --secondary-foreground: oklch(0.955 0.004 80);
-  --muted: oklch(0.265 0.006 260);
-  --muted-foreground: oklch(0.70 0.012 260);
-  --accent: oklch(0.265 0.006 260);
+  --muted: oklch(0.30 0.007 70);
+  --muted-foreground: oklch(0.74 0.01 75);
+  --accent: oklch(0.30 0.007 70);
   --accent-foreground: oklch(0.955 0.004 80);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 8%);
@@ -186,6 +221,13 @@
   --chart-ramp-5: oklch(0.63 0.23 30);
   /* Faint disc behind hollow "not on your CV" marks so they never vanish. */
   --chart-hollow-fill: oklch(1 0 0 / 15%);
+  /* Data roles on the desk (brand, 2026-09-29): green counts, orange acts.
+     #5fd39a / #9a958c / #d8d6d0, validated as a pair against the panel ground
+     (dataviz validator: CVD ΔE 11.4; the grey is neutral by design, its
+     secondary encoding is the hatch). */
+  --chart-have: oklch(0.79 0.13 160);
+  --chart-gap: oklch(0.68 0.012 80);
+  --chart-ink: oklch(0.88 0.006 80);
   /* The Search-Party yellow-green annotation accent (≈ #d8f34a). */
   --accent-lime: oklch(0.92 0.19 116);
   --accent-lime-ink: oklch(0.28 0.07 152);
@@ -198,6 +240,18 @@
   --panel-green-frame: oklch(0.96 0.04 140 / 45%);
   --panel-green-ink: oklch(0.985 0.01 120);
   --panel-green-ink-muted: oklch(0.88 0.05 148);
+  /* The Market tab's chart panels: the same charcoal card as every other
+     section (2026-10-02), so the charts read as part of the app. Colour is
+     kept for the data (green = yours), not the ground. Neutral inks in hue 70. */
+  --panel-chart-top: var(--card);
+  --panel-chart: var(--card);
+  --panel-chart-border: oklch(1 0 0 / 10%);
+  --panel-chart-ink: oklch(0.955 0.004 80);
+  --panel-chart-ink-muted: oklch(0.80 0.008 75);
+  --panel-chart-ink-faint: oklch(0.66 0.01 75);
+  --panel-chart-grid: oklch(1 0 0 / 4.5%);
+  --panel-chart-grid-major: oklch(1 0 0 / 10%);
+  --panel-chart-frame: oklch(1 0 0 / 20%);
   /* Sibling panel grounds — same recipe, different hue (ramp validated ≥ 3:1 on each). */
   --panel-navy: oklch(0.30 0.055 265);
   --panel-navy-border: oklch(0.93 0.03 260 / 16%);
@@ -207,11 +261,11 @@
   --panel-maroon-border: oklch(0.95 0.04 40 / 16%);
   --panel-maroon-ink: oklch(0.99 0.008 60);
   --panel-maroon-ink-muted: oklch(0.89 0.045 45);
-  --sidebar: oklch(0.19 0.005 260);
+  --sidebar: oklch(0.185 0.006 70);
   --sidebar-foreground: oklch(0.955 0.004 80);
   --sidebar-primary: oklch(0.66 0.205 35);
   --sidebar-primary-foreground: oklch(0.16 0.015 35);
-  --sidebar-accent: oklch(0.265 0.006 260);
+  --sidebar-accent: oklch(0.28 0.007 70);
   --sidebar-accent-foreground: oklch(0.955 0.004 80);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.66 0.205 35);
@@ -243,8 +297,8 @@
   /* Blueprint grid on the dark ground — the app's full-screen graph paper. */
   .dark body {
     background-image:
-      linear-gradient(oklch(1 0 0 / 4%) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(1 0 0 / 4%) 1px, transparent 1px);
+      linear-gradient(oklch(1 0 0 / 3.5%) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(1 0 0 / 3.5%) 1px, transparent 1px);
     background-size: 28px 28px;
 
   }
@@ -292,6 +346,15 @@
     --panel-ink-muted: var(--panel-green-ink-muted);
     --chart-grid: var(--panel-green-grid);
     --chart-frame: var(--panel-green-frame);
+  }
+  /* The Market tab's charts: the same re-scoping, on the plain card surface. */
+  .chart-panel-desk {
+    --panel-bg: linear-gradient(180deg, var(--panel-chart-top), var(--panel-chart));
+    --panel-border-c: var(--panel-chart-border);
+    --panel-ink: var(--panel-chart-ink);
+    --panel-ink-muted: var(--panel-chart-ink-muted);
+    --chart-grid: var(--panel-chart-grid);
+    --chart-frame: var(--panel-chart-frame);
   }
   .chart-panel-navy {
     --panel-bg: var(--panel-navy);
@@ -387,3 +450,12 @@
     background-size: 20px 20px;
   }
 }
+
+/* "Not on your CV yet": a neutral diagonal hatch, so it reads apart from the
+   solid "you have this" green without leaning on colour. SVG charts use the
+   matching <pattern> (components/Market/ChartPatterns.tsx, HatchDefs). */
+@utility bar-gap {
+  background-color: transparent;
+  background-image: repeating-linear-gradient(135deg, var(--chart-gap) 0 1.5px, transparent 1.5px 5px);
+}
+

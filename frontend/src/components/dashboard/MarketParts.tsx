@@ -1,161 +1,262 @@
 'use client'
 
-import React, {useState} from 'react'
+import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
 
 import {cn} from "@/lib/utils";
-import {MarketAnalysis, SkillStat} from "@/types/jobradar";
-import {byDemand, coveragePercent, GAP_FREQUENCY_THRESHOLD, significantGaps, skillKey, skillLabel, toPercent} from "@/lib/market";
-import {axisDomainMax} from "@/lib/chart-ramp";
+import {MarketAnalysis} from "@/types/jobradar";
+import {significantGaps, SkillMark} from "@/lib/market";
 
 /*
- * The Market tab's pieces, in the dashboard's own anatomy (hairline cells,
- * mono labels) rather than the landing flow's editorial panels.
+ * The Market tab's chart chrome, docs/brand/charts.html made real: every
+ * chart is an object on the desk. A forest green-black panel, a short
+ * uppercase title, a mono subtitle split by the orange slash (the only orange
+ * in a chart), a legend, a "Good to know" row and a table twin for screen
+ * readers. The charts themselves are hand-built SVG in DemandBars, GapTally
+ * and SkillStrip; this file is what they share.
  *
- * Colour has one job: whether a skill is on the CV (--chart-have) or missing
- * (--chart-gap), a pair validated for colour-blind separation. Bar length
- * already shows demand, so colour never repeats it.
+ * Colour has one job: green is on your CV, a neutral hatch or hollow ring is
+ * not yet, lime is a single highlighter. Nothing here is set below 12px.
  */
 
-/** The four numbers the market view leads with, as one row of cells. */
-export function StatStrip({market}: { market: MarketAnalysis }) {
-    const coverage = market.skill_coverage;
-    const cells = [
-        {label: "Jobs analysed", value: market.jobs_analyzed.toLocaleString(), hint: "postings in this scan"},
-        {label: "Coverage", value: `${coveragePercent(coverage)}%`, hint: `${coverage.covered} of the top ${coverage.total} skills`,
-            meter: coveragePercent(coverage)},
-        {label: "Your skills", value: (market.user_skill_presence ?? []).length, hint: "asked for in these postings"},
-        {label: "Gaps", value: significantGaps(market.skill_gaps ?? []).length,
-            hint: `missing, in ${toPercent(GAP_FREQUENCY_THRESHOLD)}%+ of jobs`},
-    ];
+/** Chart text is JetBrains Mono, whose advance width is 0.6em: no measuring needed. */
+export const monoWidth = (text: string, fontSize: number) => text.length * fontSize * 0.6;
+
+export const TICK_FS = 12;
+
+/** The host's width, kept current, so an SVG chart can lay itself out in pixels. */
+export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
+    const ref = useRef<T>(null);
+    const [width, setWidth] = useState(0);
+    useEffect(() => {
+        const node = ref.current;
+        if (!node) return;
+        const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width)));
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, []);
+    return [ref, width];
+}
+
+/* ---------- tooltip ---------- */
+
+export interface TipContent {
+    title: string;
+    line: string;
+    sub?: string;
+}
+
+interface Tip extends TipContent {
+    x: number;
+    y: number;
+}
+
+/** What a mark says on hover or focus: the count first, then the skill and whose it is. */
+export function markTip(mark: SkillMark, jobs: number, sub?: string): TipContent {
+    return {
+        title: `${mark.count} of ${jobs} postings`,
+        line: `${mark.label} · ${mark.percent}% · ${mark.have ? "on your CV" : "not on your CV yet"}`,
+        sub,
+    };
+}
+
+/**
+ * One tooltip per chart. `bind` gives a mark the pointer and keyboard handlers
+ * plus an accessible name, so every hit area is focusable and read aloud.
+ */
+export function useTip() {
+    const [tip, setTip] = useState<Tip | null>(null);
+    const bind = (content: TipContent) => ({
+        tabIndex: 0,
+        role: "img",
+        "aria-label": `${content.line}. ${content.title}${content.sub ? `. ${content.sub}` : ""}`,
+        onPointerEnter: (e: React.PointerEvent) => setTip({...content, x: e.clientX, y: e.clientY}),
+        onPointerMove: (e: React.PointerEvent) => setTip((prev) => prev && {...prev, x: e.clientX, y: e.clientY}),
+        onPointerLeave: () => setTip(null),
+        onFocus: (e: React.FocusEvent<Element>) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setTip({...content, x: r.left + Math.min(r.width, 80), y: r.top + r.height / 2});
+        },
+        onBlur: () => setTip(null),
+    });
+    return {tip, bind};
+}
+
+export function TipBox({tip}: { tip: Tip | null }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = useState({left: 0, top: 0});
+    // Placed after it has a size, so it can flip away from the window's edges.
+    useLayoutEffect(() => {
+        if (!tip || !ref.current) return;
+        const {offsetWidth: w, offsetHeight: h} = ref.current;
+        let left = tip.x + 14, top = tip.y + 14;
+        if (left + w > window.innerWidth - 8) left = tip.x - w - 14;
+        if (left < 8) left = 8;
+        if (top + h > window.innerHeight - 8) top = tip.y - h - 14;
+        setPos({left, top});
+    }, [tip]);
+    if (!tip) return null;
     return (
-        // gap-px over a border-coloured ground draws the hairlines between cells at any column count.
-        <dl className={"grid grid-cols-2 gap-px border-b border-border bg-border sm:grid-cols-4"}>
-            {cells.map((cell) => (
-                <div key={cell.label} className={"flex min-w-0 flex-col gap-1.5 bg-background px-4 py-3.5 sm:px-5"}>
-                    <dt className={"font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"}>{cell.label}</dt>
-                    <dd className={"text-2xl font-bold leading-none tracking-tight"}>{cell.value}</dd>
-                    {"meter" in cell && (
-                        // One ratio, so a meter: the covered share on a lighter track of the same hue.
-                        <dd className={"h-[3px] max-w-40 rounded-full bg-chart-have/15"} role={"meter"} aria-label={"Skill coverage"}
-                            aria-valuenow={cell.meter} aria-valuemin={0} aria-valuemax={100}>
-                            <span className={"block h-full rounded-full bg-chart-have"} style={{width: `${cell.meter}%`}} />
-                        </dd>
-                    )}
-                    <dd className={"truncate font-mono text-[10px] text-muted-foreground"}>{cell.hint}</dd>
-                </div>
-            ))}
-        </dl>
+        <div ref={ref} role={"tooltip"} style={pos}
+             className={"pointer-events-none fixed z-20 max-w-[260px] rounded-[10px] bg-[var(--panel-chart-ink)] px-3 py-1.5 text-[13px] leading-snug text-[var(--panel-chart)] shadow-xl"}>
+            <b className={"block font-heading text-[15px] font-bold tracking-tight"}>{tip.title}</b>
+            {tip.line}
+            {tip.sub && <div className={"text-[12px] opacity-70"}>{tip.sub}</div>}
+        </div>
     )
 }
 
-/** Swatch + label pairs; the legend is what keeps identity from being colour alone. */
-export function ChartLegend({gaps = true}: { gaps?: boolean }) {
+/* ---------- panel chrome ---------- */
+
+export type Swatch = "have" | "hatch" | "dot" | "ring" | "solid" | "faint";
+
+const SWATCH: Record<Swatch, string> = {
+    have: "size-3 rounded-[3px] bg-chart-have",
+    hatch: "size-3 rounded-[3px] bar-gap",
+    dot: "size-[11px] rounded-full bg-chart-have",
+    ring: "size-[11px] rounded-full border-2 border-chart-gap opacity-70",
+    solid: "size-3 rounded-[3px] bg-chart-gap",
+    faint: "size-3 rounded-[3px] bg-chart-gap/30",
+};
+
+export function Legend({items}: { items: Array<[Swatch, string]> }) {
     return (
-        <div className={"flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"}>
-            <span className={"inline-flex items-center gap-1.5"}>
-                <span aria-hidden className={"size-2.5 rounded-[3px] bg-chart-have"} /> On your CV
-            </span>
-            {gaps && (
-                <span className={"inline-flex items-center gap-1.5"}>
-                    <span aria-hidden className={"size-2.5 rounded-[3px] bg-chart-gap"} /> Not on your CV
+        <div className={"flex flex-wrap justify-center gap-x-5 gap-y-1.5 font-mono text-[12px] font-medium uppercase tracking-[0.06em] text-muted-foreground"}>
+            {items.map(([swatch, label]) => (
+                <span key={label} className={"inline-flex items-center gap-2"}>
+                    <i aria-hidden className={cn("inline-block", SWATCH[swatch])} />{label}
                 </span>
-            )}
+            ))}
         </div>
+    )
+}
+
+/** The table twin of a chart: the same rows, readable without the picture. */
+export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) {
+    return (
+        <details className={"group mt-3"}>
+            <summary className={"inline-flex cursor-pointer list-none items-center gap-2 font-mono text-[12px] font-medium uppercase tracking-[0.1em] text-panel-chart-ink-faint hover:text-foreground [&::-webkit-details-marker]:hidden"}>
+                <span aria-hidden className={"font-bold group-open:hidden"}>+</span>
+                <span aria-hidden className={"hidden font-bold group-open:inline"}>–</span>
+                View as table
+            </summary>
+            <table className={"mt-2.5 w-full max-w-[560px] border-collapse font-mono text-[12px] tabular-nums"}>
+                <thead>
+                    <tr className={"text-left font-medium uppercase tracking-[0.06em] text-panel-chart-ink-faint"}>
+                        <th className={"border-b border-border px-2.5 py-1.5 font-medium"}>Skill</th>
+                        <th className={"border-b border-border px-2.5 py-1.5 text-right font-medium"}>Postings</th>
+                        <th className={"border-b border-border px-2.5 py-1.5 text-right font-medium"}>Share</th>
+                        <th className={"border-b border-border px-2.5 py-1.5 font-medium"}>CV</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {marks.map((mark) => (
+                        <tr key={mark.skill}>
+                            <td className={"border-b border-border px-2.5 py-1.5"}>{mark.label}</td>
+                            <td className={"border-b border-border px-2.5 py-1.5 text-right"}>{mark.count} / {jobs}</td>
+                            <td className={"border-b border-border px-2.5 py-1.5 text-right"}>{mark.percent}%</td>
+                            <td className={"border-b border-border px-2.5 py-1.5"}>{mark.have ? "Yours" : "Not yet"}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </details>
     )
 }
 
 /**
- * Ranked horizontal bars for skills, one row each: name, bar, value. Every bar
- * is labelled, so there is no axis to read, and the scale runs from 0 to just
- * past the top value so differences stay visible without overstating them.
+ * The panel every chart sits in. `lead` is the finding; the postings chip
+ * after the orange slash is the denominator every count is read against.
  */
-export function SkillBars({skills, have, initialCount = 12, limit}: {
-    skills: SkillStat[];
-    /** skillKey()s on the CV: those bars are "have", the rest "gap". */
-    have: Set<string>;
-    initialCount?: number;
-    /** Show exactly this many, with no "show all". */
-    limit?: number;
+export function ChartPanel({title, lead, jobs, legend, children, notes, table, action, preview, className}: {
+    title: string;
+    lead: React.ReactNode;
+    jobs: number;
+    legend?: Array<[Swatch, string]>;
+    children: React.ReactNode;
+    /** At most two short bullets. */
+    notes?: string[];
+    table?: { marks: SkillMark[] };
+    /** A control under the chart, like "Show all". */
+    action?: React.ReactNode;
+    /** The overview's compact version: a link to the full view instead of notes and the table. */
+    preview?: React.ReactNode;
+    className?: string;
 }) {
-    const [showAll, setShowAll] = useState(false);
-    const ranked = byDemand(skills ?? []);
-    if (ranked.length === 0) return null;
-
-    const shown = limit ? ranked.slice(0, limit) : showAll ? ranked : ranked.slice(0, initialCount);
-    const scale = axisDomainMax(toPercent(ranked[0].frequency));
-
     return (
-        <div className={"flex flex-col"}>
-            <ul className={"flex flex-col"}>
-                {shown.map((stat) => {
-                    const percent = Math.round(toPercent(stat.frequency));
-                    const mine = have.has(skillKey(stat.skill));
-                    return (
-                        <li
-                            key={stat.skill}
-                            title={`${stat.skill}: ${stat.job_count.toLocaleString()} ${stat.job_count === 1 ? "posting" : "postings"} (${percent}%)${mine ? ", on your CV" : ""}`}
-                            className={"grid grid-cols-[minmax(0,8.5rem)_1fr_auto] items-center gap-3 rounded-md px-1 py-1.5 transition-colors hover:bg-foreground/3 sm:grid-cols-[minmax(0,13rem)_1fr_auto]"}
-                        >
-                            <span className={"truncate text-[13px]"}>{skillLabel(stat.skill)}</span>
-                            <span className={"h-3.5"}>
-                                <span
-                                    className={cn("block h-full rounded-r-[4px]", mine ? "bg-chart-have" : "bg-chart-gap")}
-                                    style={{width: `${Math.max(1.5, (percent / scale) * 100)}%`}}
-                                />
-                            </span>
-                            <span className={"w-9 text-right font-mono text-[11px] tabular-nums sm:w-20"}>
-                                {percent}%
-                                <span className={"hidden text-muted-foreground sm:inline"}> · {stat.job_count.toLocaleString()}</span>
-                            </span>
-                        </li>
-                    );
-                })}
-            </ul>
-            {!limit && ranked.length > initialCount && (
-                <button
-                    type={"button"}
-                    onClick={() => setShowAll((prev) => !prev)}
-                    className={"mt-2 self-start rounded-md border border-border px-3 py-1 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground"}
-                >
-                    {showAll ? `Show top ${initialCount}` : `Show all ${ranked.length}`}
-                </button>
+        <section aria-label={title}
+                 className={cn("chart-panel chart-panel-desk flex min-w-0 flex-col px-4 pb-4 pt-[18px] sm:px-8 sm:pb-[22px] sm:pt-[26px]", className)}>
+            <h2 className={"text-balance text-center font-heading text-[18px] font-bold uppercase leading-tight tracking-[0.05em] sm:text-[20px]"}>{title}</h2>
+            <p className={"mx-auto mt-1.5 max-w-[640px] text-center font-mono text-[12px] leading-[1.7] text-muted-foreground"}>
+                {lead}
+                <span aria-hidden className={"mx-[7px] font-bold text-primary"}>/</span>
+                <span className={"whitespace-nowrap"}>
+                    <span className={"inline-block rounded-full bg-foreground/9 px-2 leading-5 text-foreground"}>{jobs.toLocaleString()} postings</span>
+                </span>
+            </p>
+            {legend && <div className={"mb-1 mt-3.5"}><Legend items={legend} /></div>}
+            <div className={"mt-2.5 min-w-0"}>{children}</div>
+            {action}
+            {notes && (
+                <div className={"mt-[18px] grid gap-1.5 border-t border-border pt-3.5 sm:grid-cols-[120px_1fr] sm:gap-x-4"}>
+                    <h4 className={"mt-[3px] font-mono text-[12px] font-bold uppercase tracking-[0.14em] text-accent-lime"}>Good to know</h4>
+                    <ul className={"flex flex-col gap-1 text-[14px] leading-normal text-muted-foreground"}>
+                        {notes.map((point) => (
+                            <li key={point} className={"relative pl-3.5 before:absolute before:left-0 before:top-[0.6em] before:size-[5px] before:rounded-full before:bg-panel-chart-ink-faint"}>{point}</li>
+                        ))}
+                    </ul>
+                </div>
             )}
+            {table && <ChartTable marks={table.marks} jobs={jobs} />}
+            {preview && <div className={"mt-4 flex justify-end border-t border-border pt-3"}>{preview}</div>}
+        </section>
+    )
+}
+
+/* ---------- overview tiles ---------- */
+
+function Tile({label, hero, small, foot, children, className}: {
+    label: string;
+    hero: React.ReactNode;
+    small?: string;
+    foot: string;
+    children?: React.ReactNode;
+    className?: string;
+}) {
+    return (
+        <div className={cn("chart-panel chart-panel-desk flex min-w-0 flex-col gap-1 px-[18px] pb-3.5 pt-4 sm:px-[22px] sm:pt-[18px]", className)}>
+            <span className={"font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-panel-chart-ink-faint"}>{label}</span>
+            <div className={"flex flex-wrap items-baseline gap-2.5 font-heading text-[40px] font-bold leading-none tracking-[-0.02em]"}>
+                <span>{hero}</span>
+                {small && <small className={"font-sans text-[13px] font-medium tracking-normal text-muted-foreground"}>{small}</small>}
+            </div>
+            {children}
+            <span className={"text-[13px] text-muted-foreground"}>{foot}</span>
         </div>
     )
 }
 
-/** Short footnotes in the tab's quiet ink: colour is kept for have / missing. */
-export function ChartNotes({points}: { points: string[] }) {
+/** The numbers the overview leads with: coverage as a hero and a tally of the top skills, then the postings. */
+export function StatTiles({market, marks}: { market: MarketAnalysis; marks: SkillMark[] }) {
+    const coverage = market.skill_coverage;
+    const groups: SkillMark[][] = [];
+    for (let i = 0; i < marks.length; i += 5) groups.push(marks.slice(i, i + 5));
+    const gaps = significantGaps(market.skill_gaps ?? []).length;
     return (
-        <ul className={"flex flex-col gap-1 border-t border-border pt-3 text-[12px] leading-relaxed text-muted-foreground"}>
-            {points.map((point) => (
-                <li key={point} className={"flex gap-2"}>
-                    <span aria-hidden className={"mt-[7px] size-1 shrink-0 rounded-full bg-muted-foreground/50"} />
-                    {point}
-                </li>
-            ))}
-        </ul>
-    )
-}
-
-/** A titled block of the Market tab, ruled off like the rest of the dashboard. */
-export function MarketSection({title, meta, action, children, className}: {
-    title: string;
-    meta?: React.ReactNode;
-    action?: React.ReactNode;
-    children: React.ReactNode;
-    className?: string;
-}) {
-    return (
-        <section className={cn("flex min-w-0 flex-col gap-3.5 border-b border-border px-4 py-4 sm:px-5", className)}>
-            <header className={"flex items-baseline justify-between gap-3"}>
-                <h2 className={"text-[13px] font-semibold"}>
-                    {title}
-                    {meta && <span className={"ml-2 font-mono text-[10px] font-normal uppercase tracking-[0.1em] text-muted-foreground"}>{meta}</span>}
-                </h2>
-                {action}
-            </header>
-            {children}
-        </section>
+        <div className={"grid gap-3 sm:grid-cols-[1.6fr_1fr_1fr] sm:gap-4"}>
+            <Tile label={"Coverage"} hero={coverage.covered} small={`of the top ${coverage.total} are yours`} foot={"In demand order. Green is yours."}>
+                <div aria-hidden className={"my-1.5 flex flex-wrap gap-2 sm:gap-2.5"}>
+                    {groups.map((group, g) => (
+                        <div key={g} className={"flex gap-[3px]"}>
+                            {group.map((mark) => (
+                                <i key={mark.skill} title={mark.label}
+                                   className={cn("block h-[18px] w-[11px] rounded-[3px] sm:w-3", mark.have ? "bg-chart-have" : "bar-gap")} />
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </Tile>
+            <Tile label={"Postings"} hero={market.jobs_analyzed.toLocaleString()} foot={"in this scan"} />
+            <Tile label={"Gaps"} hero={gaps} foot={"asked for by a fifth of postings or more"} />
+        </div>
     )
 }

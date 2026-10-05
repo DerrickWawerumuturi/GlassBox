@@ -28,7 +28,7 @@ export const GRID_FOOT = "border-l border-input px-3 py-2 align-middle font-mono
 export function PageBar({title, meta}: { title: string; meta?: React.ReactNode }) {
     return (
         <div className={"flex min-h-12 flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 sm:px-5"}>
-            <h1 className={"text-[15px] font-bold tracking-tight"}>
+            <h1 className={"font-heading text-[15px] font-bold tracking-tight"}>
                 {title}<span className={"text-primary"}>.</span>
             </h1>
             {meta && (

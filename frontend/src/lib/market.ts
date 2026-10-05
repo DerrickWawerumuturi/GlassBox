@@ -95,6 +95,27 @@ export function toSkillKeys(skills: SkillStat[]): Set<string> {
     return new Set((skills ?? []).map((stat) => skillKey(stat.skill)));
 }
 
+/** One skill as a chart draws it: its count against the scan, and whether the CV has it. */
+export interface SkillMark {
+    skill: string;
+    label: string;
+    count: number;
+    /** Whole-number share of postings, 0-100. */
+    percent: number;
+    have: boolean;
+}
+
+/** Skills in demand order, each marked "yours" when its key is among the CV's. */
+export function skillMarks(skills: SkillStat[], have: Set<string>): SkillMark[] {
+    return byDemand(skills ?? []).map((stat) => ({
+        skill: stat.skill,
+        label: skillLabel(stat.skill),
+        count: stat.job_count,
+        percent: Math.round(toPercent(stat.frequency)),
+        have: have.has(skillKey(stat.skill)),
+    }));
+}
+
 /**
  * Split a posting's extracted skills into the ones the user already has and
  * the ones they don't. Pure set arithmetic over data the backend returned —

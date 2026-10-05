@@ -4,8 +4,12 @@
 
 ## Direction
 
-Dark editorial data-visualization: near-black ground, one vivid accent, bold
+Dark editorial data-visualization: a warm charcoal ground, one vivid accent, bold
 tight display type against monospace captions, hairline rules.
+
+The ground was near-black (`oklch(0.155 0.004 260)`) until 2026-10-02. Against it
+every panel cut out harshly. It is now `oklch(0.205 0.006 70)`, and the surfaces
+(card, popover, muted, sidebar) step from it in the same warm hue.
 
 Chosen from two references. The rejected alternative was a warm off-white SaaS
 analysis; density and card-layering ideas were borrowed from it, but the ground
@@ -36,13 +40,45 @@ rather than acceptable in two.
 | Text | warm white, plus a muted step |
 | **Accent** | **`#f5532a`** orange-red |
 
-The accent drives `--primary` **and** the whole `--chart-*` ramp. That single
-decision is why the entire analysis repainted from green to orange-red in one
-edit — no component holds a colour.
+The accent drives `--primary` and the legacy `--chart-1…5` ramp that the
+anonymous `/analysis` charts still read. It no longer drives the Market tab's
+charts: there, orange is the brand and never marks data (see "Chart grammar"
+below). Accent use is restricted to: the primary CTA, the active-tab indicator,
+section heading ticks, small numerals and the slash in a chart subtitle.
+Everywhere else is foreground/muted ink. **Text wears text tokens, never the
+series colour.**
 
-Accent use is restricted to: data marks, the primary CTA, the active-tab
-indicator, section heading ticks, and small numerals. Everywhere else is
-foreground/muted ink. **Text wears text tokens, never the series colour.**
+## Chart grammar (Market tab, 2026-10-02)
+
+The approved designs are `docs/brand/charts.html`. Every chart is an object on
+the desk, and every chart is the same object:
+
+- the plain card surface every other section uses (`.chart-panel.chart-panel-desk`,
+  tokens `--panel-chart*`, which point at `--card`). The first build used a
+  forest green-black panel; next to the rest of the app it looked like another
+  product, so colour stays in the data (green = yours) and off the ground;
+- a rounded plot frame with a fine graph-paper grid
+  (`components/Market/ChartPatterns.tsx`, `PlotFrame`);
+- a short uppercase title in Space Grotesk, five words or fewer;
+- a mono subtitle: the finding, an orange slash, a "N postings" chip. The
+  slash is the only orange in a chart;
+- a legend, a "Good to know" row of at most two bullets, a "View as table"
+  twin, and hover or keyboard tooltips on every mark.
+
+Colour roles, each a token in `globals.css`:
+
+| Role | Token | Means |
+|---|---|---|
+| Green, solid | `--chart-have` | on your CV |
+| Neutral hatch (`.bar-gap`, `HatchDefs`) or hollow ring | `--chart-gap` | not on your CV yet |
+| Neutral ink | `--chart-ink` | market-only data, no "you" in it |
+| Lime | `--accent-lime` | one highlighter per chart: a "1st" badge or one pill |
+| Orange | `--primary` | never in data |
+
+`--chart-have` and `--chart-gap` are validated as a pair for colour-blind
+separation on the panel ground; the hatch and the ring are the second
+encoding, so the pair never relies on hue alone. Nothing in a chart is set
+below 12px: ticks are 12px regular mono, titles 18-20px, hero numbers 40px.
 
 ## Charts must read tokens
 
@@ -56,10 +92,17 @@ breaks the one-place-to-change property that makes this system worth having.
 
 ## Typography
 
-- **Space Grotesk** (`font-space`, `font-heading`) — display and body. Bold,
-  tight, uppercase for headings.
+- **Space Grotesk** (`font-space`, `font-heading`) — display. Bold, tight,
+  uppercase for headings; `font-heading` on every h1 and chart title.
+- **Schibsted Grotesk** (`font-sans`, the body default) — reading text.
+  Warmer and calmer at 14-16px than Space Grotesk, whose quirks suit headlines.
 - **JetBrains Mono** (`font-mono`) — every number, axis tick, unit, percent
   label, legend entry and small-caps label.
+
+The type scale is seven tokens in `@theme`: `text-display` (3.5rem), `text-h1`
+(2.5rem), `text-h2` (1.75rem), `text-h3` (1.25rem), `text-body` (1rem),
+`text-small` (0.875rem) and `text-label` (0.75rem), each with its line height.
+`text-label` is the floor; nothing new goes below 12px.
 
 Numbers are treated as the hero. The mono/display contrast is most of what makes
 the reference read as technical rather than generic.

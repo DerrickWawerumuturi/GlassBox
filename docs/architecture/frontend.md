@@ -22,16 +22,22 @@ src/
         page.tsx                 overview
         applications/page.tsx    the tracker table
         opportunities/page.tsx   the daily pool matched to the CV
-        market/page.tsx          the scan's market, one view per chip (?view=demand)
+        market/page.tsx          the scan's market, one view at a time, picked on a needle dial (?view=demand)
         gaps, scan, profile
+  app/experiments/market-navigation/  dev-only lab of the four rotary concepts (404 in production)
   components/
-    Market/                      analysis charts, shared by /analysis and /dashboard
+    Market/                      analysis charts, shared by /analysis and /dashboard;
+                                 ChartPatterns.tsx holds the SVG hatch and plot frame;
+                                 NeedleDial.tsx the Market view dial, ViewDial.tsx where it sits
+                                 (left column on a desktop, bottom half circle on a phone)
     dashboard/                   dashboard pieces; ApplicationParts.tsx holds the tracker's cells
                                  and menus, AddApplicationDialog.tsx the paste-a-link flow,
                                  ImportApplicationsDialog.tsx the spreadsheet import,
                                  ApplicationSheet.tsx a row's long-press sheet on phones,
                                  OpportunityCard/OpportunityPeek a match and its reasons,
-                                 MarketParts.tsx + SkillStrip.tsx the Market tab's charts
+                                 MarketParts.tsx the Market tab's chart chrome (panel, tooltip,
+                                 table twin, stat tiles), DemandBars / GapTally / SkillStrip
+                                 its three hand-built SVG charts
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token
@@ -40,6 +46,8 @@ src/
     applications-store.tsx       tracked applications, optimistic writes, per-user cache
     opportunities-store.tsx      matched pool jobs, per-user cache
     market.ts                    display transforms over the analysis
+    use-rotor.ts                 the dial's motion: aim, ease, snap, wheel, drag, keys
+    chart-labels.ts              label placement for the landscape chart
     dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract
 ```
@@ -133,12 +141,16 @@ Tailwind v4 with **no config file**. Every token lives in
 `src/app/globals.css` inside `@theme inline`, `:root` and `.dark`.
 
 The app is locked to dark via `className="dark"` on `<html>`. A single accent
-(`#f5532a`) drives `--primary` and the `--chart-*` ramp, so all five charts
-repaint from one token change. Charts read colour via `var(--chart-3)` rather
+(`#f5532a`) drives `--primary` and the legacy `--chart-1…5` ramp the
+`/analysis` charts read. The Market tab's charts read the colour roles instead
+(`--chart-have` green for on your CV, `--chart-gap` neutral with a hatch or a
+ring for not yet, `--chart-ink` for market-only data, lime for one highlight)
+and never put orange in data. Charts read colour via `var(--chart-have)` rather
 than literals — never hard-code a colour in a chart.
 
-Fonts: Space Grotesk (display/body, `font-space`) and JetBrains Mono
-(`font-mono`, used for every number, axis tick and small-caps label).
+Fonts: Space Grotesk (`font-heading`, headings and chart titles), Schibsted
+Grotesk (`font-sans`, body) and JetBrains Mono (`font-mono`, used for every
+number, axis tick and small-caps label).
 
 See `decisions/design-system.md`.
 

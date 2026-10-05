@@ -72,6 +72,9 @@ function NavLink({item, active, compact, collapsed}: {
     )
 }
 
+/** Pages that open with the sidebar collapsed: Market charts, to make room for its dial. */
+const AUTO_COLLAPSE = ["/dashboard/market"];
+
 export default function Sidebar() {
     const pathname = usePathname();
     const {data: session} = useSession();
@@ -80,14 +83,24 @@ export default function Sidebar() {
     const {apps} = useApplications();
     const {data: opportunities} = useOpportunities();
 
-    const [collapsed, setCollapsed] = useState(false);
+    // The saved preference, and pages that start collapsed to make room for their own
+    // left-hand control (the Market charts dial). There, expanding lasts for the visit
+    // and is not saved; leaving restores the preference.
+    const [saved, setSaved] = useState(false);
     useEffect(() => {
-        try { setCollapsed(localStorage.getItem("sidebar-collapsed") === "1") } catch {}
+        try { setSaved(localStorage.getItem("sidebar-collapsed") === "1") } catch {}
     }, []);
-    const toggleCollapsed = () => setCollapsed((prev) => {
-        try { localStorage.setItem("sidebar-collapsed", prev ? "0" : "1") } catch {}
-        return !prev;
-    });
+    const auto = AUTO_COLLAPSE.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    const [visit, setVisit] = useState<boolean | null>(null);
+    useEffect(() => setVisit(null), [auto]);
+    const collapsed = visit ?? (auto || saved);
+    const toggleCollapsed = () => {
+        if (auto) { setVisit(!collapsed); return; }
+        setSaved((prev) => {
+            try { localStorage.setItem("sidebar-collapsed", prev ? "0" : "1") } catch {}
+            return !prev;
+        });
+    };
 
     const stripRef = useRef<HTMLElement>(null);
     const [stripAtEnd, setStripAtEnd] = useState(false);

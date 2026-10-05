@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, JetBrains_Mono, Caveat } from "next/font/google";
+import { Space_Grotesk, Schibsted_Grotesk, JetBrains_Mono, Caveat } from "next/font/google";
 import "./globals.css";
 import {Toaster} from "sonner";
 import {AnalysisProvider} from "@/lib/analysis-store";
@@ -11,6 +11,14 @@ import Navbar from "@/components/Navbar";
 const spaceGrotesk = Space_Grotesk({
     subsets: ["latin"],
     variable: "--font-space-grotesk",
+    display: "swap"
+})
+
+// Reading text: warmer and calmer at 14-16px than Space Grotesk, whose quirks
+// suit headlines (docs/decisions/design-system.md).
+const schibstedGrotesk = Schibsted_Grotesk({
+    subsets: ["latin"],
+    variable: "--font-schibsted-grotesk",
     display: "swap"
 })
 
@@ -62,9 +70,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${spaceGrotesk.variable} ${jetBrainsMono.variable} ${caveat.variable} h-full antialiased`}
+      className={`dark ${spaceGrotesk.variable} ${schibstedGrotesk.variable} ${jetBrainsMono.variable} ${caveat.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-background font-space text-foreground">
+      <body className="min-h-full bg-background font-sans text-foreground">
       <SessionProvider>
           <AnalysisProvider>
               <CVProvider>
