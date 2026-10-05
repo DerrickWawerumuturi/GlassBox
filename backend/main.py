@@ -42,8 +42,7 @@ from src.jobpool.opportunities import NoProfile, opportunity_service
 from src.jobpool.service import job_url_service
 
 
-# The analysis stack (SkillNer matchers, sentence-transformers, spaCy) takes
-# ~10s to import on the container and ~20s locally. Imported at the top of this
+# The analysis stack (sentence-transformers and torch) takes seconds to import. Imported at the top of this
 # file it held every route hostage: after a scale-from-zero the applications
 # list could not answer until the models finished loading. Routes that need it
 # import it on first use; startup loads it in the background so the first
@@ -91,8 +90,8 @@ async def lifespan(_app):
 app = FastAPI(lifespan=lifespan)
 
 # One analysis at a time. The work is moved off the event loop so the server
-# stays responsive, but spaCy/SkillNer pipelines are shared mutable objects and
-# are not safe to run concurrently, so requests queue rather than overlap.
+# stays responsive, but it is CPU-bound (the embedder) on a 2 vCPU container,
+# so requests queue rather than compete for the same cores.
 analysis_lock = asyncio.Lock()
 
 

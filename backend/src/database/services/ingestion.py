@@ -1,4 +1,3 @@
-import os
 import time
 from datetime import datetime
 from types import SimpleNamespace
@@ -10,14 +9,9 @@ from src.database.repositories import (
     observation_repository,
     profile_repository,
     search_repository,
-    skill_repository,
 )
 from src.database.session import connection, is_configured
 from src.matching.requirements import PROFILER_VERSION, JobProfile, content_hash, profile_job
-
-# Bump when SkillExtractor's output changes. Old rows are kept, so the two
-# generations stay comparable over identical descriptions.
-EXTRACTOR_VERSION = os.getenv("JOBRADAR_EXTRACTOR_VERSION", "skillner-emsi-v1")
 
 # An unreachable database costs the pool timeout on every call. Without this,
 # one analysis pays it three times over.
@@ -76,8 +70,7 @@ class JobIngestionService:
     not recorded — rather than failing the request.
     """
 
-    def __init__(self, extractor_version: str = EXTRACTOR_VERSION):
-        self.extractor_version = extractor_version
+    def __init__(self):
         self.enabled = is_configured()
         self._retry_after = 0.0
         if not self.enabled:
@@ -212,17 +205,6 @@ class JobIngestionService:
             self._record_failure("profile jobs", err)
             return done
 
-    def stored_skills(self, job_ids: list[int]) -> dict[int, list[str]]:
-        """Skills an earlier run already extracted and that still hold, by job id."""
-        if not self._available() or not job_ids:
-            return {}
-        try:
-            with connection() as conn:
-                return skill_repository.stored_skills(conn, job_ids, self.extractor_version)
-        except Exception as err:
-            self._record_failure("read stored skills", err)
-            return {}
-
     def stored_profiles(self, job_ids: list[int]) -> dict[int, JobProfile]:
         """Requirement profiles that still describe their posting, by job id."""
         if not self._available() or not job_ids:
@@ -234,51 +216,3 @@ class JobIngestionService:
         except Exception as err:
             self._record_failure("read stored profiles", err)
             return {}
-
-    def persist_skills(
-        self,
-        job_ids: dict[JobIdentity, int],
-        processed_jobs: list,
-    ) -> None:
-        if not self._available() or not job_ids or not processed_jobs:
-            return
-
-        try:
-            per_job: dict[int, set[str]] = {}
-            for processed in processed_jobs:
-                identity, _, _ = resolve_identity(processed.job)
-                job_id = job_ids.get(identity)
-                if job_id is None:
-                    continue
-                per_job.setdefault(job_id, set()).update(
-                    skill for skill in processed.skills if skill and skill.strip()
-                )
-
-            if not per_job:
-                return
-
-            all_names = {name for names in per_job.values() for name in names}
-
-            with connection() as conn:
-                skill_ids = skill_repository.get_or_create_skills(conn, all_names)
-
-                job_skill_ids = {
-                    job_id: {
-                        skill_ids[key]
-                        for key in (skill_repository.normalize_name(n) for n in names)
-                        if key in skill_ids
-                    }
-                    for job_id, names in per_job.items()
-                }
-
-                written = skill_repository.replace_job_skills(
-                    conn, job_skill_ids, self.extractor_version
-                )
-
-            print(
-                f"Persisted {written} job-skill links across {len(job_skill_ids)} jobs "
-                f"({len(skill_ids)} distinct skills, {self.extractor_version})"
-            )
-
-        except Exception as err:
-            self._record_failure("store skills", err)

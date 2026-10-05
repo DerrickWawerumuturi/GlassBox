@@ -58,6 +58,27 @@ def test_a_cv_list_keeps_what_the_vocabulary_does_not_know():
     assert known == {"react", "next.js", "postgresql"} and unknown == ["Problem Solving"]
 
 
+def _skills_at(company, title, text):
+    p = profile_job(SimpleNamespace(title=title, description=text, experience_level=None, employment_type=None,
+                                    company=company))
+    return {*p.required, *p.preferred, *p.mentioned}
+
+
+def test_the_employers_own_name_is_not_a_skill():
+    # Every Datadog posting says "Datadog"; it made Observability a skill of
+    # their recruiters (2026-10-05). The same words elsewhere are a real ask.
+    about = "About Datadog: Datadog is the monitoring platform for cloud applications. We build Datadog."
+    assert _skills_at("Datadog", "Recruiter", about) == set()
+    assert _skills_at("Acme", "Recruiter", about) == {"observability"}
+    assert _skills_at("GitLab Inc.", "Backend Engineer", "Join GitLab. Requirements: Ruby and PostgreSQL.") == \
+        {"ruby", "postgresql"}
+
+
+def test_a_tool_the_employer_does_not_make_still_counts_at_the_employer():
+    text = "About Datadog: Datadog is a cloud company.\nRequirements: Go, and experience with Grafana."
+    assert _skills_at("Datadog", "Backend Engineer", text) == {"go", "observability"}
+
+
 # --------------------------------------------------------- sections, years
 
 def test_only_headings_open_sections():

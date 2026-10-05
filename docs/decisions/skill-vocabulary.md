@@ -1,6 +1,6 @@
 # Decision: one closed skill vocabulary, grown by review
 
-**Status:** steps 1–3 in place (2026-10-01). The Market tab reads the vocabulary; SkillNer stays in the code, unused, until step 4.
+**Status:** all four steps done. Steps 1–3 on 2026-10-01; step 4 (SkillNer and spaCy deleted) on 2026-10-05.
 **Files:** `backend/src/matching/skills.txt`, `skills.py`, `discover.py`, `discover_report.py`, `skills_rejected.txt`
 
 ## The problem
@@ -59,6 +59,7 @@ order is:
    covers at least 80%.
 4. **Remove SkillNer and spaCy** from the container: about 400 MB+ resident
    (`changelog/2026-08-25-container-oom.md`) and about 2 s a posting.
+   Done 2026-10-05.
 
 ## Rules for the vocabulary
 
@@ -66,6 +67,13 @@ order is:
   approves each one.
 - Spellings of one skill are aliases of one key ("Photoshop" = "Adobe Photoshop").
 - EMSI's skill types are not trusted: it calls "Workflows" a hard skill.
+- A spelling is one phrase: its words may be joined by spaces, hyphens or
+  slashes, never a comma ("product, design" is two teams).
+- A skill that postings also use as a quality is gated: `?observability[...]`
+  resolves on a CV, but in a posting counts only in a sentence that also says a
+  context word.
+- The employer's own name is never a skill: "Datadog" at Datadog is who is
+  hiring.
 - `non_tech`, `other` and `ai_data` are measured but not mined. They are outside
   the audience; pass `--family` to mine one anyway.
 
@@ -133,3 +141,55 @@ and the CV's through the same vocabulary (`parser.cv_skill_names`). SkillNer is
 not imported on the scan path, so spaCy's `en_core_web_lg` and the 31k EMSI
 matchers no longer load in the app. Step 4 deletes them from the code and the
 image.
+
+## Step 4 (2026-10-05)
+
+Deleted `skill_extractor.py`, `extraction_pool.py`, `skill_repository.py`,
+`stored_skills`, `persist_skills`, `token_dist.json` and the local
+`en_core_web_lg` folder; `skillner` and `spacy` left `requirements.txt`, and the
+Dockerfile no longer installs the model or copies the EMSI files. Packages that
+only they needed, measured in the venv: en_core_web_lg 424.5 MiB,
+spaCy, SkillNer and 18 dependencies 54 MiB (nltk, thinc, blis, srsly...), plus 7 MB of JSON: about
+485 MiB less in the image. A test fails if anything in the backend imports
+either again.
+
+`skill_db_relax_20.json` stays in the repository: `discover.py` reads it as a
+dictionary of EMSI names. It is in `.dockerignore`. The `skills` and
+`job_skills` tables stay in the database, unused.
+
+## Observability, and three over-broad rules (2026-10-05, `requirements-v4`)
+
+Observability topped the backend family: 50 of 126 readable live jobs. Of 30
+sampled by hand, 16 asked for observability tooling or practice and 14 used
+the word as a quality ("debugging, observability, and test coverage"), a team
+or product name, or the employer's own name. Three rules, each general:
+
+| Rule | Before | After |
+|---|---|---|
+| Bare "observability" only with a practice word in its sentence (monitoring, metrics, traces, logs, alerting, telemetry, dashboards, SLOs) or as "observability tools/tooling/stack/solutions" | quality lists counted | 11 of 14 sampled dropped |
+| A multi-word spelling never spans a comma or full stop | "product, design" 415 times | 0 |
+| The employer's own name is not a skill | "Datadog" at Datadog 4,256 times | 0 |
+
+On the 30-job sample: all 16 real asks still match, 11 of the 14 false ones
+drop. Live pool, readable jobs, before and after:
+
+| Family | Observability | Product design |
+|---|---|---|
+| Backend | 50 → 29 / 126 (1st → 10th) | 17 → 4 |
+| Software engineering | 556 → 261 / 1,701 | 159 → 31 |
+| DevOps | 81 → 64 / 176 (1st → 5th) | |
+| AI | 74 → 28 / 305 | |
+| Product | 66 → 20 / 608 | |
+| Full stack | 21 → 10 / 107 | 23 → 1 |
+| Frontend | 13 → 5 / 48 | 20 → 5 |
+| Mobile | | 19 → 5 |
+| Design | | 85 → 81 / 200 |
+
+The employer rule also moved Databricks in solutions (128 → 45 / 592), Git in
+backend (30 → 10, GitLab's own postings) and MongoDB, Cloudflare and Twilio.
+
+Left alone, worth a look later: `ml` as Machine learning in product postings
+("AI/ML products", 101 hits); `on call rotation` as Incident response (devops
+72 / 176); `relational databases` as SQL; a tool name used as a company
+("Grafana Labs CEO" as an investor).
+

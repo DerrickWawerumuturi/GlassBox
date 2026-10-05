@@ -6,7 +6,7 @@ _CONTENT = "md5(concat_ws('|', j.title, j.description, j.experience_level, j.emp
 
 # Jobs with no profile, a profile from older rules, or text that changed since.
 STALE = f"""
-select j.id, j.title, j.description, j.experience_level, j.employment_type
+select j.id, j.title, j.company, j.description, j.experience_level, j.employment_type
 from jobs j
 left join job_profiles p on p.job_id = j.id
 where j.archived_at is null

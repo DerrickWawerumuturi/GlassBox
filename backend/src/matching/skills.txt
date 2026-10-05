@@ -10,6 +10,11 @@
 #            ^Word  only with this exact capitalisation ("React", not "react quickly")
 #            ~Word  exact capitalisation AND inside a list ("Python, Go and Rust") —
 #                   for names that are also ordinary words: Go, R, C, Spring, Express
+#            ?word[context words]  a name, but in prose only in a sentence that
+#                   also says a context word. For a skill postings also use as
+#                   a quality ("performance, observability and security").
+#          The words of one alias may be joined by spaces, hyphens or slashes,
+#          never a comma or full stop: "product, design" is not Product design.
 # related  key=credit: knowing THIS skill earns partial credit toward THAT one.
 #          Directional on purpose — Next.js implies React more than React implies Next.js.
 #
@@ -126,7 +131,7 @@ gitlab ci | GitLab CI | devops | gitlab ci, gitlab pipelines, gitlab runners | c
 jenkins | Jenkins / CI servers | devops | jenkins, circleci, circle ci, travis ci, teamcity, argo cd, argocd | ci/cd=0.9
 linux | Linux | devops | linux, unix, ubuntu, debian, centos, rhel, red hat linux | bash=0.4
 git | Git | tool | git, version control, github, gitlab, bitbucket |
-observability | Observability | devops | observability, prometheus, grafana, datadog, new relic, splunk, opentelemetry, sentry, elk, elk stack, monitoring and alerting, kibana | 
+observability | Observability | devops | ?observability[monitoring alerting alerts telemetry tracing traces logs logging metrics dashboards slos slis instrumentation instrumenting], observability tools, observability tool, observability tooling, observability stack, observability stacks, observability solutions, prometheus, grafana, datadog, new relic, splunk, opentelemetry, sentry, elk, elk stack, monitoring and alerting, kibana | 
 vercel | Vercel | cloud | vercel | netlify=0.8
 netlify | Netlify | cloud | netlify | vercel=0.8
 heroku | Heroku | cloud | heroku, render.com, fly.io |

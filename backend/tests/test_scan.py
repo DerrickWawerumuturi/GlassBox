@@ -1,6 +1,6 @@
 """
-A scan reads each posting once: skills and requirement profiles stored by an
-earlier run are reused, and only postings nothing has read yet are read here.
+A scan reads each posting once: requirement profiles stored by an earlier run
+are reused, and only postings nothing has read yet are read here.
 """
 from src.Agent.utils import parser
 from src.Agent.utils.types import Job, ParsedQuery, ProcessedJob
@@ -49,13 +49,20 @@ def test_cv_skills_are_named_like_posting_skills():
         {"React", "PostgreSQL", "Underwater basket weaving"}
 
 
-def test_the_scan_path_no_longer_loads_skillner():
-    import subprocess
-    import sys
-    out = subprocess.run([sys.executable, "-c", "import sys, src.Agent.utils.parser; "
-                          "print('src.Agent.utils.skill_extractor' in sys.modules)"],
-                         capture_output=True, text=True, check=True)
-    assert out.stdout.strip() == "False"
+def test_nothing_in_the_backend_imports_spacy_or_skillner():
+    # Both left the image on 2026-10-05 (decisions/skill-vocabulary.md, step 4);
+    # an import anywhere would now fail at runtime, on whichever path reached it.
+    import ast
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    imported = set()
+    for path in [root / "main.py", *(root / "src").rglob("*.py")]:
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Import):
+                imported.update((alias.name.split(".")[0], path.name) for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported.add((node.module.split(".")[0], path.name))
+    assert {(module, where) for module, where in imported if module.lower() in ("spacy", "skillner")} == set()
 
 
 def test_a_stored_profile_is_scored_and_only_unstored_jobs_are_read(monkeypatch):

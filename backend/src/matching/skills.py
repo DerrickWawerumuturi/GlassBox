@@ -31,6 +31,16 @@ _WORDS_AFTER = frozenset({"and", "or", "code", "services", "microservices", "bac
                           "developers", "engineer", "engineers", "programming", "experience", "codebase",
                           "stack", "modules", "concurrency", "applications"})
 _QUALIFIER = re.compile(r"\s*\([^)]*\)\s*$")
+# What may sit between the words of one multi-word spelling: spaces, a hyphen or
+# a slash ("react-native", "ci/cd"). A comma or a full stop ends it, so "product,
+# design and engineering" names two teams, not Product design (2026-10-05:
+# 415 such matches in the live pool).
+_JOINER = re.compile(r"[ \t\u00a0\-\u2010\u2011/]*")
+# "?word[context words]": a skill's name that is also an everyday word in
+# postings. As a name (a CV's list) it always resolves; in prose it counts only
+# in a sentence that also says one of its context words.
+_GATED_ALIAS = re.compile(r"\?([^\[]+)\[([^\]]*)\]")
+_SENTENCE_END = ".;!?\n•"
 
 
 @dataclass(frozen=True)
@@ -46,7 +56,7 @@ def tokens(text: str) -> list[re.Match]:
 
 
 def _load(path: Path = VOCABULARY_FILE):
-    skills, folded, exact, in_list = {}, {}, {}, {}
+    skills, folded, exact, in_list, gated = {}, {}, {}, {}, {}
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -58,7 +68,10 @@ def _load(path: Path = VOCABULARY_FILE):
             credits[other.strip()] = float(value)
         skills[key] = Skill(key, name, category, credits)
         for alias in filter(None, (a.strip() for a in aliases.split(","))):
-            if alias[0] in "^~":
+            if alias[0] == "?":
+                word, context = _GATED_ALIAS.fullmatch(alias).groups()
+                gated[tuple(t.group().lower() for t in tokens(word))] = (key, frozenset(context.lower().split()))
+            elif alias[0] in "^~":
                 (exact if alias[0] == "^" else in_list)[alias[1:]] = key
             else:
                 folded[tuple(t.group().lower() for t in tokens(alias))] = key
@@ -66,11 +79,11 @@ def _load(path: Path = VOCABULARY_FILE):
     unknown = {o for s in skills.values() for o in s.related if o not in skills}
     if unknown:
         raise ValueError(f"skills.txt relates to skills it does not define: {sorted(unknown)}")
-    return skills, folded, exact, in_list
+    return skills, folded, exact, in_list, gated
 
 
-SKILLS, _FOLDED, _EXACT, _IN_LIST = _load()
-_LONGEST = max(len(alias) for alias in _FOLDED)
+SKILLS, _FOLDED, _EXACT, _IN_LIST, _GATED = _load()
+_LONGEST = max(len(alias) for alias in (*_FOLDED, *_GATED))
 
 
 def display(key: str) -> str:
@@ -91,6 +104,8 @@ def canonical(name: str | None) -> str | None:
         return None
     if words in _FOLDED:
         return _FOLDED[words]
+    if words in _GATED:
+        return _GATED[words][0]
     # A name is a skill by definition, so the capitalisation rules that protect
     # prose ("go to market") do not apply to it.
     joined = " ".join(words)
@@ -111,17 +126,33 @@ def _in_list(text: str, found: list[re.Match], i: int) -> bool:
     return word_before in _WORDS_BEFORE or word_after in _WORDS_AFTER
 
 
+def _gated(text: str, words: tuple, start: int, end: int) -> str | None:
+    """The key for a gated alias, if its sentence also says one of its context words."""
+    key, context = _GATED.get(words, (None, None))
+    if key is None:
+        return None
+    left = max(text.rfind(c, 0, start) for c in _SENTENCE_END) + 1
+    rights = [i for i in (text.find(c, end) for c in _SENTENCE_END) if i != -1]
+    sentence = text[left:min(rights, default=len(text))]
+    return key if context.intersection(t.group().lower() for t in tokens(sentence)) else None
+
+
 def scan(text: str | None) -> list[tuple[str, int, int]]:
     """Every skill mention in prose as (key, start, end); the longest alias wins."""
     if not text:
         return []
     found = tokens(text)
     words = [t.group().lower() for t in found]
+    # joined[j]: words j and j+1 can belong to one spelling (see _JOINER).
+    joined = [bool(_JOINER.fullmatch(text, a.end(), b.start())) for a, b in zip(found, found[1:])]
     hits = []
     i = 0
     while i < len(found):
         for n in range(min(_LONGEST, len(found) - i), 0, -1):
-            key = _FOLDED.get(tuple(words[i:i + n]))
+            if n > 1 and not all(joined[i:i + n - 1]):
+                continue
+            phrase = tuple(words[i:i + n])
+            key = _FOLDED.get(phrase) or _gated(text, phrase, found[i].start(), found[i + n - 1].end())
             if key is None and n == 1:
                 surface = found[i].group()
                 key = _EXACT.get(surface) or (_IN_LIST.get(surface) if surface in _IN_LIST and _in_list(text, found, i)

@@ -98,7 +98,8 @@ mirrors this exactly (`frontend/src/types/jobradar.ts`).
 
 - **A scan** used to spend ~80% of its time in SkillNer extraction for the
   market statistics. Since 2026-10-01, skills come from requirement profiles, at
-  milliseconds a posting, so the search and the LLM read of the CV dominate. Matching the scan's jobs is milliseconds. A scan's jobs join
+  milliseconds a posting, so the search and the LLM read of the CV dominate.
+  SkillNer and spaCy left the code and the image on 2026-10-05. Matching the scan's jobs is milliseconds. A scan's jobs join
   the pool as they are stored, and the user's cached Opportunities list is
   dropped when the scan finishes, so they show there at once.
 - **Opportunities** read up to 5,000 stored profiles and score them in about

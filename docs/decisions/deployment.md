@@ -44,6 +44,12 @@ Those two numbers are the whole sizing argument. The first is why the container
 could not boot at 1 GiB. The second is why the worker count has to be pinned:
 at the default of 4 workers the same peak does not fit in 4 GiB either.
 
+**Since 2026-10-05** the first two rows and the extraction workers are gone:
+the scan stopped loading spaCy and SkillNer on 2026-10-01, and step 4 of
+`decisions/skill-vocabulary.md` removed them from the image (about 485 MiB of
+packages, model and data). torch + MiniLM is what remains. The 2 vCPU / 4 GiB
+size has not been re-measured since; it is now generous, not tight.
+
 Consumption locks CPU and memory to a fixed ratio (0.5→1Gi, 1→2Gi, 1.5→3Gi,
 2→4Gi), so memory cannot be bought without CPU. The 2 vCPU is wanted anyway —
 extraction is ~80% of runtime and superlinear in posting length.
@@ -93,17 +99,16 @@ startup window and both on the critical path of every scale-from-zero:
 
 - **MiniLM** — `embedder.py:34` constructs `SentenceTransformer` at import. The
   image now pre-fetches it and pins `HF_HOME=/opt/hf` with `HF_HUB_OFFLINE=1`.
-- **skillNer's databases** — `skillNer/general_params.py:32-49` opens
-  `skill_db_relax_20.json` **relative to the working directory** and, failing
-  that, fetches it from `raw.githubusercontent.com` and writes 7.4 MB back into
-  `/app`. The remote path parses the response with an unguarded `response.json()`
-  (`remote_db.py:81`), so any 404 or proxy interstitial raises inside a
-  module-level import and kills uvicorn before it binds. Both JSON files are now
-  copied to `/app`.
+- **skillNer's databases** (until 2026-10-05) — `skillNer/general_params.py`
+  opened `skill_db_relax_20.json` **relative to the working directory** and,
+  failing that, fetched it from `raw.githubusercontent.com` with an unguarded
+  `response.json()`, so a 404 killed uvicorn before it bound. The image copied
+  both JSON files to `/app`. SkillNer is gone; `skill_db_relax_20.json` stays in
+  the repository for the discovery report only and is kept out of the image.
 
 This is the classic works-locally-fails-in-the-container shape: a development
-checkout already has those files at the repository root from an earlier run, so
-the `try` branch succeeds instantly and the remote fallback is never exercised.
+checkout already had those files at the repository root, so the `try` branch
+succeeded instantly and the remote fallback was never exercised.
 
 ## The 240s ingress limit is a real constraint
 
@@ -117,30 +122,16 @@ the frontend polls — which also removes the cold start from the request path
 entirely. That is a cross-repo change: the response contract, including the
 double nesting at `ranked_jobs[i].job.job`, is mirrored verbatim by the frontend.
 
-Until then, `JOBRADAR_MAX_EXTRACTION_CHARS` is the cheapest lever, since
-extraction cost grows faster than character count.
+The 434 s figure was SkillNer extraction. Since 2026-10-01 a scan reads skills
+from requirement profiles in milliseconds, and the `JOBRADAR_MAX_EXTRACTION_CHARS`
+lever went with SkillNer on 2026-10-05.
 
-## The spaCy model is not in the repository
+## The spaCy model (removed 2026-10-05)
 
-`en_core_web_lg` unpacks to ~424 MiB, and its `vocab/vectors` file alone is
-392 MiB — over GitHub's **100 MB per-file hard limit**, so a push carrying it is
-rejected outright regardless of how long it is given. It is gitignored and the
-image installs it from the spacy-models wheel at build time instead.
-
-That is a *build-time* network dependency, which is fine; the rule that matters
-is the one above — nothing in the **boot** path may touch the network.
-
-`skill_extractor._load_spacy` tries `JOBRADAR_SPACY_MODEL`, then
-`/app/en_core_web_lg` (the layout of images built before this change), then the
-checkout's nested wheel layout, then the package name, which is what resolves in
-a current image. `en_core_web_lg` is also in `.dockerignore`, so a developer's
-local copy is not shipped into the build context.
-
-One fragility worth knowing: `requirements.txt` pins no spacy version, and the
-model wheel is installed in a separate layer, so pip resolves the two
-independently. The 3.8.0 model requires `spacy>=3.8.0,<3.9.0`; a future spacy
-3.9 would install first and then be downgraded by the second step rather than
-failing loudly.
+`en_core_web_lg` (~424 MiB unpacked, one 392 MiB file, over GitHub's 100 MB
+per-file limit) was never in the repository; the image installed it from the
+spacy-models wheel at build time. Step 4 of `decisions/skill-vocabulary.md`
+removed it, spaCy and SkillNer from `requirements.txt` and the Dockerfile.
 
 ## Build for linux/amd64 explicitly
 

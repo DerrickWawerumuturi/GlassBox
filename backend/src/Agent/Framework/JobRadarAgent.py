@@ -50,9 +50,8 @@ class JobRadarAgent:
         outcome = self.search_engine.get_jobs(search_query, run_log=run_log)
         raw_jobs = outcome.jobs
 
-        # Raw postings are stored before parsing, so the ones parsing discards —
-        # no description, or a SkillNer failure — still enter the dataset and
-        # stay reprocessable.
+        # Raw postings are stored before parsing, so the ones parsing discards
+        # (no description) still enter the dataset and stay reprocessable.
         search_id = self.ingestion.record_search(
             query, run_log, len(raw_jobs), started_at, outcome.coverage
         )

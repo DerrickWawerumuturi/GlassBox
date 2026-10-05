@@ -11,8 +11,8 @@ implementation for:
 
 What a posting *asks for* — years, skills, seniority — is read by
 src/matching/requirements.py. Used by the daily fetch (sources.py), pasted
-links (extract.py), SkillNer's preprocessing and the opportunities list.
-Deliberately light: no spaCy, no database, so the fast paths can import it.
+links (extract.py), requirement profiles and the opportunities list.
+Deliberately light: no model, no database, so the fast paths can import it.
 """
 import re
 from datetime import datetime, timedelta, timezone

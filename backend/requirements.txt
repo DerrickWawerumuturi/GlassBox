@@ -13,8 +13,6 @@ pycountry
 pandas
 pdf-inspector
 xai-sdk
-skillner
-spacy
 sentence-transformers
 python-multipart
 ipython

@@ -7,7 +7,7 @@ FastAPI service. `main.py` holds the routes; everything they call lives under
 
 ```
 main.py                              routes, auth, status codes — no business logic
-skill_db_relax_20.json               EMSI skill database, read by SkillNer from the working directory
+skill_db_relax_20.json               EMSI skill names, a dictionary for discover.py only (not in the image)
 src/Agent/                           CV analysis (a scan)
   Framework/
     JobRadarAgent.py                 orchestrator; score_jobs ranks through src/matching
@@ -18,10 +18,8 @@ src/Agent/                           CV analysis (a scan)
     llm_client.py                    GroqModel("user" | "cv"): text -> ParsedQuery / CVQuery
     prompts.py                       prompts for both
     location.py                      location resolution, eligibility, tiers, fit
-    skill_extractor.py               SkillNer wrapper, canonical EMSI names (market charts)
-    extraction_pool.py               process pool for extraction
-    embedder.py                      MiniLM: the off-market filter before extraction
-    parser.py                        extract skills for a list of jobs
+    embedder.py                      MiniLM: the off-market filter
+    parser.py                        a scan's skills, from requirement profiles
     types.py                         pydantic + dataclass models, API request models
 src/matching/                        how well a CV fits a job — the one match score
   skills.py + skills.txt             technology vocabulary: aliases, related-skill credit
@@ -81,10 +79,10 @@ Both steps are offloaded because they are synchronous and slow; running them
 inline pinned the event loop and made the whole API unreachable. The lock is
 required *because* of the offload — see `decisions/` and the changelog.
 
-The analysis stack (spaCy, SkillNer, sentence-transformers) is **not** imported
-when `main.py` loads. `_agent()` imports it on first use and startup warms it in
-the background, so after a scale-from-zero every other route answers in under a
-second instead of waiting ~10s for models.
+The analysis stack (sentence-transformers and torch) is **not** imported when
+`main.py` loads. `_agent()` imports it on first use and startup warms it in the
+background, so after a scale-from-zero every other route answers in under a
+second instead of waiting for the model.
 
 Every signed-in request becomes a user through `services/users.py::resolve_user_id`,
 which refuses non-numeric (stale-session) subjects on every route. Unhandled
@@ -165,14 +163,12 @@ scan has nothing readable, every posting is used.
 
 Until 2026-10-01 this step ran SkillNer in an `ExtractionPool` of worker
 processes, at seconds a posting, and its open EMSI search kept surfacing
-"Custom Backend", "Workflows" and "Curiosity". `skill_extractor.py`,
-`extraction_pool.py`, `stored_skills` and `persist_skills` remain for a week as a
-rollback path, and the scan path no longer imports them. See
-`decisions/skill-vocabulary.md`.
+"Custom Backend", "Workflows" and "Curiosity". SkillNer, spaCy and their code
+were deleted on 2026-10-05. See `decisions/skill-vocabulary.md`.
 
 ### 4. The off-market filter
 
-`all-MiniLM-L6-v2` runs **before** extraction, scoring the user's role + skills
+`all-MiniLM-L6-v2` runs **before** the postings are read for skills, scoring the user's role + skills
 against each job title and dropping postings below `alpha × best_score`. This
 keeps off-market postings — copywriter, sales, aviation — out of the market
 statistics, which weight every posting equally. It is the only use of
@@ -233,22 +229,18 @@ Both are displayed in the vocabulary's spelling ("React", "PostgreSQL"). Names
 the vocabulary does not know are kept as written: still the user's, never
 matched.
 
-The SkillNer notes below describe the extractor the scan used until 2026-10-01.
-It is kept for a week as a rollback path.
+Three rules keep everyday words from counting (2026-10-05, `requirements-v4`):
 
-Two denylists filter known-bad matches:
-
-- `DENYLISTED_SURFACE_FORMS` — abbreviation collisions with ordinary prose
-  (`San` → Storage Area Network, `com` → Component Object Model, `e` → E
-  programming language). `c`, `r` and `go` are deliberately absent; they are
-  real languages.
-- `DENYLISTED_SKILL_NAMES` — real database entries that are job titles or fields
-  of study rather than differentiating skills (`Software Engineering`,
-  `Computer Science`, `Job Descriptions`).
-
-`prepare_description()` drops legal, benefits and company-culture blocks, then
-keeps only requirements-style sections — about a 66% character reduction, with a
-fallback to full text when under 400 characters survive.
+- **A spelling stops at a comma or full stop.** The words of a multi-word alias
+  may be joined by spaces, hyphens or slashes only, so "product, design and
+  engineering" is two teams, not Product design.
+- **Some names count only in context.** `?observability[...]` in `skills.txt`
+  resolves on a CV, but in a posting it counts only in a sentence that also says
+  a practice word (monitoring, metrics, traces, logs...). "Performance,
+  observability and security" is a quality, not a tool.
+- **The employer's own name is not a skill.** `requirements._skills` skips a
+  match whose spelling begins the company's name: "Datadog" at Datadog,
+  "GitLab" at GitLab Inc.
 
 ## Storage layer
 
@@ -257,7 +249,9 @@ PostgreSQL on Neon. The job pipeline's tables:
 ```
 searches ─1─n─ search_provider_runs
    │
-   └─n─ job_observations ─1─ jobs ─n─ job_skills ─1─ skills
+   └─n─ job_observations ─1─ jobs ─1─ job_profiles
+
+job_skills, skills (SkillNer's output until 2026-10-01; nothing reads or writes them)
 
 market_snapshots   (taken_on, profiler_version, family): daily counts, no job ids
 ```
@@ -270,10 +264,10 @@ references `jobs` with `on delete restrict`. Job lifecycle signals
 view are described in `decisions/job-retention.md`.
 
 `jobs` holds **source data only** — provider values verbatim plus the complete
-`raw_payload` as `jsonb`. Everything JobRadar derives lives in `job_skills`
-(SkillNer's EMSI skills, for market statistics) and `job_profiles` (what a
-posting requires, for matching; one row per job, about 300 bytes), so the
-raw/processed split is a table boundary rather than a column prefix.
+`raw_payload` as `jsonb`. What JobRadar derives lives in `job_profiles` (what a
+posting requires, for matching and the market; one row per job, about 300
+bytes), so the raw/processed split is a table boundary rather than a column
+prefix.
 
 A job's timestamps: `posted_at` is the source's own date, never guessed
 (`posted_at_raw` keeps what it said, e.g. "2 days ago"); `first_seen_at` is when
@@ -286,8 +280,8 @@ recorded in `identity_source`. Writes are a single batched upsert, so repeating
 a search updates `last_seen_at` and appends an observation rather than inserting
 duplicates.
 
-`extractor_version` is part of `job_skills`' primary key, so a future extractor
-can reprocess stored payloads without destroying the current generation's output.
+`profiler_version` on `job_profiles` plays the same part for the rules: a bump
+re-profiles every stored job, and market snapshots start a new series.
 
 Migrations are numbered `.sql` files tracked in `schema_migrations`:
 
@@ -314,11 +308,7 @@ and migrations use `DATABASE_URL_DIRECT` — the same host without `-pooler`.
 | `DATABASE_URL` | Neon pooled endpoint, used at runtime |
 | `DATABASE_URL_DIRECT` | Neon direct endpoint, used by migrations |
 | `JOOBLE_API_KEY` | Jooble provider (optional; disabled without it) |
-| `JOBRADAR_EXTRACTION_WORKERS` | Override extraction pool size. **Set this explicitly in containers** — the default derives from `os.cpu_count()`, which ignores cgroup CPU quotas and reports the host's cores, so an unset value spins up 4 workers regardless of the container's allocation and each holds its own `en_core_web_lg` |
-| `JOBRADAR_EXTRACTOR_VERSION` | Tag written to `job_skills` |
 | `JOBRADAR_RELEVANCE_ALPHA` | Off-market cut, as a fraction of the best title match (default 0.30) |
-| `JOBRADAR_MAX_EXTRACTION_CHARS` | Per-posting ceiling sent to the annotator (default 4000) |
-| `JOBRADAR_SPACY_MODEL` | Path to `en_core_web_lg`. Tried first; otherwise `/app/en_core_web_lg` (the container layout), then the checkout's `en_core_web_lg/en_core_web_lg-3.8.0`, then the installed package |
 | `JOBRADAR_DB_POOL_SIZE` | Connection pool max size |
 | `API_JWT_SECRET` | Verifies the tokens the frontend mints. Required at import |
 | `JOBRADAR_DEFAULT_COUNTRY` | Home market when a CV names no location (default `ke`) |
@@ -332,9 +322,9 @@ read when `main.py` imports; a missing `GROQ_API_KEY` surfaces on the first
 analysis or CV parse, because `Groq()` raises in its constructor.
 
 Deployment sizing is a configuration concern of the same kind. The first
-analysis loads `en_core_web_lg`, skillNer's 31k-entry matchers and MiniLM into
-the main process — about 2 GB — and each extraction worker adds its own
-pipeline on top. See `docs/changelog/2026-08-25-container-oom.md`.
+analysis loads MiniLM into the main process. Until 2026-10-01 it also loaded
+`en_core_web_lg` and SkillNer's 31k-entry matchers, about 2 GB with the
+extraction workers; see `docs/changelog/2026-08-25-container-oom.md`.
 
 ## Known limitations
 
@@ -342,11 +332,8 @@ pipeline on top. See `docs/changelog/2026-08-25-container-oom.md`.
   freelance role counts as full time.
 - The matching vocabulary (`skills.txt`) is technical; roles outside tech match
   on role and level but barely on skills.
-- Skill extraction is **superlinear** in posting length: 46 postings / 85,900
-  prepared characters took 434s on four workers, where a linear model predicted
-  32s. Capping per-posting length would help more than trimming the corpus.
-- SkillNer raises on some inputs; those postings are dropped and logged.
-- Extraction remains ~80% of a scan's runtime for postings not read before,
-  dominated by SkillNer's pairwise `token.similarity()` n-gram scoring.
-- A posting SkillNer finds no skills in leaves no `job_skills` rows, so it is
-  read again by the next scan that finds it.
+- The employer rule reads the company's name as given: a skill named by a
+  company that is not the employer ("Grafana Labs CEO" as an investor) still
+  counts.
+- `job_skills` and `skills` still exist in the database, unused. Dropping them
+  is a migration for a later day.

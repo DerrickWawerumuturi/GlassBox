@@ -5,7 +5,8 @@ from src.matching import discover
 
 REAL_REJECTED = discover.rejected       # before the fixture swaps it out
 DICTIONARY = {("calligraphy",): "Calligraphy", ("signage", "design"): "Signage Design", ("workflows",): "Workflows",
-              ("adobe", "photoshop"): "Adobe Photoshop", ("acme",): "Acme", ("python",): "Python"}
+              ("adobe", "photoshop"): "Adobe Photoshop", ("acme",): "Acme", ("python",): "Python",
+              ("product", "design"): "Product Design", ("observability",): "Observability"}
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +28,13 @@ def test_unknown_dictionary_terms_and_new_tool_names_are_suggested():
 def test_what_the_vocabulary_knows_is_never_suggested():
     # Python is in skills.txt: whatever EMSI calls it, it is already counted.
     assert found("Requirements: Python and Figma") == {}
+
+
+def test_a_known_skill_left_uncounted_on_purpose_is_not_suggested():
+    # "product, design" is two teams and "observability" here a quality: the
+    # vocabulary skipped them, and the report must not offer them back.
+    assert found("Requirements: work with product, design and engineering on observability and calligraphy") == \
+        {"calligraphy": ("Calligraphy", "dictionary")}
 
 
 def test_the_employers_own_name_is_not_a_skill():

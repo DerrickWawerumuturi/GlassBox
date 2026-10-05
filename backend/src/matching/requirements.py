@@ -19,13 +19,15 @@ from functools import lru_cache
 
 from src.jobpool.posting import html_to_text
 from src.matching.roles import classify_family, classify_seniority, track
-from src.matching.skills import find_skills, scan
+from src.matching.skills import find_skills, scan, tokens
 
 # Bump when any rule here or the vocabulary (skills.txt) changes: the daily run
 # re-profiles every stored job whose profile carries another version, and market
 # snapshots start a new series. v2: 66 skills added from the discovery report.
 # v3: role families and levels audited against the live pool (2026-10-05).
-PROFILER_VERSION = "requirements-v3"
+# v4: bare "observability" needs context, spellings stop at commas, and the
+# employer's own name is not a skill (2026-10-05).
+PROFILER_VERSION = "requirements-v4"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
@@ -222,7 +224,13 @@ def experience_level_years(title: str | None, description: str | None) -> int | 
     return _experience(title, description)[1]
 
 
-def _skills(text: str, title: str | None) -> tuple[list[str], list[str], list[str]]:
+def _is_employer(surface: str, employer: tuple[str, ...]) -> bool:
+    """Whether a skill's spelling is the employer's own name: "Datadog" at Datadog, "Grafana" at Grafana Labs."""
+    words = tuple(t.group().lower() for t in tokens(surface))
+    return bool(employer) and words == employer[:len(words)]
+
+
+def _skills(text: str, title: str | None, company: str | None = None) -> tuple[list[str], list[str], list[str]]:
     """
     (required, preferred, mentioned) skills.
 
@@ -230,7 +238,12 @@ def _skills(text: str, title: str | None) -> tuple[list[str], list[str], list[st
     no requirements heading puts everything in `general`, and that is its
     requirement list: treating it as a job that asks for nothing would score
     every thin listing as a perfect skills match.
+
+    The employer's own name is who is hiring, not what they ask for: every
+    Datadog posting says "Datadog", and counting it made Observability a skill
+    of their recruiters and lawyers (decisions/skill-vocabulary.md).
     """
+    employer = tuple(t.group().lower() for t in tokens(company or ""))
     spans = _spans(text)
     headed = any(kind == "required" for _, _, kind in spans)
     buckets = {"required": {}, "preferred": {}, "general": {}}
@@ -238,7 +251,7 @@ def _skills(text: str, title: str | None) -> tuple[list[str], list[str], list[st
         buckets["required"].setdefault(key)
     for key, start, end in scan(text):
         kind = _kind_at(spans, start)
-        if kind == "stop":
+        if kind == "stop" or _is_employer(text[start:end], employer):
             continue
         if kind == "general" and not headed:
             kind = "required"
@@ -408,13 +421,13 @@ def content_hash(title: str | None, description: str | None, experience_level: s
 
 
 def profile_job(job) -> JobProfile:
-    """`job` is anything with title, description, experience_level, employment_type."""
+    """`job` is anything with title, description, experience_level, employment_type (and company)."""
     title = getattr(job, "title", None)
     text = html_to_text(getattr(job, "description", None)) or ""
     sections = split_sections(text)
     experience, level_years = _experience(title, text)
 
-    required, preferred, mentioned = _skills(text, title)
+    required, preferred, mentioned = _skills(text, title, getattr(job, "company", None))
 
     # Some boards put the level in the employment type ("INTERN") and nowhere else.
     level = getattr(job, "experience_level", None)

@@ -6,5 +6,6 @@ __pycache__
 .gitignore
 .env
 .env.*
-# No longer COPYied — pip installs it. Keeps 424 MiB out of the build context.
-en_core_web_lg
+# The EMSI dictionary only the discovery report reads (src/matching/discover.py),
+# run from a checkout. Nothing in the image needs it.
+skill_db_relax_20.json

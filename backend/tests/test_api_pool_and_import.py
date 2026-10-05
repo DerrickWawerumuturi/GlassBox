@@ -32,7 +32,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from openpyxl import Workbook  # noqa: E402
 
 import main  # noqa: E402
-from src.Agent.utils.types import Job, ProcessedJob  # noqa: E402
+from src.Agent.utils.types import Job  # noqa: E402
 from src.database.services import application_import  # noqa: E402
 from src.database.services.ingestion import JobIngestionService  # noqa: E402
 from src.database.session import connection  # noqa: E402
@@ -232,16 +232,21 @@ def test_a_scan_reuses_what_is_stored_until_the_posting_changes(pool):
     job = posting(7, "Backend Engineer", "Requirements: 2+ years. Python and PostgreSQL.", 1)
     stored = ingestion.persist_jobs(None, [job], observe=False)          # profiled as it is stored
     job_id = next(iter(stored.values()))
-    ingestion.persist_skills(stored, [ProcessedJob(job=job, skills=["Python (Programming Language)", "PostgreSQL"])])
-
-    skills = ingestion.stored_skills([job_id])
-    assert {s.lower() for s in skills[job_id]} == {"python (programming language)", "postgresql"}
     assert set(ingestion.stored_profiles([job_id])[job_id].required) == {"python", "postgresql"}
 
     edited = posting(7, "Backend Engineer", "Requirements: 2+ years. Python, PostgreSQL and Redis.", 1)
     ingestion.persist_jobs(None, [edited], observe=False, profile=False)
-    assert ingestion.stored_skills([job_id]) == {}                       # changed: read it again
-    assert ingestion.stored_profiles([job_id]) == {}
+    assert ingestion.stored_profiles([job_id]) == {}                     # changed: read it again
+
+
+def test_the_pool_is_profiled_knowing_the_employer(pool):
+    # The daily profile reads rows from the database; without the company in
+    # that read, "Datadog" at Datadog would still count as Observability.
+    ingestion = JobIngestionService()
+    job = posting(8, "Recruiter", "About Datadog: we build Datadog. Requirements: 2+ years recruiting.", 1,
+                  company="Datadog")
+    job_id = next(iter(ingestion.persist_jobs(None, [job], observe=False).values()))
+    assert "observability" not in ingestion.stored_profiles([job_id])[job_id].mentioned
 
 
 def test_a_scan_shows_its_jobs_in_opportunities_at_once(client, pool, monkeypatch):

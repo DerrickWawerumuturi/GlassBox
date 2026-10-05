@@ -15,8 +15,8 @@ which the vocabulary finds at least COVERED skills. A family below the bar is
 one where users would see too little.
 
 Candidates: terms in postings' requirement sections that the vocabulary does
-not know, from two sources. EMSI's hard-skill names (SkillNer's database, used
-only as a dictionary here) catch established tools; a shape test catches new
+not know, from two sources. EMSI's hard-skill names (skill_db_relax_20.json,
+the database SkillNer shipped, kept as a dictionary for this report only) catch established tools; a shape test catches new
 ones EMSI lacks ("PyTorch", "Next.js", "D3"). Terms the vocabulary already
 covers, the employer's own name, and anything in skills_rejected.txt are
 dropped. The rest are ranked by how specific they are to the family: "Typography"
@@ -97,9 +97,12 @@ def candidates_in(text: str, company: str | None, dictionary: dict[tuple, str], 
 
     def usable(key: str, start: int, end: int) -> bool:
         # A term overlapping a skill the vocabulary found is already counted,
-        # whatever EMSI calls it ("Python (Programming Language)").
+        # whatever EMSI calls it ("Python (Programming Language)"). One it knows
+        # but did not count here ("observability" as a quality, "product,
+        # design") was left out on purpose and is not a candidate either.
         return (key not in turned_down
                 and not set(key.split()) <= employer
+                and skills.canonical(key) is None
                 and not any(s < end and start < e for s, e in known_spans))
 
     i = 0
