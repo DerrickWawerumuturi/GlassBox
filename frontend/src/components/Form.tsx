@@ -104,6 +104,10 @@ const CVReviewForm = () => {
                 <CardDescription className={"text-xs"}>
                     (Open any section to fix what we got wrong)
                 </CardDescription>
+                <CardDescription className={"text-xs"}>
+                    We keep only your skills, level, years of experience, education level and location.
+                    Your name, contact details, summary and the details of each job stay in this browser.
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <form

@@ -86,3 +86,27 @@ Shown in the pop-up and on the profile page:
   and a profile view with a delete button. The API functions are in
   `frontend/src/lib/api.ts`: `GetLatestCV`, `DeleteLatestCV`, `AnalyzeReuse`.
 - The privacy page (product-spec #5) should repeat the wording above.
+
+## Keep less (2026-10-05)
+
+The founder's call: keep less, so the privacy promise is true. For a
+signed-in user every stored CV is cut to what matching and the UI need
+(`backend/src/matching/kept_cv.py`):
+
+- **Kept:** skills, the roles the CV aims for (`latest_cvs` only, the search
+  needs them), level, education level, location, spoken languages, the file
+  name, date, text hash and parser version.
+- **Derived, then the source dropped:** years per track, the families the
+  roles and education point at, title phrases and the PhD flag, worked out
+  from the positions and education when the CV is read (`candidate.derive`)
+  and stored as `derived`. `Candidate.from_cv` reads them as they are.
+- **Never kept:** name, email, phone, links, summary, positions (companies,
+  dates, descriptions), education details, the parser's free text.
+
+It applies to `cvs` (`PUT /cv`), `latest_cvs` (each parse) and each
+application's `cv_snapshot`. Existing rows: run
+`python -m src.database.backfill_kept_cv` (it derives before it strips), then
+migration `017_keep_less_cv.sql`, which strips any key left as a safety net.
+
+A derived value is frozen at read time: a current job's years stop growing
+until the next scan. That is the price of not keeping the dates.

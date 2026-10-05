@@ -14,6 +14,7 @@ from src.Agent.utils.types import ParsedQuery
 from src.database.repositories import user_repository
 from src.database.session import connection
 from src.matching.candidate import Candidate
+from src.matching.kept_cv import as_cv_shape, kept_cv, kept_profile
 
 
 class UserNotFound(Exception):
@@ -76,13 +77,14 @@ def candidate_for(conn, user_id: int | None) -> Candidate | None:
 
 class UserService:
     def store_cv(self, payload, cv: dict) -> None:
+        """Keeps only what matching and the UI need (kept_cv): no name, contact, summary or positions."""
         with connection() as conn:
-            user_repository.save_cv(conn, resolve_user_id(conn, payload), cv)
+            user_repository.save_cv(conn, resolve_user_id(conn, payload), kept_cv(cv))
 
     def fetch_cv(self, payload) -> dict | None:
         with connection() as conn:
             user_id = resolve_user_id(conn, payload, create=False)
-            return user_repository.get_cv(conn, user_id) if user_id else None
+            return as_cv_shape(user_repository.get_cv(conn, user_id)) if user_id else None
 
     def store_analysis(self, payload, data: dict, file_name) -> None:
         with connection() as conn:
@@ -95,11 +97,11 @@ class UserService:
 
     def store_latest_cv(self, payload, query: ParsedQuery, file_name, cv_text: str) -> None:
         """
-        Keeps what the parser read, never the file or its text. `notes` is the
-        parser's free text, which could repeat anything on the CV, and nothing
-        downstream reads it, so it is not kept either.
+        Keeps what matching needs of what the parser read (kept_profile): never
+        the file or its text, the positions' companies and dates, education
+        details, or the parser's free text.
         """
-        profile = query.model_dump(mode="json", exclude={"notes"})
+        profile = kept_profile(query.model_dump(mode="json"))
         with connection() as conn:
             user_repository.save_latest_cv(conn, resolve_user_id(conn, payload), profile, file_name,
                                            text_sha256(cv_text), PARSER_VERSION)

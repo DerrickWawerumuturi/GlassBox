@@ -123,9 +123,8 @@ export function CvSnapshot({app}: { app: ApplicationRow }) {
                 </DialogTitle>
                 <div className={"flex flex-col gap-3 text-[13px]"}>
                     <div>
-                        <p className={"font-medium"}>{cv.name ?? "Unnamed"}</p>
                         <p className={"font-mono text-[11px] text-muted-foreground"}>
-                            {[cv.title, cv.experience_level, cv.location].filter(Boolean).join(" · ") || "no details"}
+                            {[cv.experience_level, cv.location].filter(Boolean).join(" · ") || "no details"}
                         </p>
                     </div>
                     <div>

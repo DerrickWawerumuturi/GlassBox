@@ -16,6 +16,7 @@ from src.database.services.users import UserNotFound, candidate_for, resolve_use
 from src.database.session import connection
 from src.matching.matcher import MATCHER_VERSION, match
 from src.matching.requirements import PROFILER_VERSION, JobProfile
+from src.matching.kept_cv import kept_cv
 
 INITIAL_STATUS = "saved"
 DELETABLE = ("saved", "withdrawn", "rejected")
@@ -40,6 +41,8 @@ class ApplicationExists(Exception):
 def _start(conn, user_id: int, status: str = INITIAL_STATUS, **fields) -> int:
     """Insert the application, record `saved`, then move it on if it already went further."""
     now = datetime.now(timezone.utc)
+    # The CV as it was when applying, cut to what we keep of any CV (kept_cv).
+    fields["cv_snapshot"] = kept_cv(fields.get("cv_snapshot"))
     try:
         application_id = repo.create(conn, user_id, **fields)
     except ForeignKeyViolation as err:

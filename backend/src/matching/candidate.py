@@ -117,23 +117,23 @@ class Candidate:
         `cv` is CVQuery-shaped: title, skills, experience[{role, start_date,
         end_date, description}], experience_level, education. A ParsedQuery dump
         works too — primary_role and secondary_roles stand in for the title.
+
+        A kept CV (src/matching/kept_cv.py) has no positions or education, only
+        what was derived from them when it was read: `derived` holds the
+        families its roles point at, its title phrases, its years and the PhD
+        flag. Those are used as they are; skills are still read live.
         """
         today = today or date.today()
         known, unknown = resolve_all(cv.get("skills"))
-        title = cv.get("title") or cv.get("primary_role")
-        roles = [title, *(cv.get("secondary_roles") or [])]
-        positions = [p for p in (cv.get("experience") or []) if isinstance(p, dict)]
+        derived = cv.get("derived") if isinstance(cv.get("derived"), dict) else None
+        background = derive(cv, today) if derived is None else derived
 
-        families: dict[str, float] = {}
+        families = {f: float(s) for f, s in (background.get("families") or {}).items()}
 
         def point(family: str, strength: float):
             if family in TECH_FAMILIES or family == "ai_data":
                 families[family] = max(families.get(family, 0.0), strength)
 
-        for role in filter(None, roles):
-            point(classify_family(role), 1.0)
-        for position in positions:
-            point(classify_family(position.get("role"), position.get("description")), 0.9)
         counts: dict[str, int] = {}
         for skill in known:
             counts[category(skill)] = counts.get(category(skill), 0) + 1
@@ -142,12 +142,6 @@ class Candidate:
                 point(family, 0.8)
         if "frontend" in families and "backend" in families:
             point("full_stack", 0.8)
-        for course in _education(cv):
-            if re.search(r"data science|machine learning|artificial intelligence|statistic", course, re.I):
-                point("data_science", 0.6)
-                point("machine_learning", 0.6)
-            if re.search(r"computer|software|information technology|informatics", course, re.I):
-                point("software_engineering", 0.6)
 
         languages = {"en"} | _COUNTRY_LANGUAGES.get(prefs.country_code or "", set())
         for name in [*(cv.get("skills") or []), *(cv.get("languages") or [])]:
@@ -159,12 +153,47 @@ class Candidate:
             skills=frozenset(known),
             unmatched_skills=tuple(unknown),
             families=families,
-            titles=tuple(t for t in (_role_phrase(r) for r in roles if r) if t),
-            years=_years(positions, cv.get("experience_level"), families, today),
+            titles=tuple(background.get("titles") or ()),
+            years=dict(background.get("years") or {"software": 0.0, "ml": 0.0, "any": 0.0}),
             languages=frozenset(languages),
-            phd=any(_PHD.search(course) for course in _education(cv)),
+            phd=bool(background.get("phd")),
             prefs=prefs,
         )
+
+
+def derive(cv: dict, today: date | None = None) -> dict:
+    """
+    What matching needs from a CV's roles, positions and education, without
+    them: the families they point at, the title phrases, professional years
+    per track and whether there is a PhD. Computed when a CV is read, so the
+    details themselves need not be kept (decisions/cv-storage.md).
+    """
+    today = today or date.today()
+    title = cv.get("title") or cv.get("primary_role")
+    roles = [title, *(cv.get("secondary_roles") or [])]
+    positions = [p for p in (cv.get("experience") or []) if isinstance(p, dict)]
+    families: dict[str, float] = {}
+
+    def point(family: str, strength: float):
+        if family in TECH_FAMILIES or family == "ai_data":
+            families[family] = max(families.get(family, 0.0), strength)
+
+    for role in filter(None, roles):
+        point(classify_family(role), 1.0)
+    for position in positions:
+        point(classify_family(position.get("role"), position.get("description")), 0.9)
+    for course in _education(cv):
+        if re.search(r"data science|machine learning|artificial intelligence|statistic", course, re.I):
+            point("data_science", 0.6)
+            point("machine_learning", 0.6)
+        if re.search(r"computer|software|information technology|informatics", course, re.I):
+            point("software_engineering", 0.6)
+    return {
+        "families": families,
+        "titles": [t for t in (_role_phrase(r) for r in roles if r) if t],
+        "years": _years(positions, cv.get("experience_level"), families, today),
+        "phd": any(_PHD.search(course) for course in _education(cv)),
+    }
 
 
 def _education(cv: dict) -> list[str]:

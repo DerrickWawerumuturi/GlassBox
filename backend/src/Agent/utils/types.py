@@ -45,6 +45,10 @@ class ParsedQuery(BaseModel):
     company_preferences: list[str] = Field(default_factory=list)
     languages: list[str] = Field(default_factory=list)
     notes: str | None = None
+    # A kept profile (src/matching/kept_cv.py) has these instead of its
+    # positions and education: what they told matching, derived when read.
+    education_level: str | None = None
+    derived: dict | None = None
 
 
 class Job(BaseModel):
@@ -186,6 +190,10 @@ class CVQuery(BaseModel):
     experience: list[Experience] = Field(default_factory=list)
     experience_level: str | None
     education: list[Education]
+    # Kept CVs carry these; see src/matching/kept_cv.py.
+    education_level: str | None = None
+    languages: list[str] = Field(default_factory=list)
+    derived: dict | None = None
 
 
 class BookmarkRequest(BaseModel):

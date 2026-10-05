@@ -89,14 +89,14 @@ export default function ProfilePage() {
     };
 
     const dataRows = [
-        {icon: FileTextIcon, color: "#f76b15", label: "CV", value: cv ? (cv.name ?? "saved") : "none"},
+        {icon: FileTextIcon, color: "#f76b15", label: "CV", value: cv ? "saved" : "none"},
         {icon: RadarIcon, color: "#0091ff", label: "Last scan", value: analysis ? (fileName ?? "stored") : "none", open: () => setLastScanOpen(true)},
         {icon: ClipboardListIcon, color: "#30a46c", label: "Applications", value: `${apps.length} tracked`}
     ];
 
     return (
         <div className={"flex min-h-screen flex-col"}>
-            <PageBar title={"My profile"} meta={cv?.name ?? undefined} />
+            <PageBar title={"My profile"} meta={session?.user?.name ?? undefined} />
 
             <div className={"mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-8 sm:px-5"}>
                 {/* Who you are */}
@@ -117,7 +117,8 @@ export default function ProfilePage() {
                     {analysis && <TagChip tone={"have"}>scan on file</TagChip>}
                 </Panel>
 
-                {/* What we hold for you */}
+                {/* What we hold for you. The account menu's "Your data" lands here. */}
+                <div id={"your-data"} className={"scroll-mt-6"}>
                 <Panel className={"flex flex-col gap-4"}>
                     <div className={"flex items-center gap-2"}>
                         <IconBadge icon={DatabaseIcon} color={"#0ca678"} />
@@ -143,7 +144,7 @@ export default function ProfilePage() {
                     </div>
                     <div className={"flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3"}>
                         <p className={"max-w-sm text-[11.5px] leading-snug text-muted-foreground"}>
-                            Wipes the CV, stored scan and tracked applications from our servers
+                            Wipes the CV, the skills we kept from it, your stored scan and tracked applications from our servers
                             and this browser. You stay signed in and keep your account.
                         </p>
                         <ConfirmDialog
@@ -159,6 +160,7 @@ export default function ProfilePage() {
                         />
                     </div>
                 </Panel>
+                </div>
 
                 <LastScanDialog latest={latest} open={lastScanOpen} onOpenChange={setLastScanOpen} onDeleted={forget} />
 

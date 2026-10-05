@@ -80,6 +80,22 @@ def test_cv_and_analysis_round_trip(client):
     assert client.get("/analysis").json()["file_name"] == "cv.pdf"
 
 
+def test_the_stored_cv_keeps_no_personal_details(client):
+    full = {**CV, "name": "Jane Wanjiru", "email": "jane@example.com", "phone_number": "+254 700 000 000",
+            "linkedIn": "https://linkedin.com/in/jane", "professional_summary": "Builds things at Acme Corp.",
+            "experience": [{"company": "Acme Corp", "role": "Backend Engineer", "start_date": "Jan 2021",
+                            "end_date": "Present", "description": "Python"}],
+            "education": [{"school_name": "University of Nairobi", "course_title": "BSc Computer Science"}]}
+    assert client.put("/cv", json=full).status_code == 200
+    with connection() as conn, conn.cursor() as cur:
+        cur.execute("select c.data from cvs c join users u on u.id = c.user_id where u.sub = %s", (SUB,))
+        stored = str(cur.fetchone()["data"])
+    assert not [t for t in ("Jane", "jane@", "+254", "linkedin", "Acme", "University of Nairobi", "Jan 2021") if t in stored]
+    shown = client.get("/cv").json()
+    assert shown["name"] is None and shown["experience"] == [] and shown["skills"] == ["Python"]
+    assert shown["derived"]["years"]["software"] > 4
+
+
 def test_latest_cv_is_one_row_replaced_then_deleted(client):
     from src.Agent.utils.types import ParsedQuery
     from src.database.services.users import user_service
@@ -115,9 +131,16 @@ def test_location_preferences(client):
 
 
 def test_application_lifecycle(client, job_ids):
-    manual = client.post("/dashboard/applications/manual", json={"title": "Typed", "company": "Co", "status": "applied"})
+    snapshot = {**CV, "name": "Jane Wanjiru", "email": "jane@example.com",
+                "experience": [{"company": "Acme Corp", "role": "Engineer", "start_date": "2021", "end_date": "2023"}]}
+    manual = client.post("/dashboard/applications/manual",
+                         json={"title": "Typed", "company": "Co", "status": "applied", "cv_snapshot": snapshot})
     assert manual.status_code == 200
     manual_id = manual.json()["application_id"]
+    with connection() as conn, conn.cursor() as cur:
+        cur.execute("select cv_snapshot from application where id = %s", (manual_id,))
+        kept = str(cur.fetchone()["cv_snapshot"])
+    assert "Jane" not in kept and "jane@" not in kept and "Acme" not in kept and "Python" in kept
     events = client.get(f"/dashboard/applications/{manual_id}/history").json()
     assert sorted((e["from_status"] or "", e["to_status"]) for e in events) == [("", "saved"), ("saved", "applied")]
 

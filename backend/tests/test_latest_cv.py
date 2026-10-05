@@ -23,7 +23,9 @@ from src.database.services import users
 
 SUB = "900000000000000000042"
 PARSED = {"primary_role": "Backend Engineer", "skills": ["Python", "PostgreSQL"],
-          "notes": "Jane Doe, jane@example.com"}
+          "notes": "Jane Doe, jane@example.com",
+          "experience": [{"role": "Backend Engineer", "company": "Acme Corp", "start_date": "Jan 2021", "end_date": "Present"}],
+          "education": "BSc Computer Science, University of Nairobi"}
 
 
 class FakeGroq:
@@ -153,3 +155,14 @@ def test_storage_failing_never_costs_the_scan(world, monkeypatch):
     monkeypatch.setattr(user_repository, "save_latest_cv", down)
     assert upload(world.client, "CV text one").status_code == 200
     assert world.groq.calls == 1
+
+
+def test_the_kept_profile_has_no_companies_dates_education_or_notes(world):
+    upload(world.client, "CV text with details")
+    profile = world.rows[SUB]["profile"]
+    assert {"experience", "education", "notes"}.isdisjoint(profile)
+    assert not [t for t in ("Jane", "jane@", "Acme", "Jan 2021", "Nairobi") if t in json.dumps(profile)]
+    assert profile["derived"]["years"]["software"] > 4          # worked out from the dates before they went
+    assert profile["education_level"] == "bachelors"
+    response = world.client.post("/analyze/reuse")               # and a rescan still runs from it
+    assert response.status_code == 200 and world.matched[-1].derived == profile["derived"]
