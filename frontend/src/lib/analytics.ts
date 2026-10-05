@@ -19,6 +19,8 @@ type Events = {
     scan_failed: {stage: "upload" | "reuse"};
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
+    ad_pasted: {kind: "text" | "url"};
+    cta_clicked: {where: "sticky" | "closing"};
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
@@ -27,6 +29,8 @@ const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
     scan_failed: ["stage"],
     view_opened: ["page", "view"],
     signed_up: [],
+    ad_pasted: ["kind"],
+    cta_clicked: ["where"],
 };
 
 export const DEFAULT_HOST = "https://us.i.posthog.com";

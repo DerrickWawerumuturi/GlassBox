@@ -31,11 +31,12 @@ export default function SiteFooter({variant = "slim", className}: {variant?: "fu
     const copyright = <span className={"font-mono text-[11px] text-muted-foreground"}>© 2026 Glassbox</span>;
 
     if (variant === "full") return (
-        <footer className={cn("chart-band chart-panel-green flex flex-col gap-4 border-b-0 px-5 py-6 lg:px-8", className)}>
+        <footer className={cn("chart-band chart-panel-green flex flex-col gap-4 text-panel-green-ink border-b-0 px-5 py-6 lg:px-8", className)}>
             <div className={"flex flex-wrap items-center justify-between gap-3"}>
                 <GlassboxWordmark className={"h-[11px] w-auto"} />
-                <span className={"font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"}>
-                    Upload a CV · read the market · see where you stand
+                <span className={"flex flex-col items-end gap-0.5 text-right"}>
+                    <span className={"font-heading text-sm font-bold uppercase tracking-tight"}>We show. You decide.</span>
+                    <span className={"font-mono text-[11px] text-panel-green-ink-muted"}>Counted from public job boards, every day. Mostly tech jobs in the US and Europe.</span>
                 </span>
             </div>
             <div className={"flex flex-wrap items-center justify-between gap-3"}>{links}{copyright}</div>

@@ -12,7 +12,7 @@ src/
     auth.ts, proxy.ts            NextAuth (Google); the token subject is Google's account id
     api/token/route.ts           mints the short-lived JWT the backend verifies
     api/logo/route.ts            same-origin company-logo proxy
-    (landing)/page.tsx           landing + anonymous upload
+    (landing)/page.tsx           landing: "Look around first" (components/landing), metadata from its copy
     (auth)/sign-in/page.tsx
     (product)/
       analysis/…                 overview · skills · gaps · jobs for an anonymous scan
@@ -41,6 +41,11 @@ src/
                                  MarketParts.tsx the Market tab's chart chrome (panel, tooltip,
                                  table twin, stat tiles), DemandBars / GapTally its hand-built
                                  SVG charts, Bridges.tsx the skills page's chart
+    landing/                     the landing page: LookAround.tsx runs it; CountCard (job types,
+                                 levels, the squares), Wall (titles behind the count), GlassSection
+                                 (an ad on the glass, paste your own), CvSection, LowerSections,
+                                 StickyCta; useStepper.ts the shared 4.6s timer; useCvScan.tsx the
+                                 upload dialog; copy.ts every word on the page; landing.css scoped `.la`
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token
@@ -55,6 +60,9 @@ src/
     analytics.ts                 PostHog: the only events, property allowlists, scrub (decisions/analytics.md)
     skill-bridges.ts             what Bridges reads: skill pairs, reach, most connected, roles
     use-rotor.ts                 the dial's motion: aim, ease, snap, wheel, drag, keys
+    landing/look.ts              GET /market/look and the count's helpers (squares, wall, asks);
+                                 look.fixture.json for tests and renders only
+    landing/ad.ts                POST /market/ad: a pasted ad or link, read on the server
     dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract
 ```

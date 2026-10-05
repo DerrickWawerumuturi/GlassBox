@@ -28,6 +28,8 @@ changed with `NEXT_PUBLIC_POSTHOG_HOST`.
 | `scan_finished` | `duration_s`, `jobs` (jobs found) |
 | `scan_failed` | `stage`: `upload` or `reuse` |
 | `view_opened` | `page` (overview, market, skills, opportunities, applications), `view` (a Market view) |
+| `ad_pasted` | `kind`: `text` or `url` (never the ad itself) |
+| `cta_clicked` | `where`: `sticky` or `closing` (the landing page's two CV asks; the hero has none since 5 Oct) |
 | `signed_up` | none (not wired yet, see below) |
 
 PostHog adds its own context: browser, OS, device type, screen size,
