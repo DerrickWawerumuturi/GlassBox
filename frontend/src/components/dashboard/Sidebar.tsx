@@ -33,6 +33,7 @@ import {useApplications} from "@/lib/applications-store";
 import {useOpportunities} from "@/lib/opportunities-store";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import InstallApp from "@/components/dashboard/InstallApp";
+import {ThemeMenu} from "@/components/ThemeMenu";
 
 interface NavItem {
     href: string;
@@ -114,7 +115,7 @@ export default function Sidebar() {
         {href: "/dashboard/opportunities", label: "Opportunities", icon: RadarIcon,
             count: opportunities ? opportunities.counts.strong + opportunities.counts.good : undefined},
         {href: "/dashboard/applications", label: "Applications", icon: ClipboardListIcon, count: apps.length},
-        {href: "/dashboard/gaps", label: "Skill gaps", icon: TrendingUpIcon}
+        {href: "/dashboard/gaps", label: "Your skills", icon: TrendingUpIcon}
     ];
 
     const you: NavItem[] = [
@@ -159,6 +160,8 @@ export default function Sidebar() {
                         )}
                     />
                     <InstallApp />
+                    <DropdownMenuSeparator />
+                    <ThemeMenu />
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                         onClick={() => signOut({redirectTo: "/"})}
@@ -251,6 +254,8 @@ export default function Sidebar() {
                                 </div>
                                 <DropdownMenuSeparator />
                                 <InstallApp />
+                                <ThemeMenu />
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     onClick={() => signOut({redirectTo: "/"})}
                                     className={"cursor-pointer"}

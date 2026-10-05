@@ -55,7 +55,7 @@ export function PlotFrame({x, y, width, height, majors = [], vertical = false}: 
                 <clipPath id={clip}><rect x={x} y={y} width={width} height={height} rx={14} /></clipPath>
             </defs>
             <g clipPath={`url(#${clip})`}>
-                <rect x={x} y={y} width={width} height={height} fill={"oklch(0 0 0 / 14%)"} />
+                <rect x={x} y={y} width={width} height={height} fill={"var(--chart-well)"} />
                 {lines}
                 {majors.map((m) => vertical
                     ? <line key={m} x1={x} y1={m} x2={x + width} y2={m} stroke={"var(--panel-chart-grid-major)"} />

@@ -84,28 +84,30 @@
 }
 
 /*
- * Light palette — kept coherent with the dark editorial system (same single
- * orange-red accent), but the app ships locked to `.dark`.
+ * Light palette: "paper", folk.app's warm whites (founder's pick of three on
+ * 2026-10-05, variant "Folk"). Never pure white. The dark desk below is
+ * unchanged; Theme in the account menu picks between them, System by default.
  */
 :root {
-  --background: oklch(0.975 0.003 80);
-  --foreground: oklch(0.17 0.005 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.005 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.005 260);
-  --primary: oklch(0.60 0.21 35);
-  --primary-foreground: oklch(0.98 0.008 50);
-  --secondary: oklch(0.945 0.004 80);
-  --secondary-foreground: oklch(0.22 0.005 260);
-  --muted: oklch(0.945 0.004 80);
-  --muted-foreground: oklch(0.48 0.012 260);
-  --accent: oklch(0.945 0.004 80);
-  --accent-foreground: oklch(0.22 0.005 260);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.17 0.005 260 / 12%);
-  --input: oklch(0.17 0.005 260 / 15%);
-  --ring: oklch(0.60 0.21 35);
+  --background: #f7f3ef;
+  --foreground: #21201c;
+  --card: #fbf9f6;
+  --card-foreground: #21201c;
+  --popover: #fffdfb;
+  --popover-foreground: #21201c;
+  /* Orange acts. A touch deeper than the desk's so white button text reads. */
+  --primary: oklch(0.575 0.20 35);
+  --primary-foreground: oklch(0.99 0.006 60);
+  --secondary: #ece7e2;
+  --secondary-foreground: #21201c;
+  --muted: #ece7e2;
+  --muted-foreground: #63635e;
+  --accent: #e7e3df;
+  --accent-foreground: #21201c;
+  --destructive: oklch(0.55 0.22 27);
+  --border: #47432a2e;
+  --input: #856f5a59;
+  --ring: var(--primary);
   --chart-1: oklch(0.80 0.10 45);
   --chart-2: oklch(0.70 0.17 40);
   --chart-3: oklch(0.60 0.21 35);
@@ -129,12 +131,18 @@
   /* Chart identity: a skill on the CV vs missing from it. Validated as a pair
      (dataviz validator, both themes): colour-blind ΔE ≥ 9.6, inside the
      lightness band. The app's --success is too light to pass on dark. */
-  --chart-have: oklch(0.53 0.10 158);
+  --chart-have: oklch(0.50 0.11 158);
+  /* Text in the "have" green (Bridges' names): darker again, for 4.5:1 on paper. */
+  --chart-have-ink: oklch(0.43 0.10 158);
   /* Not on the CV yet: neutral, always with a hatch (.bar-gap) or a hollow ring.
      Orange is the brand and never marks data. */
-  --chart-gap: oklch(0.55 0.01 80);
+  --chart-gap: oklch(0.58 0.012 70);
   /* Market-only data, no "you" in it. */
-  --chart-ink: oklch(0.35 0.01 80);
+  --chart-ink: oklch(0.35 0.01 70);
+  /* Lime is close to cream in lightness; a hairline keeps a lime pill's edge. */
+  --accent-lime-edge: oklch(0.28 0.07 152 / 28%);
+  /* The plot frame's inset: a faint warm shade on paper. */
+  --chart-well: oklch(0.25 0.02 70 / 4%);
   --panel-green: oklch(0.32 0.07 158);
   --panel-green-border: oklch(0.95 0.05 150 / 16%);
   --panel-green-grid: oklch(0.95 0.06 150 / 8%);
@@ -144,15 +152,16 @@
   /* The Market tab's chart panels, "an object on the desk" (docs/brand/charts.html):
      a forest green-black ground, darker than --panel-green, with its own ink,
      grid and frame scale. One look in both themes, like the other panels. */
-  --panel-chart-top: oklch(0.25 0.045 160);
-  --panel-chart: oklch(0.19 0.03 160);
-  --panel-chart-border: oklch(0.79 0.13 160 / 16%);
-  --panel-chart-ink: oklch(0.96 0.008 150);
-  --panel-chart-ink-muted: oklch(0.82 0.018 155);
-  --panel-chart-ink-faint: oklch(0.63 0.018 160);
-  --panel-chart-grid: oklch(0.93 0.02 150 / 6%);
-  --panel-chart-grid-major: oklch(0.93 0.02 150 / 14%);
-  --panel-chart-frame: oklch(0.93 0.02 150 / 28%);
+  /* On paper the chart panels are cards, like on the desk, with dark alphas. */
+  --panel-chart-top: var(--card);
+  --panel-chart: var(--card);
+  --panel-chart-border: var(--border);
+  --panel-chart-ink: var(--foreground);
+  --panel-chart-ink-muted: var(--muted-foreground);
+  --panel-chart-ink-faint: oklch(0.62 0.008 70);
+  --panel-chart-grid: oklch(0.25 0.02 70 / 6%);
+  --panel-chart-grid-major: oklch(0.25 0.02 70 / 12%);
+  --panel-chart-frame: oklch(0.25 0.02 70 / 22%);
   --panel-navy: oklch(0.30 0.055 265);
   --panel-navy-border: oklch(0.93 0.03 260 / 16%);
   --panel-navy-ink: oklch(0.985 0.005 260);
@@ -162,14 +171,14 @@
   --panel-maroon-ink: oklch(0.99 0.008 60);
   --panel-maroon-ink-muted: oklch(0.89 0.045 45);
   --radius: 0.5rem;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.17 0.005 260);
-  --sidebar-primary: oklch(0.60 0.21 35);
-  --sidebar-primary-foreground: oklch(0.98 0.008 50);
-  --sidebar-accent: oklch(0.945 0.004 80);
-  --sidebar-accent-foreground: oklch(0.22 0.005 260);
-  --sidebar-border: oklch(0.17 0.005 260 / 12%);
-  --sidebar-ring: oklch(0.60 0.21 35);
+  --sidebar: #f3eee9;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 
 }
 
@@ -226,6 +235,10 @@
      (dataviz validator: CVD ΔE 11.4; the grey is neutral by design, its
      secondary encoding is the hatch). */
   --chart-have: oklch(0.79 0.13 160);
+  /* Mint ink: the "have" green pulled toward the foreground until it reads as text (11:1). */
+  --chart-have-ink: oklch(0.86 0.08 160);
+  --accent-lime-edge: transparent;
+  --chart-well: oklch(0 0 0 / 14%);
   --chart-gap: oklch(0.68 0.012 80);
   --chart-ink: oklch(0.88 0.006 80);
   /* The Search-Party yellow-green annotation accent (≈ #d8f34a). */
@@ -347,6 +360,12 @@
     --chart-grid: var(--panel-green-grid);
     --chart-frame: var(--panel-green-frame);
   }
+  /* On paper the desk panels re-scope to dark alphas; the coloured panels keep white. */
+  :root:not(.dark) .chart-panel-desk {
+    --card: oklch(0.25 0.02 70 / 3%);
+    --border: oklch(0.25 0.02 70 / 14%);
+    --muted: oklch(0.25 0.02 70 / 10%);
+  }
   /* The Market tab's charts: the same re-scoping, on the plain card surface. */
   .chart-panel-desk {
     --panel-bg: linear-gradient(180deg, var(--panel-chart-top), var(--panel-chart));
@@ -454,8 +473,18 @@
 /* "Not on your CV yet": a neutral diagonal hatch, so it reads apart from the
    solid "you have this" green without leaning on colour. SVG charts use the
    matching <pattern> (components/Market/ChartPatterns.tsx, HatchDefs). */
+/* The mono label: 12px uppercase, the smallest text the app sets (design-system.md). */
+@utility label {
+  @apply font-mono text-label font-medium uppercase tracking-[0.06em];
+}
+
 @utility bar-gap {
   background-color: transparent;
   background-image: repeating-linear-gradient(135deg, var(--chart-gap) 0 1.5px, transparent 1.5px 5px);
 }
 
+
+/* Lime text vanishes on paper: lime stays a fill there, and its text turns to the lime ink. */
+:root:not(.dark) .text-accent-lime {
+  color: var(--accent-lime-ink);
+}

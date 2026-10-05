@@ -15,6 +15,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
+import {ThemeMenu} from "@/components/ThemeMenu";
 import {initials} from "@/lib/utils";
 
 const Navbar = () => {
@@ -129,7 +130,9 @@ const Navbar = () => {
                                     <p className={"text-xs text-muted-foreground"}>{session.user?.email}</p>
                                 </div>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => signOut({ redirectTo: "/" })} className={"hover:cursor-pointer text-white"}>
+                                <ThemeMenu />
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => signOut({ redirectTo: "/" })} className={"hover:cursor-pointer"}>
                                     Sign out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

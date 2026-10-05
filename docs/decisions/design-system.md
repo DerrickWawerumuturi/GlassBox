@@ -22,7 +22,7 @@ declared in `src/app/globals.css`:
 
 - `@theme inline` — maps tokens to utility names. A `--color-foo` here generates
   `bg-foo`, `text-foo`, `ring-foo`.
-- `:root` — light values (kept coherent, but not what ships).
+- `:root` — light values: "paper" (see Light mode below).
 - `.dark` — the shipping palette.
 
 The app is **locked to dark** via `className="dark"` on `<html>` in
@@ -90,6 +90,20 @@ fill="#f5532a"             // never
 Recharts accepts CSS custom properties directly. Hard-coding a colour in a chart
 breaks the one-place-to-change property that makes this system worth having.
 
+## Light mode: paper (2026-10-05)
+
+The founder picked "Folk" of three paper variants: page `#f7f3ef`, cards
+`#fbf9f6`, ink `#21201c`, muted `#63635e`, warm hairlines. Never pure white.
+Theme (Light / Dark / System, System by default) sits in the account menu;
+`lib/theme.ts` sets the class before paint.
+
+The brand colours hold on paper with their own light values: a darker
+"have" green for marks and for text (`--chart-have-ink`), orange a touch
+deeper so white button text reads, and a lime-ink hairline on lime pills
+(`--accent-lime-edge`), because lime is barely lighter than cream. Lime text
+turns to the lime ink. Chart panels re-scope to dark alphas; the plot well is
+`--chart-well`. Measured in `docs/changelog/2026-10-05-paper-light-mode.md`.
+
 ## Typography
 
 - **Space Grotesk** (`font-space`, `font-heading`) — display. Bold, tight,
@@ -106,6 +120,12 @@ The type scale is seven tokens in `@theme`: `text-display` (3.5rem), `text-h1`
 
 Numbers are treated as the hero. The mono/display contrast is most of what makes
 the reference read as technical rather than generic.
+
+**2026-10-05:** the four faces are self-hosted (`frontend/src/app/fonts`,
+`next/font/local`), so the dev server no longer falls back to Arial. The
+seven-step scale (56/40/28/20/16/14/12) is a guide for new work. Existing
+sizes stay as they are, by the founder's call on 2026-10-05: a sweep onto the
+scale was tried and reverted. The sidebar keeps its compact sizes.
 
 ## A bug worth remembering
 
