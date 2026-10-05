@@ -14,7 +14,7 @@ import {SectionLabel, SkillTag, StatusChip} from "@/components/dashboard/bits";
 const DIMENSIONS = [
     {key: "role", label: "Role fit", color: "#c7ef34"},
     {key: "required", label: "Required skills", color: "#30a46c"},
-    {key: "preferred", label: "Nice-to-haves", color: "#0ca678"},
+    {key: "preferred", label: "Optional", color: "#0ca678"},
     {key: "seniority", label: "Level", color: "#ffb224"},
     {key: "experience", label: "Experience", color: "#f76b15"},
     {key: "location", label: "Location", color: "#5b7fff"}
@@ -119,11 +119,11 @@ export function BreakdownContent({row, onClose}: BreakdownProps) {
                 </p>
             </div>
 
-            <SkillSection title={`Required you bring (${row.have.length})`} skills={row.have} tone={"have"}
-                          empty={row.required ? "None of the required skills are on your CV." : "The posting lists no specific skills."} />
-            {row.missing.length > 0 && <SkillSection title={`Required you're missing (${row.missing.length})`} skills={row.missing} tone={"gap"} />}
+            <SkillSection title={`Required skills you have (${row.have.length})`} skills={row.have} tone={"have"}
+                          empty={row.required ? "None of the required skills are on your CV." : "This job lists no specific skills."} />
+            {row.missing.length > 0 && <SkillSection title={`Required skills not on your CV (${row.missing.length})`} skills={row.missing} tone={"gap"} />}
             {detail.preferred.missing.length > 0 && (
-                <SkillSection title={`Nice-to-haves missing (${detail.preferred.missing.length})`} skills={detail.preferred.missing} tone={"gap"} />
+                <SkillSection title={`Optional skills not on your CV (${detail.preferred.missing.length})`} skills={detail.preferred.missing} tone={"gap"} />
             )}
 
             {row.also.length > 0 && (

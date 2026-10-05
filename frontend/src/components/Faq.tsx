@@ -13,15 +13,15 @@ const FAQS = [
     },
     {
         q: "What will I actually see?",
-        a: "Four views: the market's headline numbers, its most-wanted skills next to yours, the gaps worth closing, and real postings ranked by how well they fit you."
+        a: "Four views: the market's headline numbers, its top skills next to yours, the ones you don't have yet, and real jobs ranked by how well they fit you."
     },
     {
-        q: "Do I have to re-upload every time?",
+        q: "Do I have to upload my CV every time?",
         a: "No. Your last analysis is kept on this device, and once you sign in your profile is saved to your account; so it follows you to any device."
     },
     {
         q: "Is a low score a bad sign?",
-        a: "No. Scores measure overlap with one batch of postings, not your employability: read a low number as a to learn list, not a verdict."
+        a: "No. Scores measure overlap with one batch of jobs, not your employability. A low number is not a verdict on you."
     }
 ] as const;
 

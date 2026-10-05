@@ -12,7 +12,7 @@ const structuredData = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
-      "Upload your CV and Jobradar scans live job postings, shows the skills your market really wants, the ones you have, and the gaps worth closing.",
+      "Upload your CV and Jobradar scans live jobs. It shows the skills your market really wants, the ones you have, and the ones you don't yet.",
   offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},
 };
 
@@ -45,8 +45,8 @@ export default function Home() {
                 Your market report is<br/>a minute away.
               </h2>
               <p className={"max-w-md text-sm text-muted-foreground"}>
-                One PDF in, a full read on your market out: what they want,
-                what you have, and what to learn next.
+                One PDF in, a full read on your market out: what jobs ask for,
+                what you have, and what you don&apos;t yet.
               </p>
               <a
                 href={"#upload"}
@@ -64,7 +64,7 @@ export default function Home() {
             Jobradar<span className={"text-primary"}>.</span>
           </span>
           <span className={"font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"}>
-            Upload a CV · read the market · close the gap
+            Upload a CV · read the market · see where you stand
           </span>
         </footer>
       </div>

@@ -11,7 +11,7 @@ export default function DashboardGapsPage() {
 
     return (
         <div className={"flex flex-col gap-1"}>
-            <Annotation className={"ml-3 self-start"}>everyone has gaps → yours just come with a to-do list</Annotation>
+            <Annotation className={"ml-3 self-start"}>everyone has gaps → here are yours, counted</Annotation>
             <SkillGapChart
                 gaps={analysis.market.skill_gaps}
                 jobsAnalyzed={analysis.market.jobs_analyzed}

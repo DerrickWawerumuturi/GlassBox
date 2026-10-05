@@ -13,6 +13,7 @@ import {PageBar, Toolbar, ViewChip} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import OpportunityCard from "@/components/dashboard/OpportunityCard";
 import {Incoming} from "@/lib/opportunities-store";
+import {useViewOpened} from "@/components/AnalyticsProvider";
 
 const VIEWS = [
     {id: "fits", label: "Good fits", tiers: ["strong", "good"]},
@@ -83,7 +84,7 @@ function Opportunities() {
             )}
             {state === "no-cv" && (
                 <Notice
-                    text={"Add your CV once. JobRadar matches it against thousands of jobs it collects every morning — no scan to wait for."}
+                    text={"Add your CV once. JobRadar matches it against the thousands of jobs it collects every morning. No scan to wait for."}
                     href={"/dashboard/scan"}
                     action={"Upload your CV"}
                 />
@@ -143,8 +144,8 @@ function Opportunities() {
                     <div className={"flex w-full flex-col gap-2.5 px-4 py-5 sm:px-5"}>
                         {view === "unlikely" && visible.length > 0 && (
                             <p className={"text-[12px] leading-relaxed text-muted-foreground"}>
-                                Jobs your skills fit but something stands in the way — seniority, years, where they hire,
-                                a language. Each one says what. The closest {visible.length} of {counts?.unlikely ?? 0} are shown.
+                                Jobs your skills fit, with one thing in the way: seniority, years, where they hire or a
+                                language. Each card says which. Showing the closest {visible.length} of {counts?.unlikely ?? 0} jobs.
                             </p>
                         )}
                         {shown.map((row) => (
@@ -158,7 +159,7 @@ function Opportunities() {
                         ))}
                         {visible.length === 0 && (
                             <p className={"py-10 text-center text-sm text-muted-foreground"}>
-                                {view === "fits" ? "No good fits in the pool right now. Stretch roles may still be worth a look." : "Nothing in this view."}
+                                {view === "fits" ? "No good fits in today's jobs. Stretch roles are in the next tab." : "Nothing in this view."}
                             </p>
                         )}
                         {remaining > 0 && (
@@ -166,7 +167,7 @@ function Opportunities() {
                                 onClick={() => setLimit((prev) => prev + BATCH_SIZE)}
                                 className={"mt-2 self-center rounded-full bg-muted/50 px-5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"}
                             >
-                                Show {Math.min(BATCH_SIZE, remaining)} more · {remaining} remaining
+                                Show {Math.min(BATCH_SIZE, remaining)} more jobs · {remaining} left
                             </button>
                         )}
                         <p className={"px-1 pt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70"}>
@@ -236,6 +237,7 @@ function ListSkeleton() {
 }
 
 export default function OpportunitiesPage() {
+    useViewOpened("opportunities");
     return (
         <Suspense fallback={null}>
             <Opportunities />

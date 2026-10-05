@@ -21,6 +21,7 @@ import {useCv} from "@/lib/cv-store";
 import Analyze, {ProcessCv} from "@/lib/api";
 import Annotation from "@/components/Annotation";
 import CvStack from "@/components/CvStack";
+import {scanEvents} from "@/lib/analytics";
 
 const Hero = () => {
     const router = useRouter();
@@ -42,6 +43,7 @@ const Hero = () => {
         setOpen(false);
         setErrorMessage(null);
         setStatus("analyzing");
+        const events = scanEvents("upload");
 
         try {
             const analysisPromise = Analyze(file);
@@ -56,10 +58,12 @@ const Hero = () => {
 
             const analysis_data = await analysisPromise;
             save(analysis_data, file.name)
+            events.finished(analysis_data.market?.jobs_analyzed ?? 0);
 
             router.push("/analysis");
         } catch (e) {
             console.error("Backend analysis error:", e);
+            events.failed();
             setStatus("error");
             // The API's own message is more useful than a generic failure —
             // a timeout and a rejected origin need different responses from
@@ -79,7 +83,7 @@ const Hero = () => {
     const points = [
         "Which skills this market asks for, ranked by how often they appear.",
         "Which of your skills carry weight, and which never come up.",
-        "The specific gaps worth closing next, ordered by demand."
+        "The skills jobs ask for that your CV doesn't list, top first."
     ];
 
 
@@ -89,13 +93,13 @@ const Hero = () => {
                 <div className={"max-w-xl"}>
                     <div className={"flex flex-col gap-6"}>
                         <p className={"font-mono text-[11px] uppercase tracking-[0.2em] text-primary"}>
-                            Job-hunt intelligence
+                            Job hunt intelligence
                         </p>
                         <h1 className={"font-heading text-4xl font-bold uppercase leading-[1.02] tracking-tight sm:text-5xl"}>
                             Your market,<br/>mapped.
                         </h1>
                         <p className={"text-base text-muted-foreground"}>
-                            Upload your CV and we&apos;ll scan live job postings, pull out
+                            Upload your CV and we&apos;ll scan live jobs, pull out
                             what the market is really asking for, and show you the gap.
                         </p>
                         <ol className={"mt-2 flex flex-col"}>
@@ -116,7 +120,7 @@ const Hero = () => {
                     <div className={"mt-8 flex flex-col gap-4"}>
                         {!analysis && !isAnalyzing && (
                             <Annotation flip className={"-mb-2 ml-10 self-start"}>
-                                start here → it takes about a minute
+                                one PDF → about a minute
                             </Annotation>
                         )}
                         <div className={"flex flex-wrap items-center gap-3"}>

@@ -31,7 +31,7 @@ const Page = () => {
                             This is what we understood from your CV. It becomes the profile we
                             build your dashboard around → <span className={"text-foreground"}>the roles you fit</span>,{" "}
                             <span className={"text-foreground"}>the skills that carry weight</span>, and{" "}
-                            <span className={"text-foreground"}>the gaps worth closing</span>. Skim it, fix anything we
+                            <span className={"text-foreground"}>the skills you don't have yet</span>. Skim it, fix anything we
                             misread, and you&apos;re on your way.
                             <span className={"text-primary pl-0.5"}>You&apos;re the expert on you.</span>
                         </p>

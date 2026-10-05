@@ -17,6 +17,7 @@ import {CELL_DIVIDE, DemandMeter, EmptyScan, Monogram, Panel, ScoreChip, Section
 import StatusDisclosure from "@/components/dashboard/StatusDisclosure";
 import SkillBadge from "@/components/dashboard/SkillBadge";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
+import {useViewOpened} from "@/components/AnalyticsProvider";
 
 const TOP_COUNT = 5;
 
@@ -61,6 +62,7 @@ function Stat({label, value, unit, sub, tone, cards}: {
 }
 
 export default function OverviewPage() {
+    useViewOpened("overview");
     const router = useRouter();
     const {data: session} = useSession();
     const {analysis, hydrated} = useAnalysis();
@@ -83,7 +85,7 @@ export default function OverviewPage() {
     const coverageCards: FolderPage[] = byDemand(market?.user_skill_presence ?? [])
         .slice(0, 3).map((stat) => ({
             title: short(stat.skill),
-            lines: [`${Math.round(toPercent(stat.frequency))}% demand`, `${stat.job_count} jobs`]
+            lines: [`in ${Math.round(toPercent(stat.frequency))}% of jobs`, `${stat.job_count} jobs ask`]
         }));
     const strongCards: FolderPage[] = fits
         .slice(0, 3).map((row) => ({
@@ -141,17 +143,17 @@ export default function OverviewPage() {
                     <div className={"grid grid-cols-2 gap-3 lg:grid-cols-4"}>
                         <Stat
                             tone={"green"}
-                            label={"Profile coverage"}
+                            label={"Top skills you have"}
                             value={Math.round(coveragePercent(market!.skill_coverage))}
                             unit={"%"}
-                            sub={`covers ${market!.skill_coverage.covered} of the ${market!.skill_coverage.total} skills your market asks for most`}
+                            sub={`Your CV has ${market!.skill_coverage.covered} of the ${market!.skill_coverage.total} skills jobs ask for most.`}
                             cards={coverageCards}
                         />
                         <Stat
                             tone={"lime"}
                             label={"Good fits"}
                             value={fits.length}
-                            sub={"jobs from today's pool that fit your CV — refreshed every morning"}
+                            sub={"Jobs from today's list that fit your CV. Refreshed every morning."}
                             cards={strongCards}
                         />
                         <Stat
@@ -167,7 +169,7 @@ export default function OverviewPage() {
                             value={state === "signed-out" ? "—" : inProgress}
                             sub={state === "signed-out"
                                 ? "sign in to track applications"
-                                : `${awaiting} waiting on a reply`}
+                                : `${awaiting} applications waiting on a reply`}
                             cards={state === "signed-out" ? undefined : pipelineCards}
                         />
                     </div>
@@ -176,7 +178,7 @@ export default function OverviewPage() {
                         <div className={"flex items-baseline justify-between"}>
                             <SectionLabel>On your radar</SectionLabel>
                             <Link href={"/dashboard/opportunities"} className={"font-mono text-[10px] uppercase tracking-[0.1em] text-primary hover:underline"}>
-                                All {fits.length} fits →
+                                All {fits.length} good fits →
                             </Link>
                         </div>
                         <div className={TABLE_WRAP}>
@@ -240,9 +242,9 @@ export default function OverviewPage() {
                     <div className={"grid gap-4 md:grid-cols-2"}>
                         <Panel className={"flex flex-col gap-3"}>
                             <div className={"flex items-baseline justify-between"}>
-                                <SectionLabel>Worth learning next</SectionLabel>
+                                <SectionLabel>Not on your CV yet</SectionLabel>
                                 <Link href={"/dashboard/gaps"} className={"font-mono text-[10px] uppercase tracking-[0.1em] text-primary hover:underline"}>
-                                    All gaps →
+                                    Your skills →
                                 </Link>
                             </div>
                             {gaps.length > 0 ? gaps.map((gap) => {
@@ -255,7 +257,7 @@ export default function OverviewPage() {
                                                 <span className={"truncate font-mono text-xs font-medium"}>{gap.skill}</span>
                                             </span>
                                             <span className={"shrink-0 font-mono text-[10.5px] tabular-nums text-muted-foreground"}>
-                                                {Math.round(percent)}% of jobs
+                                                in {Math.round(percent)}% of jobs
                                             </span>
                                         </div>
                                         <DemandMeter percent={percent} tone={"gap"} />
@@ -263,7 +265,7 @@ export default function OverviewPage() {
                                 )
                             }) : (
                                 <p className={"text-sm text-muted-foreground"}>
-                                    No significant gaps. Your CV covers what this market keeps asking for.
+                                    Your CV has every skill that 1 in 5 jobs or more ask for.
                                 </p>
                             )}
                         </Panel>

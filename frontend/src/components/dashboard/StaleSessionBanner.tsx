@@ -18,8 +18,8 @@ export default function StaleSessionBanner() {
     return (
         <div className={"flex flex-wrap items-center justify-between gap-3 border-b border-primary/40 bg-primary/10 px-4 py-2.5 sm:px-5"}>
             <p className={"text-[12.5px] text-foreground"}>
-                This sign-in predates an app update, so your data can&apos;t load here.
-                One fresh sign-in reconnects everything.
+                You signed in before an app update, so your data can&apos;t load here.
+                Sign in again to reconnect everything.
             </p>
             <button
                 onClick={() => signOut({redirectTo: "/sign-in"})}

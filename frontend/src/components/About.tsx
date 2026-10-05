@@ -23,15 +23,15 @@ const STEPS = [
     {
         step: "03",
         title: "you vs the market",
-        body: "Colour-coded charts show the market's demand, the skills you cover, and the gaps worth closing.",
+        body: "Coloured charts show the market's demand, the skills you cover, and the ones you don't yet.",
         rotate: "-rotate-1",
         offset: "lg:translate-y-2",
         visual: "compare" as const,
     },
     {
         step: "04",
-        title: "start with the best fits",
-        body: "Every posting is scored against your CV, so you know which jobs to look at first.",
+        title: "see your best fits",
+        body: "Every job is scored against your CV, best fits first.",
         rotate: "rotate-2",
         offset: "lg:translate-y-12",
         visual: "match" as const,
@@ -40,16 +40,16 @@ const STEPS = [
 
 const SNAPSHOTS: Record<string, {src: string; alt: string}> = {
     upload: {src: "/assets/process01.png", alt: "A CV being read by Jobradar"},
-    scan: {src: "/assets/process02.png", alt: "Live job postings being scanned"},
+    scan: {src: "/assets/process02.png", alt: "Live jobs being scanned"},
     compare: {src: "/assets/process03.png", alt: "Your skills plotted against the market"},
-    match: {src: "/assets/process04.png", alt: "Job postings ranked by how well they fit"},
+    match: {src: "/assets/process04.png", alt: "Jobs ranked by how well they fit"},
 };
 
 const TABS = [
     {label: "Overview", body: "The headline numbers of your analysis at a glance."},
     {label: "Skills", body: "What the market wants next to what your CV already covers."},
     {label: "Gaps", body: "The missing skills employers ask for the most."},
-    {label: "Matches", body: "Live postings ranked by how well they fit you."}
+    {label: "Matches", body: "Live jobs ranked by how well they fit you."}
 ] as const;
 
 /**
@@ -110,7 +110,7 @@ const About = () => {
         <PanelHeader
             title={"What Jobradar does"}
             qualifier={""}
-            lead={"A market report for your career: your CV on one side, live job postings on the other"}
+            lead={"A market report for your career: your CV on one side, live jobs on the other"}
         />
 
         <ol

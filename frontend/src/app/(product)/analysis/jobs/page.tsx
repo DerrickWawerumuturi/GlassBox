@@ -11,7 +11,7 @@ export default function DashboardJobsPage() {
 
     return (
         <div className={"flex flex-col gap-1"}>
-            <Annotation className={"ml-3 self-start"}>real postings, live right now → and they fit you</Annotation>
+            <Annotation className={"ml-3 self-start"}>real jobs, live right now → ranked by fit</Annotation>
             <JobMatches
                 jobs={analysis.ranked_jobs}
                 userSkills={analysis.market.user_skill_presence}

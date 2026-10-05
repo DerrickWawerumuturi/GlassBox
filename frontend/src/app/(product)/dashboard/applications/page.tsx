@@ -31,6 +31,7 @@ import ApplicationSheet from "@/components/dashboard/ApplicationSheet";
 import {ApplicationsSkeleton, CvSnapshot, RemoveCell, RowMeta, TrackJobMenu, workplaceLabel} from "@/components/dashboard/ApplicationParts";
 import {DeleteButton} from "@/components/ui/delete-button";
 import {Folder} from "@/components/ui/folder-component";
+import {useViewOpened} from "@/components/AnalyticsProvider";
 
 const time = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : 0) || 0;
 
@@ -42,6 +43,7 @@ const VIEWS = [
 type ViewId = typeof VIEWS[number]["id"];
 
 export default function ApplicationsPage() {
+    useViewOpened("applications");
     const {apps, state, counts, refresh, removeMany, syncing} = useApplications();
     const [view, setView] = useState<ViewId>("all");
 
@@ -105,7 +107,7 @@ export default function ApplicationsPage() {
             <PageBar
                 title={"Applications"}
                 meta={state === "ready"
-                    ? `${apps.length} tracked · ${counts.interview} in interview${syncing ? " · syncing" : ""}`
+                    ? `${apps.length} applications tracked · ${counts.interview} at interview${syncing ? " · syncing" : ""}`
                     : undefined}
             />
 

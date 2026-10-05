@@ -12,9 +12,9 @@ import {significantGaps, SkillMark} from "@/lib/market";
  * uppercase title, a mono subtitle split by the orange slash (the only orange
  * in a chart), a legend, a "Good to know" row and a table twin for screen
  * readers. The charts themselves are hand-built SVG in DemandBars, GapTally
- * and SkillStrip; this file is what they share.
+ * and Bridges; this file is what they share.
  *
- * Colour has one job: green is on your CV, a neutral hatch or hollow ring is
+ * Colour has one job: green is on your CV, a neutral hatch or dashed outline is
  * not yet, lime is a single highlighter. Nothing here is set below 12px.
  */
 
@@ -53,7 +53,7 @@ interface Tip extends TipContent {
 /** What a mark says on hover or focus: the count first, then the skill and whose it is. */
 export function markTip(mark: SkillMark, jobs: number, sub?: string): TipContent {
     return {
-        title: `${mark.count} of ${jobs} postings`,
+        title: `${mark.count} of ${jobs} jobs ask for it`,
         line: `${mark.label} · ${mark.percent}% · ${mark.have ? "on your CV" : "not on your CV yet"}`,
         sub,
     };
@@ -107,13 +107,11 @@ export function TipBox({tip}: { tip: Tip | null }) {
 
 /* ---------- panel chrome ---------- */
 
-export type Swatch = "have" | "hatch" | "dot" | "ring" | "solid" | "faint";
+export type Swatch = "have" | "hatch" | "solid" | "faint";
 
 const SWATCH: Record<Swatch, string> = {
     have: "size-3 rounded-[3px] bg-chart-have",
     hatch: "size-3 rounded-[3px] bar-gap",
-    dot: "size-[11px] rounded-full bg-chart-have",
-    ring: "size-[11px] rounded-full border-2 border-chart-gap opacity-70",
     solid: "size-3 rounded-[3px] bg-chart-gap",
     faint: "size-3 rounded-[3px] bg-chart-gap/30",
 };
@@ -143,7 +141,7 @@ export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) 
                 <thead>
                     <tr className={"text-left font-medium uppercase tracking-[0.06em] text-panel-chart-ink-faint"}>
                         <th className={"border-b border-border px-2.5 py-1.5 font-medium"}>Skill</th>
-                        <th className={"border-b border-border px-2.5 py-1.5 text-right font-medium"}>Postings</th>
+                        <th className={"border-b border-border px-2.5 py-1.5 text-right font-medium"}>Jobs asking</th>
                         <th className={"border-b border-border px-2.5 py-1.5 text-right font-medium"}>Share</th>
                         <th className={"border-b border-border px-2.5 py-1.5 font-medium"}>CV</th>
                     </tr>
@@ -164,7 +162,7 @@ export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) 
 }
 
 /**
- * The panel every chart sits in. `lead` is the finding; the postings chip
+ * The panel every chart sits in. `lead` is the finding; the jobs chip
  * after the orange slash is the denominator every count is read against.
  */
 export function ChartPanel({title, lead, jobs, legend, children, notes, table, action, preview, className}: {
@@ -188,9 +186,9 @@ export function ChartPanel({title, lead, jobs, legend, children, notes, table, a
             <h2 className={"text-balance text-center font-heading text-[18px] font-bold uppercase leading-tight tracking-[0.05em] sm:text-[20px]"}>{title}</h2>
             <p className={"mx-auto mt-1.5 max-w-[640px] text-center font-mono text-[12px] leading-[1.7] text-muted-foreground"}>
                 {lead}
-                <span aria-hidden className={"mx-[7px] font-bold text-primary"}>/</span>
+                <span aria-hidden className={"mx-[7px] font-bold text-muted-foreground/60"}>/</span>
                 <span className={"whitespace-nowrap"}>
-                    <span className={"inline-block rounded-full bg-foreground/9 px-2 leading-5 text-foreground"}>{jobs.toLocaleString()} postings</span>
+                    <span className={"inline-block rounded-full bg-foreground/9 px-2 leading-5 text-foreground"}>{jobs.toLocaleString()} jobs</span>
                 </span>
             </p>
             {legend && <div className={"mb-1 mt-3.5"}><Legend items={legend} /></div>}
@@ -235,7 +233,7 @@ function Tile({label, hero, small, foot, children, className}: {
     )
 }
 
-/** The numbers the overview leads with: coverage as a hero and a tally of the top skills, then the postings. */
+/** The numbers the overview leads with: coverage as a hero and a tally of the top skills, then the jobs. */
 export function StatTiles({market, marks}: { market: MarketAnalysis; marks: SkillMark[] }) {
     const coverage = market.skill_coverage;
     const groups: SkillMark[][] = [];
@@ -243,7 +241,7 @@ export function StatTiles({market, marks}: { market: MarketAnalysis; marks: Skil
     const gaps = significantGaps(market.skill_gaps ?? []).length;
     return (
         <div className={"grid gap-3 sm:grid-cols-[1.6fr_1fr_1fr] sm:gap-4"}>
-            <Tile label={"Coverage"} hero={coverage.covered} small={`of the top ${coverage.total} are yours`} foot={"In demand order. Green is yours."}>
+            <Tile label={"Coverage"} hero={coverage.covered} small={`of the ${coverage.total} skills jobs ask for most are on your CV`} foot={"One block per skill, top first. Green: on your CV."}>
                 <div aria-hidden className={"my-1.5 flex flex-wrap gap-2 sm:gap-2.5"}>
                     {groups.map((group, g) => (
                         <div key={g} className={"flex gap-[3px]"}>
@@ -255,8 +253,8 @@ export function StatTiles({market, marks}: { market: MarketAnalysis; marks: Skil
                     ))}
                 </div>
             </Tile>
-            <Tile label={"Postings"} hero={market.jobs_analyzed.toLocaleString()} foot={"in this scan"} />
-            <Tile label={"Gaps"} hero={gaps} foot={"asked for by a fifth of postings or more"} />
+            <Tile label={"Jobs"} hero={market.jobs_analyzed.toLocaleString()} foot={"jobs read in this scan"} />
+            <Tile label={"Gaps"} hero={gaps} foot={"skills not on your CV, each in 1 in 5 jobs or more"} />
         </div>
     )
 }

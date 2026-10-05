@@ -28,7 +28,7 @@ const Page = () => {
                 </svg>
 
                 <p className={"font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground"}>
-                    Job-hunt intelligence
+                    Job hunt intelligence
                 </p>
 
                 <div className={"flex flex-col gap-4"}>
@@ -69,7 +69,7 @@ const Page = () => {
                     </Button>
 
                     <p className={"font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"}>
-                        More sign-in options coming soon
+                        More ways to sign in soon
                     </p>
 
                     <p className={"border-t border-border pt-5 text-sm text-muted-foreground"}>

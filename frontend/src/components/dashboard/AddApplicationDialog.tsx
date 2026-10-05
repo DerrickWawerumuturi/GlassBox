@@ -70,7 +70,7 @@ export default function AddApplicationDialog() {
         const url = raw.trim();
         if (!url || reading) return;
         if (!looksLikeUrl(url)) {
-            setError("Paste the full link to the job posting, e.g. https://…");
+            setError("Paste the full link to the job ad, e.g. https://…");
             return;
         }
         const id = ++request.current;
@@ -201,8 +201,8 @@ export default function AddApplicationDialog() {
                             </div>
                             <p id={"link-help"} className={cn("min-h-4 text-[12px]", error ? "text-destructive" : "text-muted-foreground")} aria-live={"polite"}>
                                 {error ?? (reading
-                                    ? (slow ? "Waking the server — this first read can take up to half a minute…" : "Reading the posting…")
-                                    : "LinkedIn, Greenhouse, Lever, Ashby, company career pages — we'll fill in the rest.")}
+                                    ? (slow ? "Waking the server. The first read can take up to half a minute…" : "Reading the job ad…")
+                                    : "Works with LinkedIn, Greenhouse, Lever, Ashby and company career pages. We fill in the rest.")}
                             </p>
                             <div className={"flex items-center gap-3"}>
                                 <button
@@ -284,7 +284,7 @@ export default function AddApplicationDialog() {
 
                             <div className={"grid gap-3 sm:grid-cols-2"}>
                                 <Field label={"Employment type"}>
-                                    <input value={draft.employment_type} onChange={set("employment_type")} placeholder={"Full-time"} className={INPUT} />
+                                    <input value={draft.employment_type} onChange={set("employment_type")} placeholder={"Full time"} className={INPUT} />
                                 </Field>
                                 <Field label={"Salary"}>
                                     <input value={draft.salary} onChange={set("salary")} placeholder={"Not stated"} className={INPUT} />
@@ -305,9 +305,9 @@ export default function AddApplicationDialog() {
                             {(skills.length > 0 || result?.experience.years != null || result?.fields.posted_at) && (
                                 <div className={"flex flex-col gap-2 border-t border-border pt-3"}>
                                     <div className={"flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground"}>
-                                        {skills.length > 0 && <span>{matched} of {skills.length} skills on your CV</span>}
+                                        {skills.length > 0 && <span>{matched} of this job&apos;s {skills.length} skills are on your CV</span>}
                                         {result?.experience.years != null && (
-                                            <span>{result.experience.kind === "preferred" ? "Prefers" : "Asks for"} {result.experience.years}+ yrs</span>
+                                            <span>{result.experience.kind === "preferred" ? "Prefers" : "Asks for"} {result.experience.years}+ years of experience</span>
                                         )}
                                         {result?.fields.posted_at && <span>Posted {timeAgo(result.fields.posted_at)}</span>}
                                     </div>
@@ -375,7 +375,7 @@ function Field({label, missing, group, children}: { label: string; missing?: boo
         <Wrapper className={"flex flex-col gap-1"}>
             <span className={"flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"}>
                 {label}
-                {missing && <span className={"normal-case tracking-normal text-amber-600 dark:text-amber-400"}>not found — add it</span>}
+                {missing && <span className={"normal-case tracking-normal text-amber-600 dark:text-amber-400"}>not found. Add it</span>}
             </span>
             {children}
         </Wrapper>

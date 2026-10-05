@@ -17,7 +17,7 @@ export default function AnalysisOverviewPage() {
                 <MarketOverview market={analysis.market} />
             </div>
             <div className={"flex flex-col gap-1"}>
-                <Annotation flip className={"mr-8 self-end"}>and look → you&apos;ve already got a good chunk covered</Annotation>
+                <Annotation flip className={"mr-8 self-end"}>and here → what you already cover</Annotation>
                 <SkillCoverage coverage={analysis.market.skill_coverage} />
             </div>
         </div>

@@ -9,9 +9,8 @@ import {markTip, monoWidth, TICK_FS, TipBox, useTip, useWidth} from "@/component
 /*
  * Ranked horizontal bars, chart A of docs/brand/charts.html: one row per
  * skill, the name on the left, the bar in a framed plot, "count/N" at the
- * tip. Yours is solid green; not yet is the neutral hatch. One lime "1st"
- * badge may mark the user's top skill, always after its count so it never
- * covers the bar or the number. Share ticks sit under the frame.
+ * tip. Yours is solid green; not yet is the neutral hatch. Share ticks sit
+ * under the frame. No rank badge: the brand never says "1st".
  */
 
 const FS = 12;
@@ -26,14 +25,12 @@ function fitLabel(label: string, maxChars: number): string {
     return label.length > maxChars ? `${label.slice(0, maxChars - 1)}…` : label;
 }
 
-export default function DemandBars({marks, jobs, initialCount = 12, limit, badge}: {
+export default function DemandBars({marks, jobs, initialCount = 12, limit}: {
     marks: SkillMark[];
     jobs: number;
     initialCount?: number;
     /** Show exactly this many, with no "Show all". */
     limit?: number;
-    /** The skill to wear the "1st" badge, if it is among the rows shown. */
-    badge?: string;
 }) {
     const [showAll, setShowAll] = useState(false);
     const [host, W] = useWidth<HTMLDivElement>();
@@ -52,10 +49,9 @@ export default function DemandBars({marks, jobs, initialCount = 12, limit, badge
     const plotX = labelW, plotW = Math.max(60, W - labelW), plotH = rows.length * rowH + padT + padB;
     const H = plotH + axisH;
 
-    // The longest bar plus its "count/N" label (and the badge beside it) must fit inside the frame.
+    // The longest bar plus its "count/N" label must fit inside the frame.
     const maxPct = Math.max(1, rows[0].percent);
-    const badgeRow = badge ? rows.findIndex((r) => r.skill === badge) : -1;
-    const reserve = monoWidth(`${rows[0].count}/${jobs}`, FS) + 12 + (badgeRow >= 0 ? 46 : 10);
+    const reserve = monoWidth(`${rows[0].count}/${jobs}`, FS) + 22;
     const fitted = Math.max(1, (plotW - 12 - reserve) / maxPct);
     const domain = Math.max(10, Math.ceil((plotW / fitted) / 5) * 5);
     const pxPerPct = plotW / domain;
@@ -67,13 +63,12 @@ export default function DemandBars({marks, jobs, initialCount = 12, limit, badge
         <div ref={host} className={"mx-auto w-full max-w-[760px]"}>
             {W > 0 && (
                 <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className={"block overflow-visible font-mono"} role={"img"}
-                     aria-label={"Ranked bars of skills by share of postings"}>
+                     aria-label={"Skills ranked by the share of jobs that ask for them"}>
                     <HatchDefs id={hatch.id} />
                     <PlotFrame x={plotX} y={0} width={plotW} height={plotH} majors={ticks.slice(1).map(x)} />
                     {rows.map((mark, i) => {
                         const cy = padT + i * rowH + rowH / 2;
                         const tipX = x(mark.percent);
-                        const wearsBadge = i === badgeRow;
                         const value = `${mark.count}`;
                         return (
                             <g key={mark.skill} className={"[&:hover_.mark]:brightness-[1.18] [&:focus-within_.mark]:brightness-[1.18]"}>
@@ -85,14 +80,8 @@ export default function DemandBars({marks, jobs, initialCount = 12, limit, badge
                                 <text x={tipX + 10} y={cy + FS * 0.36} fontSize={FS} fontWeight={600} fill={"var(--foreground)"}>
                                     {value}<tspan fontWeight={400} fill={"var(--panel-chart-ink-faint)"}>/{jobs}</tspan>
                                 </text>
-                                {wearsBadge && (
-                                    <g aria-hidden transform={`translate(${tipX + 10 + monoWidth(`${value}/${jobs}`, FS) + 22} ${cy})`}>
-                                        <circle r={13} fill={"var(--accent-lime)"} />
-                                        <text y={4} textAnchor={"middle"} fontSize={12} fontWeight={700} fill={"var(--panel-chart)"}>1st</text>
-                                    </g>
-                                )}
                                 <rect x={0} y={cy - rowH / 2} width={W} height={rowH} fill={"transparent"} className={"outline-none"}
-                                      {...bind(markTip(mark, jobs, wearsBadge ? "Your most asked-for skill" : undefined))} />
+                                      {...bind(markTip(mark, jobs))} />
                             </g>
                         );
                     })}
@@ -105,7 +94,7 @@ export default function DemandBars({marks, jobs, initialCount = 12, limit, badge
             {!limit && marks.length > initialCount && (
                 <button type={"button"} onClick={() => setShowAll((prev) => !prev)} aria-expanded={showAll}
                         className={"mt-3 inline-flex items-center rounded-full border border-foreground/22 px-[13px] py-[7px] font-mono text-[12px] font-medium uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-foreground/50 hover:text-foreground"}>
-                    {showAll ? `Show top ${initialCount}` : `Show all ${marks.length}`}
+                    {showAll ? `Show top ${initialCount} skills` : `Show all ${marks.length} skills`}
                 </button>
             )}
             <TipBox tip={tip} />

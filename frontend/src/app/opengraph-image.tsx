@@ -23,7 +23,7 @@ export default function OgImage() {
                 }}
             >
                 <div style={{display: "flex", fontSize: 28, letterSpacing: 6, color: "#e8672e"}}>
-                    JOB-HUNT INTELLIGENCE
+                    JOB HUNT INTELLIGENCE
                 </div>
 
                 <div style={{display: "flex", flexDirection: "column", gap: 10}}>

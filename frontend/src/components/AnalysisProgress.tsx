@@ -20,9 +20,9 @@ const MAX_PROGRESS = 92;
  */
 const STAGES = [
     {at: 0, label: "Reading your CV", message: "Getting to know your experience and skills."},
-    {at: 8, label: "Scanning the market", message: "Looking through live job postings, right now, across multiple job boards."},
+    {at: 8, label: "Scanning the market", message: "Reading live jobs from several job boards, right now."},
     {at: 20, label: "Matching you up", message: "Comparing your skills with what employers are actually asking for."},
-    {at: 32, label: "Finding your edge", message: "Ranking your best-fit roles and spotting the gaps worth closing."},
+    {at: 32, label: "Finding your edge", message: "Ranking your closest roles and counting the skills you don't have yet."},
     {at: 45, label: "Almost there", message: "Pulling everything together into your personal report."},
 ] as const;
 
