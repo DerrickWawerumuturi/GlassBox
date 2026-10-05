@@ -24,7 +24,8 @@ from src.matching.skills import find_skills, scan
 # Bump when any rule here or the vocabulary (skills.txt) changes: the daily run
 # re-profiles every stored job whose profile carries another version, and market
 # snapshots start a new series. v2: 66 skills added from the discovery report.
-PROFILER_VERSION = "requirements-v2"
+# v3: role families and levels audited against the live pool (2026-10-05).
+PROFILER_VERSION = "requirements-v3"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
@@ -155,23 +156,28 @@ _PROSE = re.compile(r"founded|years ago|in business|over the past|established|an
 MAX_PLAUSIBLE_YEARS = 15
 
 
-def _figures(text: str) -> list[tuple[int, int, int]]:
-    """Every years figure as (start, end, years), positions in `text`."""
+def _figures(text: str) -> list[tuple[int, int, int, int]]:
+    """
+    Every years figure as (start, end, years, middle), positions in `text`.
+    `years` gates (a range's lower end); `middle` places the level (a range's
+    midpoint, so "2-5 years" reads as mid level, not junior).
+    """
     # "two (2) years" -> "2" padded to the same length, so positions still line up.
     text = _WORD_YEARS.sub(lambda m: _NUMBER_WORDS[m.group(1).lower()].ljust(len(m.group())), text or "")
     found, masked = [], []
     # Ranges first: "2-4 years" gates on 2, and its span is masked so the single
     # patterns cannot read the 4 back out as a separate requirement.
     for m in _RANGE.finditer(text):
-        found.append((m.start(), m.end(), min(int(m.group(1)), int(m.group(2)))))
+        low, high = sorted((int(m.group(1)), int(m.group(2))))
+        found.append((m.start(), m.end(), low, (low + high) // 2))
         masked.append((m.start(), m.end()))
     for pattern in _SINGLE:
-        found.extend((m.start(), m.end(), int(m.group(1))) for m in pattern.finditer(text)
+        found.extend((m.start(), m.end(), int(m.group(1)), int(m.group(1))) for m in pattern.finditer(text)
                      if not any(s <= m.start() < e for s, e in masked))
     return [f for f in found if f[2] <= MAX_PLAUSIBLE_YEARS and not _PROSE.search(_around(text, f[0], f[1], _SENTENCE))]
 
 
-def extract_experience(title: str | None, description: str | None) -> dict:
+def _experience(title: str | None, description: str | None) -> tuple[dict, int | None]:
     """
     {"years": int | None, "kind": "required" | "preferred" | "unstated"}
 
@@ -184,8 +190,8 @@ def extract_experience(title: str | None, description: str | None) -> dict:
     """
     text = description or ""
     spans = _spans(text)
-    required, general, wished = [], [], []
-    for start, end, years in _figures(text):
+    required, general, wished, middles = [], [], [], []
+    for start, end, years, middle in _figures(text):
         kind = _kind_at(spans, start)
         if kind == "stop":
             continue
@@ -193,15 +199,27 @@ def extract_experience(title: str | None, description: str | None) -> dict:
             wished.append(years)
         else:
             (required if kind == "required" else general).append(years)
-    general += [years for _, _, years in _figures(title or "")]
+            middles.append(middle)
+    title_figures = _figures(title or "")
+    general += [years for _, _, years, _ in title_figures]
+    middles += [middle for _, _, _, middle in title_figures]
 
-    if required:
-        return {"years": max(required), "kind": "required"}
-    if general:
-        return {"years": max(general), "kind": "required"}
+    if required or general:
+        # The gate is the highest required figure; the level reads the same figures at their middles.
+        return {"years": max(required or general), "kind": "required"}, max(middles)
     if wished:
-        return {"years": min(wished), "kind": "preferred"}
-    return {"years": None, "kind": "unstated"}
+        return {"years": min(wished), "kind": "preferred"}, None
+    return {"years": None, "kind": "unstated"}, None
+
+
+def extract_experience(title: str | None, description: str | None) -> dict:
+    """{"years": int | None, "kind": "required" | "preferred" | "unstated"}; see _experience."""
+    return _experience(title, description)[0]
+
+
+def experience_level_years(title: str | None, description: str | None) -> int | None:
+    """The required years read for level: a range at its middle ("2-5 years" is 3). None when not required."""
+    return _experience(title, description)[1]
 
 
 def _skills(text: str, title: str | None) -> tuple[list[str], list[str], list[str]]:
@@ -394,7 +412,7 @@ def profile_job(job) -> JobProfile:
     title = getattr(job, "title", None)
     text = html_to_text(getattr(job, "description", None)) or ""
     sections = split_sections(text)
-    experience = extract_experience(title, text)
+    experience, level_years = _experience(title, text)
 
     required, preferred, mentioned = _skills(text, title)
 
@@ -408,7 +426,7 @@ def profile_job(job) -> JobProfile:
     return JobProfile(
         family=classify_family(title, text),
         seniority=classify_seniority(title, text, level,
-                                     experience["years"] if experience["kind"] == "required" else None),
+                                     level_years),
         years=experience["years"],
         years_kind=experience["kind"],
         required=tuple(required),

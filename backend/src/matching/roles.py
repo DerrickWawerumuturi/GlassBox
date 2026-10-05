@@ -25,6 +25,26 @@ def _first(patterns, text: str, default=None):
     return next((name for name, pattern in patterns if re.search(pattern, text)), default)
 
 
+# Job functions that are not technical work. Used last in _FAMILIES, and to
+# take an "AI" title away from `ai` when its job is selling, marketing or law.
+# The second half came from the live pool on 2026-10-05 (families audit).
+_NON_TECH_WORDS = (r"\b(?:sales|marketing|account (?:executive|manager)|recruit\w*|talent acquisition|human resources|hr|"
+                   r"people partner|finance|financial|accountant|accounting|accounts|audit\w*|tax|legal|counsel|paralegal|"
+                   r"lawyer|attorney|compliance|customer (?:success|service|support|care|experience)|call cent\w*|"
+                   r"office (?:manager|assistant|administrator)|receptionist|front office|secretary|executive assistant|"
+                   r"administrative|admin assistant|copywrit\w*|content (?:writer|creator|marketing)|social media|"
+                   r"community manager|public relations|communications|brand|nurse|nursing|clinical|medical|pharmac\w*|"
+                   r"doctor|physician|dentist|laboratory|lab technician|teacher|tutor|lecturer|driver|rider|chef|cook|"
+                   r"waiter|waitress|hotel|housekeep\w*|guard|cctv|warehouse|logistics|procurement|supply chain|"
+                   r"storekeeper|farm|agronom\w*|veterinar\w*|social work\w*|counsell?or|photograph\w*|videograph\w*|"
+                   r"merchandis\w*|cashier|teller|loan officer|credit officer|debt collect\w*|insurance|underwrit\w*|"
+                   r"actuar\w*|electrician|plumber|mechanic|welder|machine operator|production supervisor|literacy|"
+                   r"telesales|relationship manager|investment|banking|fundrais\w*|grants?|program officer|"
+                   r"monitoring and evaluation|operations (?:manager|officer|associate|assistant))\b"
+                   r"|\b(?:policy|seo|creative|creators?|communication|gtm|go to market|payroll|partnerships?|events?|"
+                   r"enablement|steuerberater\w*|pflege\w*|instructor|docente|coordinator|art director|"
+                   r"growth marketing|product marketing)\b")
+
 # Ordered: the first match wins. The job's function ("Designer", "Product
 # Manager") decides before its domain ("AI"), so "AI Product Manager" is product
 # work, and specific tech families come before the generic "engineer" — so
@@ -42,7 +62,7 @@ _FAMILIES = [
     ("solutions", r"\b(?:solutions?|sales|pre ?sales|customer(?: success)?|forward deployed|implementation|"
                   r"integrations?|field|technical account) (?:engineer|architect)\b|\btechnical account manager\b|"
                   r"\bdeveloper (?:advocate|relations)\b|\bdevrel\b"),
-    ("design", r"\b(?:designer|ux researcher|user researcher|ux design|ui design|ui ux)\b"),
+    ("design", r"\b(?:designer|ux researcher|user researcher|ux design|ui design|ui ux|head of product design|product design (?:intern|lead|director|manager))\b"),
     ("product", r"\b(?:product manager|product owner|program manager|project manager|technical program manager|"
                 r"scrum master|delivery manager)\b"),
     ("machine_learning", r"\b(?:machine learning|ml|mlops|deep learning|computer vision|nlp|applied scientist|"
@@ -61,7 +81,7 @@ _FAMILIES = [
                r"kubernetes|linux) (?:engineer|architect|developer|specialist)\b|\bdevops\b|\bsre\b"),
     ("it_support", r"\b(?:it|ict|technical|desktop|helpdesk|help desk|service desk) (?:support|officer|technician|"
                    r"specialist|administrator|assistant|analyst)\b|\b(?:system|systems|network|sys) administrator\b|"
-                   r"\bsysadmin\b|\bnetwork engineer\b|\bsupport engineer\b"),
+                   r"\bsysadmin\b|\bsystemadministrator\w*|\bnetwork engineer\b|\bsupport engineer\b|\btse\b"),
     ("mobile", r"\b(?:ios|android|flutter|react native)\b|\bmobile (?:engineer|developer|app\w*|software)\b"),
     ("embedded", r"\b(?:embedded|firmware|fpga|hardware engineer|iot|robotics)\b"),
     ("game", r"\b(?:game|gameplay|unity|unreal)\b"),
@@ -71,22 +91,10 @@ _FAMILIES = [
                 r"node(?:\.js)?|php|ruby|rails|django|laravel|\.net|c#|scala|elixir|rust) (?:engineer|developer)\b"),
     ("full_stack", r"\b(?:full ?stack|web developer|web engineer|mern|mean stack)\b"),
     ("software_engineering", r"\b(?:software|developer|programmer|coder|engineer|engineering|member of technical staff|"
-                             r"technical staff|swe|sde|entwickler\w*|softwareentwickl\w*|informati\w*|it specialist)\b"),
+                             r"technical staff|swe|sde|entwickler\w*|softwareentwickl\w*|informati\w*|it specialist|it architect)\b"),
     # Clearly not technical, once no technical family has claimed the title
     # (jobhunt's non-technical list, from what Kenyan boards actually carry).
-    ("non_tech", r"\b(?:sales|marketing|account (?:executive|manager)|recruit\w*|talent acquisition|human resources|hr|"
-                 r"people partner|finance|financial|accountant|accounting|accounts|audit\w*|tax|legal|counsel|paralegal|"
-                 r"lawyer|attorney|compliance|customer (?:success|service|support|care|experience)|call cent\w*|"
-                 r"office (?:manager|assistant|administrator)|receptionist|front office|secretary|executive assistant|"
-                 r"administrative|admin assistant|copywrit\w*|content (?:writer|creator|marketing)|social media|"
-                 r"community manager|public relations|communications|brand|nurse|nursing|clinical|medical|pharmac\w*|"
-                 r"doctor|physician|dentist|laboratory|lab technician|teacher|tutor|lecturer|driver|rider|chef|cook|"
-                 r"waiter|waitress|hotel|housekeep\w*|guard|cctv|warehouse|logistics|procurement|supply chain|"
-                 r"storekeeper|farm|agronom\w*|veterinar\w*|social work\w*|counsell?or|photograph\w*|videograph\w*|"
-                 r"merchandis\w*|cashier|teller|loan officer|credit officer|debt collect\w*|insurance|underwrit\w*|"
-                 r"actuar\w*|electrician|plumber|mechanic|welder|machine operator|production supervisor|literacy|"
-                 r"telesales|relationship manager|investment|banking|fundrais\w*|grants?|program officer|"
-                 r"monitoring and evaluation|operations (?:manager|officer|associate|assistant))\b"),
+    ("non_tech", _NON_TECH_WORDS),
 ]
 TECH_FAMILIES = frozenset(name for name, _ in _FAMILIES) - {"other", "non_tech", "ai_data"}
 
@@ -101,8 +109,32 @@ _MODEL_SIGNALS = ("train models", "training models", "model training", "fine-tun
                   "hyperparameter", "production ml")
 
 
+# "AI" in a title names the domain, not the job. A technical function also in
+# the title decides ("iOS Developer - AI Finance Agent" is mobile work); a
+# non-technical one with no technical role word means the job is not
+# engineering at all ("Legal AI Counsel", "Account Executive - AI Native").
+_TECH_ROLE = re.compile(r"\b(?:engineer\w*|developer|programmer|scientist|research\w*|architect|technical staff|swe|sde|"
+                        r"mlops|devops|sre|tester|sdet|administrator)\b")
+_FUNCTION_OVER_DOMAIN = [(name, pattern) for name, pattern in _FAMILIES
+                         if name in ("mobile", "frontend", "backend", "full_stack", "security", "data_engineering",
+                                     "qa", "it_support", "embedded", "game")]
+# Quality and test work on physical products: manufacturing, hardware, propulsion.
+# It is not software QA unless the title says software.
+_PHYSICAL = re.compile(r"\b(?:hardware|manufacturing|npi|propulsion|battery|metrology|dimensional|mechanical|supplier|"
+                       r"production|process|materials?|medizin\w*|cannabis|pharma\w*|food|automotive|vehicle|"
+                       r"electrical|electronics|rf|thermal|structural|design quality)\b")
+_SOFTWARE_QA = re.compile(r"\b(?:software|sdet|automation|automated|api|web|mobile|game|localisation|localization|data)\b")
+
+
 def classify_family(title: str | None, description: str | None = None) -> str:
-    family = _first(_FAMILIES, normalise_title(title), "other")
+    t = normalise_title(title)
+    family = _first(_FAMILIES, t, "other")
+    if family == "ai":
+        if re.search(_NON_TECH_WORDS, t) and not _TECH_ROLE.search(t):
+            return "non_tech"
+        family = _first(_FUNCTION_OVER_DOMAIN, t, family)
+    if family == "qa" and _PHYSICAL.search(t) and not _SOFTWARE_QA.search(t):
+        return "embedded" if re.search(r"\b(?:hardware|electronics|rf)\b", t) else "non_tech"
     if family in ("ai", "machine_learning") and description:
         text = description.lower()
         app = sum(signal in text for signal in _APP_SIGNALS)
@@ -145,6 +177,8 @@ _PROVIDER_LEVELS = [
     ("senior", r"senior|expert"),
     ("entry", r"entry|graduate|junior|associate|beginner"),
 ]
+_IC_MANAGER = re.compile(r"(?<!group )\b(product|program|programme|project|technical program|delivery|account|partner|"
+                         r"marketing|community|content|brand|campaign|category) manager\b")
 _SENIOR_SIGNALS = ("extensive experience", "extensive professional", "proven track record",
                    "deep production experience", "expert-level", "expert level", "mentor junior",
                    "mentoring junior", "lead a team", "leading a team", "own the architecture",
@@ -155,7 +189,10 @@ _SENIOR_SIGNALS = ("extensive experience", "extensive professional", "proven tra
 def classify_seniority(title: str | None, description: str | None = None, provider_level: str | None = None,
                        years: int | None = None) -> str:
     """Title first, then the board's own level, then the posting's language, then its years."""
-    level = _first(_TITLE_LEVELS, normalise_title(title))
+    # "Product Manager" names a function, not a manager of people: without the
+    # word "manager" a "Senior Product Manager" is senior, a plain one unknown.
+    # A "Group Product Manager" does manage, so it keeps the word.
+    level = _first(_TITLE_LEVELS, _IC_MANAGER.sub(r"\1 ", normalise_title(title)))
     if level:
         return level
     level = _first(_PROVIDER_LEVELS, (provider_level or "").lower())

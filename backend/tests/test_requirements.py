@@ -7,7 +7,7 @@ import pytest
 from src.Agent.utils.location import LocationPreferences
 from src.matching import skills as S
 from src.matching.candidate import Candidate, position_months
-from src.matching.requirements import content_hash, extract_experience, profile_job, split_sections
+from src.matching.requirements import content_hash, experience_level_years, extract_experience, profile_job, split_sections
 from src.matching.roles import classify_family, classify_seniority
 
 TODAY = date(2026, 9, 22)
@@ -115,6 +115,49 @@ def test_a_skill_in_the_title_is_required():
 ])
 def test_role_family_from_the_title(title, family):
     assert classify_family(title) == family
+
+
+# Real titles from the pool that were filed wrong (families audit, 2026-10-05).
+@pytest.mark.parametrize("title, family", [
+    # "AI" names the domain; a non-technical job stays non-technical.
+    ("Legal AI Counsel (Berlin or Leipzig)", "non_tech"), ("Enterprise Account Executive - AI Native Companies", "non_tech"),
+    ("Principal Technical Product Marketing Manager — AI", "non_tech"), ("Finance Intern - (AI x Greentech) (m/f/d)", "non_tech"),
+    ("Global Public Policy Manager, Compute, Infrastructure & Sovereign AI", "non_tech"),
+    ("Senior SEO & AI Search Manager (Expert Level) | SEO, GEO & E-Commerce", "non_tech"),
+    # ...and a technical function in the title beats the domain.
+    ("iOS Developer - AI Finance Agent", "mobile"), ("Mobile Application Developer - AI Neobank App", "mobile"),
+    ("Senior Software Engineer, Backend - Platform (Core AI Automation)", "backend"), ("AI Security Engineer", "security"),
+    ("AI Support Engineer - Toronto (Weekend Shift)", "it_support"), ("Senior AI-Native Data Engineer (f/m/x)", "data_engineering"),
+    ("AI Engineer", "ai"), ("Staff Applied AI Engineer", "ai"), ("Engineering Manager, Applied AI", "ai"),
+    # Quality and test work on physical products is not software QA.
+    ("Manufacturing Quality Engineer – Datacenter Infrastructure", "non_tech"), ("Propulsion Test Engineer", "non_tech"),
+    ("Dimensional Quality Engineer, Metrology", "non_tech"), ("NPI Hardware Quality Engineer, Accessories", "embedded"),
+    ("Staff Hardware Test Engineer (Manufacturing)", "embedded"),
+    ("Senior QA Automation Engineer", "qa"), ("Principal Software Development Engineer in Test (SDET)", "qa"),
+    ("Quality Engineer, Mobile", "qa"), ("Senior Localisation Quality Engineer", "qa"),
+    # Small misses.
+    ("Product Design Intern (2027)", "design"), ("Systemadministrator Linux (m/w/d)", "it_support"),
+])
+def test_role_family_audit_cases(title, family):
+    assert classify_family(title) == family
+
+
+@pytest.mark.parametrize("title, level", [
+    # "Manager" in a product or project title names the function, not a team.
+    ("Senior Product Manager - Product & Experience", "senior"), ("Product Manager", "unknown"),
+    ("Technical Project Manager", "unknown"), ("Group Product Manager", "lead"), ("Engineering Manager", "lead"),
+    ("Director of Product, Workflows", "principal"),
+])
+def test_product_titles_are_not_all_leads(title, level):
+    assert classify_seniority(title) == level
+
+
+def test_a_year_range_places_the_level_at_its_middle():
+    # Was junior: "2-5 years" gated on 2 and read the level from it too.
+    title, text = "Security Engineer, Corporate Security", "Typically 2–5 years of experience in corporate security."
+    assert extract_experience(title, text)["years"] == 2
+    assert experience_level_years(title, text) == 3
+    assert classify_seniority(title, "", None, experience_level_years(title, text)) == "mid"
 
 
 @pytest.mark.parametrize("title, provider, years, level", [
