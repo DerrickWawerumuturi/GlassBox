@@ -23,21 +23,24 @@ src/
         applications/page.tsx    the tracker table
         opportunities/page.tsx   the daily pool matched to the CV
         market/page.tsx          the scan's market, one view at a time, picked on a needle dial (?view=demand)
-        gaps, scan, profile
+        gaps/page.tsx            the skills page: Bridges, from your skills to what the scan's jobs ask for
+        scan, profile
+  app/fonts/                     the four brand faces, self-hosted woff2 (next/font/local), OFL licences
   app/experiments/market-navigation/  dev-only lab of the four rotary concepts (404 in production)
   components/
     Market/                      analysis charts, shared by /analysis and /dashboard;
                                  ChartPatterns.tsx holds the SVG hatch and plot frame;
                                  NeedleDial.tsx the Market view dial, ViewDial.tsx where it sits
-                                 (left column on a desktop, bottom half circle on a phone)
+                                 (left column on a desktop, half circle on a small tablet),
+                                 ViewTabBar.tsx the bottom tab bar on a phone
     dashboard/                   dashboard pieces; ApplicationParts.tsx holds the tracker's cells
                                  and menus, AddApplicationDialog.tsx the paste-a-link flow,
                                  ImportApplicationsDialog.tsx the spreadsheet import,
                                  ApplicationSheet.tsx a row's long-press sheet on phones,
                                  OpportunityCard/OpportunityPeek a match and its reasons,
                                  MarketParts.tsx the Market tab's chart chrome (panel, tooltip,
-                                 table twin, stat tiles), DemandBars / GapTally / SkillStrip
-                                 its three hand-built SVG charts
+                                 table twin, stat tiles), DemandBars / GapTally its hand-built
+                                 SVG charts, Bridges.tsx the skills page's chart
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token
@@ -46,8 +49,12 @@ src/
     applications-store.tsx       tracked applications, optimistic writes, per-user cache
     opportunities-store.tsx      matched pool jobs, per-user cache
     market.ts                    display transforms over the analysis
+    market-views.ts              the Market tab's four views and the ?view= fallback
+    theme.ts                     Theme (System/Dark/Light), the no-flash <head> script, ?paper= previews
+    latest-cv.ts                 the kept CV skills: hook, dates, reuse errors, the privacy line
+    analytics.ts                 PostHog: the only events, property allowlists, scrub (decisions/analytics.md)
+    skill-bridges.ts             what Bridges reads: skill pairs, reach, most connected, roles
     use-rotor.ts                 the dial's motion: aim, ease, snap, wheel, drag, keys
-    chart-labels.ts              label placement for the landscape chart
     dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract
 ```
@@ -176,8 +183,9 @@ calls, long enough to outlast a cold start, and longer for analysis.
 
 ```bash
 npm run dev     # http://localhost:3000
-npm run build   # production build; also the only type-check gate
+npm run build   # production build and type-check
 npx tsc --noEmit
+npm test        # vitest: unit tests for pure logic (src/**/*.test.ts)
 ```
 
 There is no lint config.
@@ -186,5 +194,6 @@ There is no lint config.
 
 - A match's `reasons` are written by the backend; the frontend shows them in
   order and never composes its own.
-- There is no frontend test runner; the browser checks used for the tracker
-  live outside the repo.
+- Vitest covers pure logic only (`lib/*.test.ts`); there are no component or
+  browser tests in the repo. The browser checks used for charts and the
+  tracker live outside it.

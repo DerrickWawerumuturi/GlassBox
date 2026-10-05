@@ -77,3 +77,6 @@ gets you; that is added without adding reading:
 
 Checked at 1280 and 390 (`docs/local/render/bridges-check.mjs`): rest,
 pinned and hovered readouts; no sideways scroll.
+
+**Update 2026-10-05:** the lab is deleted. Concept C (Bridges) became the
+skills page; see `2026-10-05-skills-bridges.md`.
