@@ -10,26 +10,18 @@ import {EmptyScan, PageBar} from "@/components/dashboard/bits";
 import {ChartPanel, StatTiles} from "@/components/dashboard/MarketParts";
 import DemandBars from "@/components/dashboard/DemandBars";
 import GapTally from "@/components/dashboard/GapTally";
-import SkillStrip from "@/components/dashboard/SkillStrip";
-import ViewDial, {PHONE_BAND, usePhone} from "@/components/Market/ViewDial";
-
-const VIEWS = [
-    {id: "overview", name: "Overview"},
-    {id: "demand", name: "Demand"},
-    {id: "yours", name: "Your skills"},
-    {id: "gaps", name: "Gaps"},
-    {id: "landscape", name: "Landscape"},
-] as const;
-type ViewId = typeof VIEWS[number]["id"];
+import ViewDial, {bottomRoom, useDialMode} from "@/components/Market/ViewDial";
+import {MARKET_VIEWS as VIEWS, MarketViewId as ViewId, viewFrom} from "@/lib/market-views";
+import {useViewOpened} from "@/components/AnalyticsProvider";
 
 interface Views {
     market: MarketAnalysis;
     jobs: number;
     /** The market's top skills, in demand order, each marked yours or not. */
     top: SkillMark[];
-    /** The CV's skills that these postings ask for. */
+    /** The CV's skills that these jobs ask for. */
     mine: SkillMark[];
-    /** Skills the CV lacks that a fifth or more of postings ask for. */
+    /** Skills the CV lacks that a fifth or more of jobs ask for. */
     gaps: SkillMark[];
     show: (view: ViewId) => void;
 }
@@ -37,17 +29,17 @@ interface Views {
 /**
  * The scan's market, one question per view instead of one long scroll. A
  * needle dial on the left picks the view (a half circle at the bottom on a
- * phone; decisions/market-navigation.md), and the view lives in the URL
- * (?view=gaps) so a refresh or a shared link lands on the same chart. Each
+ * small tablet, a tab bar on a phone; decisions/market-navigation.md), and
+ * the view lives in the URL (?view=gaps) so a refresh or a shared link lands on the same chart. Each
  * chart is an object on the desk (docs/brand/charts.html).
  */
 function MarketCharts() {
     const {analysis, hydrated, fileName} = useAnalysis();
     const router = useRouter();
     const pathname = usePathname();
-    const requested = useSearchParams().get("view");
-    const view = (VIEWS.find((v) => v.id === requested)?.id ?? "overview") as ViewId;
-    const phone = usePhone();
+    const view = viewFrom(useSearchParams().get("view"));
+    useViewOpened("market", view);
+    const mode = useDialMode();
 
     const market = analysis?.market;
     const views = useMemo<Omit<Views, "show"> | null>(() => {
@@ -62,7 +54,7 @@ function MarketCharts() {
         };
     }, [market]);
 
-    if (!hydrated || phone === null) return null;
+    if (!hydrated || mode === null) return null;
 
     const show = (id: ViewId) => router.replace(id === "overview" ? pathname : `${pathname}?view=${id}`, {scroll: false});
 
@@ -70,31 +62,30 @@ function MarketCharts() {
         <div className={"flex min-h-screen flex-col"}>
             <PageBar
                 title={"Market charts"}
-                meta={market ? `${market.jobs_analyzed.toLocaleString()} jobs analysed${fileName ? ` · ${fileName}` : ""}` : undefined}
+                meta={market ? `${market.jobs_analyzed.toLocaleString()} jobs analyzed${fileName ? ` · ${fileName}` : ""}` : undefined}
             />
 
             {!views ? (
                 <div className={"px-4 py-8 sm:px-8"}>
-                    <EmptyScan message={"No scan yet. The charts draw themselves from real postings."} />
+                    <EmptyScan message={"No scan yet. Every chart here is counted from real jobs."} />
                 </div>
             ) : (
                 <div className={"flex min-w-0 flex-1"}>
-                    {!phone && (
-                        <ViewDial items={[...VIEWS]} index={VIEWS.findIndex((v) => v.id === view)} phone={false}
+                    {mode === "column" && (
+                        <ViewDial items={[...VIEWS]} index={VIEWS.findIndex((v) => v.id === view)} mode={mode}
                                   onSelect={(i) => show(VIEWS[i].id)} controls={"market-view"} />
                     )}
                     {/* The desk: panels sit on the plain ground with room around them. */}
                     <div id={"market-view"} role={"tabpanel"} aria-labelledby={`tab-${view}`}
                          className={"mx-auto flex w-full max-w-[1000px] min-w-0 flex-col gap-4 px-4 py-5 sm:gap-6 sm:px-8 sm:py-8"}
-                         style={phone ? {paddingBottom: PHONE_BAND + 24} : undefined}>
+                         style={{paddingBottom: bottomRoom(mode)}}>
                         {view === "overview" && <Overview {...views} show={show} />}
                         {view === "demand" && <Demand {...views} show={show} />}
                         {view === "yours" && <Yours {...views} show={show} />}
                         {view === "gaps" && <Gaps {...views} show={show} />}
-                        {view === "landscape" && <Landscape {...views} show={show} />}
                     </div>
-                    {phone && (
-                        <ViewDial items={[...VIEWS]} index={VIEWS.findIndex((v) => v.id === view)} phone
+                    {mode !== "column" && (
+                        <ViewDial items={[...VIEWS]} index={VIEWS.findIndex((v) => v.id === view)} mode={mode}
                                   onSelect={(i) => show(VIEWS[i].id)} controls={"market-view"} />
                     )}
                 </div>
@@ -120,29 +111,23 @@ const yoursOf = (marks: SkillMark[]) => marks.filter((m) => m.have).length;
 
 /** The numbers first, then every chart in brief, each a step from its full view. */
 function Overview({market, jobs, top, mine, gaps, show}: Views) {
-    const best = mine[0];
     return (
         <>
             <StatTiles market={market} marks={top} />
             <div className={"grid gap-4 lg:grid-cols-2 sm:gap-6"}>
-                <ChartPanel title={"What companies ask for"} lead={`${yoursOf(top.slice(0, 6))} of top 6 are yours`} jobs={jobs}
+                <ChartPanel title={"What companies ask for"} lead={`${yoursOf(top.slice(0, 6))} of the top 6 skills are yours`} jobs={jobs}
                             preview={<ViewLink onClick={() => show("demand")}>Demand</ViewLink>}>
-                    <DemandBars marks={top} jobs={jobs} limit={6} badge={best?.skill} />
+                    <DemandBars marks={top} jobs={jobs} limit={6} />
                 </ChartPanel>
-                <ChartPanel title={"Your skills in demand"} lead={`${mine.length} from your CV`} jobs={jobs}
+                <ChartPanel title={"Your skills in demand"} lead={`${mine.length} CV skills that jobs ask for`} jobs={jobs}
                             preview={<ViewLink onClick={() => show("yours")}>Your skills</ViewLink>}>
                     {mine.length ? <DemandBars marks={mine} jobs={jobs} limit={6} />
-                        : <Quiet>None of your CV&apos;s skills appear in these postings.</Quiet>}
+                        : <Quiet>None of your CV&apos;s skills appear in these jobs.</Quiet>}
                 </ChartPanel>
-                <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} skills, one mark per posting`} jobs={jobs}
+                <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} skills not on your CV. One mark per job.`} jobs={jobs} className={"lg:col-span-2"}
                             preview={<ViewLink onClick={() => show("gaps")}>Gaps</ViewLink>}>
                     {gaps.length ? <GapTally marks={gaps} jobs={jobs} limit={4} />
-                        : <Quiet>Nothing these postings often ask for is missing from your CV.</Quiet>}
-                </ChartPanel>
-                <ChartPanel title={"Where your skills sit"} lead={"Yours above the line, not yet below"} jobs={jobs}
-                            legend={[["dot", "Yours"], ["ring", "Not yet"]]}
-                            preview={<ViewLink onClick={() => show("landscape")}>Landscape</ViewLink>}>
-                    <SkillStrip mine={mine} missing={top.filter((m) => !m.have)} jobs={jobs} compact />
+                        : <Quiet>Your CV has every skill that 1 in 5 jobs or more ask for.</Quiet>}
                 </ChartPanel>
             </div>
         </>
@@ -152,23 +137,23 @@ function Overview({market, jobs, top, mine, gaps, show}: Views) {
 function Demand({jobs, top, mine}: Views) {
     const shown = Math.min(12, top.length);
     return (
-        <ChartPanel title={"What companies ask for"} lead={`${yoursOf(top.slice(0, shown))} of top ${shown} are yours`} jobs={jobs}
+        <ChartPanel title={"What companies ask for"} lead={`${yoursOf(top.slice(0, shown))} of the top ${shown} skills are yours`} jobs={jobs}
                     legend={[["have", "Yours"], ["hatch", "Not yet"]]}
-                    notes={["Green is on your CV. Hatched isn't yet.", "Longer bar, more postings ask. The number is the count."]}
+                    notes={["Green is on your CV. Hatched isn't yet.", "Longer bar, more jobs ask. 26/58 means 26 of 58 jobs."]}
                     table={{marks: top}}>
-            <DemandBars marks={top} jobs={jobs} badge={mine[0]?.skill} />
+            <DemandBars marks={top} jobs={jobs} />
         </ChartPanel>
     )
 }
 
 function Yours({jobs, mine}: Views) {
     return (
-        <ChartPanel title={"Your skills in demand"} lead={`${mine.length} from your CV, by demand`} jobs={jobs}
+        <ChartPanel title={"Your skills in demand"} lead={`${mine.length} CV skills that jobs ask for, top first`} jobs={jobs}
                     legend={[["have", "Yours"]]}
-                    notes={["Every skill here is on your CV.", "Longer bar, more postings ask. The number is the count."]}
+                    notes={["Every skill here is on your CV.", "Longer bar, more jobs ask. 26/58 means 26 of 58 jobs."]}
                     table={{marks: mine}}>
             {mine.length === 0
-                ? <Quiet>None of the skills on your CV appear in these postings. The search probably reached a different corner of the market.</Quiet>
+                ? <Quiet>None of the skills on your CV appear in these jobs. The search probably reached a different corner of the market.</Quiet>
                 : <DemandBars marks={mine} jobs={jobs} />}
         </ChartPanel>
     )
@@ -177,25 +162,13 @@ function Yours({jobs, mine}: Views) {
 function Gaps({jobs, gaps}: Views) {
     const floor = toPercent(GAP_FREQUENCY_THRESHOLD);
     return (
-        <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} skills, one mark per posting`} jobs={jobs}
-                    legend={[["solid", "Asks"], ["faint", "Doesn't"]]}
-                    notes={["Each mark is one posting. Solid ones ask for it.", `Grouped in fives. Only skills in ${floor}% of postings or more.`]}
+        <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} skills not on your CV. One mark per job.`} jobs={jobs}
+                    legend={[["solid", "Asks for it"], ["faint", "Doesn't"]]}
+                    notes={["Each mark is one job. Solid marks are jobs that ask for the skill.", `Grouped in fives. Only skills that ${floor}% of jobs or more ask for.`]}
                     table={{marks: gaps}}>
             {gaps.length === 0
-                ? <Quiet>Nothing that {floor}% or more of these postings ask for is missing from your CV.</Quiet>
+                ? <Quiet>Your CV has every skill that {floor}% or more of these jobs ask for.</Quiet>
                 : <GapTally marks={gaps} jobs={jobs} />}
-        </ChartPanel>
-    )
-}
-
-function Landscape({jobs, top, mine}: Views) {
-    const missing = top.filter((m) => !m.have);
-    return (
-        <ChartPanel title={"Where your skills sit"} lead={"Yours above the line, not yet below"} jobs={jobs}
-                    legend={[["dot", "Yours"], ["ring", "Not yet"]]}
-                    notes={["Further along the line, more postings ask.", "Small ones stay unlabelled. Hover any dot for its name."]}
-                    table={{marks: [...mine, ...missing]}}>
-            <SkillStrip mine={mine} missing={missing} jobs={jobs} />
         </ChartPanel>
     )
 }

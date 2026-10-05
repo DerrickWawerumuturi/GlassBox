@@ -6,7 +6,7 @@
 
 ## Why
 
-The Market tab's five views (Overview, Demand, Your skills, Gaps, Landscape)
+The Market tab's views (then five: Overview, Demand, Your skills, Gaps, Landscape)
 sat in a row of chips like every other page. The founder wanted the market to
 read as dimensions you turn between, not a list of filters, without losing
 the speed of tabs.
@@ -59,3 +59,25 @@ view keeps its direction. The founder tried all four and picked it.
 
 - The chips' counts (Demand 20, Your skills 7, Gaps 6).
 - The dial is not faster than tabs; it should not be sold as faster.
+
+## Landscape cut (2026-10-05)
+
+The dial now has four views: Overview, Demand, Your skills, Gaps. Landscape
+(every skill on one demand axis, yours above the line) was cut because it
+repeated Demand: the same skills in the same order, as dots instead of bars.
+Its chart (`SkillStrip`) and label placer (`chart-labels.ts`) were deleted.
+Old `?view=landscape` links open Overview (`lib/market-views.ts`, tested).
+The anonymous `/analysis/skills` page and the landing preview keep their own
+Recharts landscape (`SkillLandscape`), which is a separate chart.
+
+Worth reconsidering only as a different question: "asked often vs asked
+firmly" (how many jobs ask for a skill against how many require it), if the
+share of required skills is large enough to separate them. The thinking is
+in `docs/local/landscape-rethink.html`.
+
+## Phone: a tab bar (2026-10-05)
+
+With four views the half circle covered the charts on a phone. Under 640px
+the views are a bottom tab bar (`ViewTabBar.tsx`): names only, the open one
+marked by a short orange bar. 640–767px keeps the half circle, 768px and up
+the column. All drive `?view=`.
