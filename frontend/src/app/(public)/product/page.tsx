@@ -1,45 +1,47 @@
 import type {Metadata} from "next";
 import Link from "next/link";
-import {ImageIcon} from "lucide-react";
 
 import AddCvButton from "@/components/AddCvButton";
-
+import {Explainer, Numbers} from "@/components/site/Explainer";
 import {Button} from "@/components/ui/button";
-import {FEATURES, PRODUCT_PAGE as P} from "@/lib/site-copy";
+import {lookForPage} from "@/lib/landing/look-server";
+import {PRODUCT_PAGE as P} from "@/lib/site-copy";
 
 export const metadata: Metadata = {
     title: "Product",
     description: "Today's jobs, counted. Then where you stand, once your CV is in.",
 };
 
-/** One section per feature, a screenshot slot for each, then the CV ask. Words: lib/site-copy.ts. */
-export default function ProductPage() {
+// Static, with today's counts for the numbers box (ISR, like the home page).
+export const revalidate = 300;
+
+/** Today's real counts for the Market section, or nothing when the count isn't available. */
+async function numbers(): Promise<string[] | null> {
+    const look = await lookForPage();
+    const backend = look?.families.backend;
+    if (!look || !backend) return null;
+    const [key, n] = Object.entries(backend.skills).sort((a, b) => b[1] - a[1])[0] ?? [];
+    if (!key) return null;
+    const total = Object.values(look.families).reduce((s, f) => s + f.jobs, 0);
+    const date = new Date(look.taken_at).toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric", timeZone: "UTC"});
+    return P.numberLines(total.toLocaleString("en"), Object.keys(look.families).length, look.skills[key] ?? key,
+        String(n), backend.readable.toLocaleString("en"), date);
+}
+
+/** A long explainer: one numbered section per part of the product, real screenshots (example CV). */
+export default async function ProductPage() {
+    const lines = await numbers();
     return (
-        <main className={"mx-auto flex w-full max-w-5xl flex-col gap-16 px-5 py-12 lg:gap-24 lg:py-16"}>
-            <header className={"flex max-w-2xl flex-col gap-3"}>
-                <h1 className={"font-heading text-4xl font-bold uppercase tracking-tight"}>{P.title}</h1>
-                <p className={"text-base text-muted-foreground"}>{P.lede}</p>
-            </header>
-            {FEATURES.map((f, i) => (
-                <section key={f.id} id={f.id} className={"grid scroll-mt-24 items-center gap-6 md:grid-cols-2 md:gap-12"}>
-                    <div className={`flex flex-col gap-3 ${i % 2 ? "md:order-2" : ""}`}>
-                        <h2 className={"font-heading text-2xl font-bold uppercase tracking-tight"}>{f.title}</h2>
-                        <p className={"max-w-md text-[15px] leading-relaxed text-muted-foreground"}>{f.body}</p>
-                    </div>
-                    <div className={"flex aspect-[16/10] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/50 text-muted-foreground"}>
-                        <ImageIcon className={"size-5"} aria-hidden />
-                        <span className={"font-mono text-[11px] uppercase tracking-[0.12em]"}>{f.title} · {P.shot}</span>
-                    </div>
-                </section>
-            ))}
+        <Explainer kicker={P.kicker} title={P.title} dek={P.dek} toc={P.toc} jump={P.jump} sections={P.sections}
+                   extra={lines ? {market: <Numbers title={P.numbers} lines={lines} />} : undefined}>
             <section className={"flex flex-col gap-4 border-t border-border pt-12"}>
-                <h2 className={"max-w-xl font-heading text-2xl font-bold uppercase tracking-tight"}>{P.closing}</h2>
+                <h2 className={"max-w-xl font-heading text-2xl font-bold uppercase tracking-tight sm:text-3xl"}>{P.closing}</h2>
                 <div className={"flex flex-wrap items-center gap-x-5 gap-y-2"}>
                     <AddCvButton label={P.cta} reading={P.reading} />
                     <Button variant={"link"} className={"px-0 text-foreground"} nativeButton={false} render={<Link href={"/sign-in"} />}>{P.signUp}</Button>
                 </div>
                 <p className={"font-mono text-[12px] text-muted-foreground"}>{P.lead}</p>
             </section>
-        </main>
+        </Explainer>
     );
 }

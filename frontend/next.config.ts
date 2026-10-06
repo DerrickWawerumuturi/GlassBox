@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   },
   // PostHog's endpoints end in a slash ("/e/"); don't redirect them away.
   skipTrailingSlashRedirect: true,
+  // The product screenshots (public/product, WebP) go out as AVIF where the browser takes it.
+  images: {formats: ["image/avif", "image/webp"]},
 };
 
 export default nextConfig;
