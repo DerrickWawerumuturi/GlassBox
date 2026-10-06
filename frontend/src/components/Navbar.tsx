@@ -2,21 +2,23 @@
 
 import React, {useState} from 'react'
 import Link from "next/link";
-import {MenuIcon} from "lucide-react";
-import {usePathname} from "next/navigation";
+import {
+    ActivityIcon, ArrowRightIcon, CircleHelpIcon, ClipboardListIcon, InfoIcon, LayoutGridIcon, LogInIcon, LucideIcon, MenuIcon,
+    RadarIcon, SigmaIcon, TrendingUpIcon,
+} from "lucide-react";
+import {usePathname, useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
-import {useAnalysis} from "@/lib/analysis-store";
-import {useCv} from "@/lib/cv-store";
 import {cn} from "@/lib/utils";
 import {Button} from "@/components/ui/button";
 import {
     NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import {Sheet, SheetContent, SheetTitle, SheetTrigger} from "@/components/ui/sheet";
 import {FEATURES, NAV} from "@/lib/site-copy";
+import {useCvScan} from "@/components/landing/useCvScan";
 import {
     DropdownMenu,
-    DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -25,109 +27,125 @@ import {initials} from "@/lib/utils";
 import {GlassboxWordmark} from "@/components/brand/Logo";
 import AccountMenuItems from "@/components/AccountMenuItems";
 
+const ICONS: Record<string, LucideIcon> = {
+    market: ActivityIcon, "your-skills": TrendingUpIcon, opportunities: RadarIcon, applications: ClipboardListIcon,
+};
+
+/** One Product item: an icon tile, the name and one line. */
+function FeatureItem({id}: {id: string}) {
+    const f = FEATURES.find((x) => x.id === id)!;
+    const Icon = ICONS[id];
+    return (
+        <span className={"flex w-full items-center gap-3"}>
+            <span className={"flex size-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground"}>
+                <Icon className={"size-4"} />
+            </span>
+            <span className={"flex min-w-0 flex-1 flex-col"}>
+                <span className={"text-sm font-medium text-foreground"}>{f.title}</span>
+                <span className={"text-[13px] leading-snug text-muted-foreground"}>{f.nav}</span>
+            </span>
+        </span>
+    );
+}
+
 const Navbar = () => {
     const {data: session} = useSession();
-    const {analysis} = useAnalysis();
-    const {cv} = useCv();
     const pathname = usePathname();
-    const [menuOpen, setMenuOpen] = useState(false);
+    const router = useRouter();
+    const scan = useCvScan({onDone: () => router.push("/analysis")});
+    const [pill, setPill] = useState<{left: number; width: number} | null>(null);
+    const pillTo = (e: React.PointerEvent<HTMLElement>) => {
+        const el = e.currentTarget, nav = el.closest("nav")!;
+        const a = el.getBoundingClientRect(), b = nav.getBoundingClientRect();
+        setPill({left: a.left - b.left, width: a.width});
+    };
 
-    // The dashboard brings its own shell — a second header would fight the sidebar.
-    if (pathname.startsWith("/dashboard")) return null;
+    // The dashboard (and a scan without an account) brings its own shell; a second header would fight the sidebar.
+    if (pathname.startsWith("/dashboard") || pathname.startsWith("/analysis")) return null;
 
-    // Signed in is enough for the dashboard link: the CV may live on the
-    // account rather than in this browser. Nothing sends anyone there for them.
-    const productLinks = [
-        ...(session || cv || analysis ? [{href: "/dashboard", label: "Dashboard"}] : []),
-        ...(cv ? [{href: "/onboarding", label: "Profile"}] : []),
-        ...(analysis ? [{href: "/analysis", label: "Analysis"}] : []),
-    ];
-
-    // The public site, for everyone; the product links join them once there is something to open.
+    // The dashboard needs an account, so its link shows only when signed in.
     const siteLinks = [{href: "/#how-we-count", label: NAV.how}, {href: "/about", label: NAV.about}, {href: "/#faq", label: NAV.faq}];
-    const links = [...siteLinks, ...productLinks];
     const linkClass = (href: string) => cn(
         "font-mono text-xs uppercase tracking-[0.12em] transition-colors",
         pathname === href ? "text-foreground" : "text-muted-foreground hover:text-foreground"
     );
+    const menuLink = (href: string, icon: React.ReactNode, label: string) => (
+        <DropdownMenuItem key={href} render={(props) => (
+            <Link {...props} href={href} className={cn(props.className, "cursor-pointer")}>{icon} {label}</Link>
+        )} />
+    );
+    const withCv = (close?: () => void) => (
+        <Button variant={"ghost"} onClick={() => { close?.(); scan.open(); }}
+                className={"group h-auto w-full justify-between px-3 py-2.5 text-sm font-normal"}>
+            <span>{NAV.withCv}</span><ArrowRightIcon className={"size-3.5 text-primary transition-transform group-hover:translate-x-0.5"} />
+        </Button>
+    );
 
     return (
-        <header className={"flex items-center justify-between gap-4  px-5 py-5 lg:px-8"}>
-            <div className={"flex flex-col gap-1"}>
+        <header className={"flex items-center justify-between gap-4 px-5 py-5 lg:px-8"}>
+            <div className={"flex items-center gap-8"}>
                 <Link href={"/"} aria-label={"Glassbox home"} className={"block w-fit"}>
                     {/* Logo exception: the size of the old 24px text wordmark's capitals. */}
                     <GlassboxWordmark className={"h-[17px] w-auto"} />
                 </Link>
-            </div>
-
-
-            <div className={"flex items-center gap-5"}>
-                <nav aria-label={"Main"} className={"relative hidden items-center gap-5 md:flex"}>
-                        <NavigationMenu>
-                            <NavigationMenuList>
-                                <NavigationMenuItem>
-                                    <NavigationMenuTrigger className={"h-auto bg-transparent px-0 py-0 font-mono text-xs font-normal uppercase tracking-[0.12em] text-muted-foreground hover:bg-transparent hover:text-foreground data-popup-open:bg-transparent data-open:bg-transparent"}>
-                                        {NAV.product}
-                                    </NavigationMenuTrigger>
-                                    <NavigationMenuContent>
-                                        <ul className={"grid w-[440px] grid-cols-2 gap-1 p-1"}>
+                <nav aria-label={"Main"} className={"relative hidden items-center gap-5 md:flex"} onPointerLeave={() => setPill(null)}>
+                    {/* A soft pill that slides to the item under the pointer (Supabase's top level indicator). */}
+                    <span aria-hidden className={"pointer-events-none absolute -inset-y-1.5 rounded-md bg-foreground/[0.06] transition-[left,width,opacity] duration-200 ease-out motion-reduce:transition-none"}
+                          style={{left: (pill?.left ?? 0) - 10, width: (pill?.width ?? 0) + 20, opacity: pill ? 1 : 0}} />
+                    <NavigationMenu>
+                        <NavigationMenuList>
+                            <NavigationMenuItem>
+                                <NavigationMenuTrigger onPointerEnter={pillTo} className={"h-auto bg-transparent px-0 py-0 font-mono text-xs font-normal uppercase tracking-[0.12em] text-muted-foreground hover:bg-transparent hover:text-foreground data-popup-open:bg-transparent data-open:bg-transparent"}>
+                                    {NAV.product}
+                                </NavigationMenuTrigger>
+                                <NavigationMenuContent>
+                                    <div className={"w-[min(600px,calc(100vw-48px))] p-2"}>
+                                        <p className={"px-3 pt-2 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.product}</p>
+                                        <ul className={"grid grid-cols-2 gap-1"}>
                                             {FEATURES.map((f) => (
                                                 <li key={f.id}>
-                                                    <NavigationMenuLink render={<Link href={`/product#${f.id}`} />} className={"flex flex-col items-start gap-1 rounded-md p-3 hover:bg-muted"}>
-                                                        <span className={"text-sm font-medium text-foreground"}>{f.title}</span>
-                                                        <span className={"text-[13px] leading-snug text-muted-foreground"}>{f.nav}</span>
+                                                    <NavigationMenuLink render={<Link href={`/product#${f.id}`} />} className={"spotlight block rounded-lg border border-transparent p-3 transition-colors hover:border-border"}>
+                                                        <FeatureItem id={f.id} />
                                                     </NavigationMenuLink>
                                                 </li>
                                             ))}
                                         </ul>
-                                    </NavigationMenuContent>
-                                </NavigationMenuItem>
-                            </NavigationMenuList>
-                        </NavigationMenu>
-                        {links.map((link) => (
-                            <Link key={link.href} href={link.href} className={linkClass(link.href)}>{link.label}</Link>
-                        ))}
-
-                        {pathname === "/" && productLinks.length >= 2 && (
-                            <div
-                                aria-hidden
-                                className={"pointer-events-none absolute left-1/2 top-full hidden -translate-x-1/2 select-none flex-col items-center pt-1 sm:flex"}
-                            >
-                                <svg viewBox={"0 0 80 34"} fill={"none"} className={"h-8 w-20 text-primary/80"}>
-                                    <path d={"M40 32 C 37 21, 26 13, 12 8"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} />
-                                    <path d={"M11 17 L 11 7 L 21 6"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} strokeLinejoin={"round"} />
-                                    <path d={"M40 32 C 43 21, 54 13, 68 8"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} />
-                                    <path d={"M69 17 L 69 7 L 59 6"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} strokeLinejoin={"round"} />
-                                </svg>
-                                <span className={"-rotate-2 whitespace-nowrap font-hand text-xl leading-none text-primary/90"}>
-                                    a bigger picture of you
-                                </span>
-                            </div>
-                        )}
+                                        <div className={"mt-1 border-t border-border pt-1"}>{withCv()}</div>
+                                    </div>
+                                </NavigationMenuContent>
+                            </NavigationMenuItem>
+                        </NavigationMenuList>
+                    </NavigationMenu>
+                    {siteLinks.map((link) => <Link key={link.href} href={link.href} onPointerEnter={pillTo} className={cn(linkClass(link.href), "relative")}>{link.label}</Link>)}
                 </nav>
+            </div>
 
-                <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-                    <SheetTrigger render={<Button variant={"ghost"} size={"icon-sm"} aria-label={NAV.menu} className={"text-muted-foreground md:hidden"} />}>
+            <div className={"flex items-center gap-5"}>
+                {session?.user && <Link href={"/dashboard"} className={cn(linkClass("/dashboard"), "hidden md:inline")}>{NAV.dashboard}</Link>}
+
+                {/* Phones: a dropdown like the account menu (founder's call), not a side sheet. */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger render={<Button variant={"ghost"} size={"icon-sm"} aria-label={NAV.menu} className={"text-muted-foreground md:hidden"} />}>
                         <MenuIcon className={"size-5"} />
-                    </SheetTrigger>
-                    <SheetContent side={"right"} className={"gap-6 p-6"}>
-                        <SheetTitle className={"font-mono text-[11px] font-normal uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.menu}</SheetTitle>
-                        <nav aria-label={"Main"} className={"flex flex-col gap-5"}>
-                            <div className={"flex flex-col gap-3"}>
-                                <span className={"font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.product}</span>
-                                {FEATURES.map((f) => (
-                                    <Link key={f.id} href={`/product#${f.id}`} onClick={() => setMenuOpen(false)} className={"flex flex-col"}>
-                                        <span className={"text-[15px] font-medium"}>{f.title}</span>
-                                        <span className={"text-[13px] text-muted-foreground"}>{f.nav}</span>
-                                    </Link>
-                                ))}
-                            </div>
-                            <div className={"flex flex-col gap-3 border-t border-border pt-5"}>
-                                {links.map((link) => <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className={"text-[15px] font-medium"}>{link.label}</Link>)}
-                            </div>
-                        </nav>
-                    </SheetContent>
-                </Sheet>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align={"end"} className={"w-56"}>
+                        {FEATURES.map((f) => {
+                            const Icon = ICONS[f.id];
+                            return menuLink(`/product#${f.id}`, <Icon className={"size-4 opacity-70"} />, f.title);
+                        })}
+                        <DropdownMenuItem onClick={() => scan.open()} className={"cursor-pointer"}>
+                            <ArrowRightIcon className={"size-4 text-primary"} /> {NAV.withCv}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {menuLink("/#how-we-count", <SigmaIcon className={"size-4 opacity-70"} />, NAV.how)}
+                        {menuLink("/about", <InfoIcon className={"size-4 opacity-70"} />, NAV.about)}
+                        {menuLink("/#faq", <CircleHelpIcon className={"size-4 opacity-70"} />, NAV.faq)}
+                        <DropdownMenuSeparator />
+                        {session?.user
+                            ? menuLink("/dashboard", <LayoutGridIcon className={"size-4 opacity-70"} />, NAV.dashboard)
+                            : menuLink("/sign-in", <LogInIcon className={"size-4 opacity-70"} />, NAV.signIn)}
+                    </DropdownMenuContent>
+                </DropdownMenu>
 
                 {session?.user ? (
                         <DropdownMenu>
@@ -161,6 +179,7 @@ const Navbar = () => {
 
 
             </div>
+            {scan.dialog}
         </header>
     )
 }
