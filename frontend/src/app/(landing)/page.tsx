@@ -4,6 +4,10 @@ import LookAround from "@/components/landing/LookAround";
 import {COPY} from "@/components/landing/copy";
 import SiteFooter from "@/components/SiteFooter";
 import {SITE_URL} from "@/lib/site";
+import {lookForPage} from "@/lib/landing/look-server";
+
+// Static, rebuilt at most every 5 minutes (ISR): today's count is in the HTML (look-server.ts).
+export const revalidate = 300;
 
 export const metadata: Metadata = {
     title: COPY.meta.title,
@@ -24,11 +28,12 @@ const structuredData = {
 };
 
 /** The landing page: look around first (components/landing/LookAround.tsx), then the footer. */
-export default function Home() {
+export default async function Home() {
+    const look = await lookForPage();
     return (
         <div className={"flex min-h-screen flex-col overflow-x-clip"}>
             <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(structuredData)}} />
-            <LookAround />
+            <LookAround initial={look ?? undefined} />
             <SiteFooter variant={"full"} />
         </div>
     );

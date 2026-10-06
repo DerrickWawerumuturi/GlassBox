@@ -8,7 +8,9 @@ import {COPY, TRUST} from "./copy";
 
 const strings = (v: unknown): string[] => typeof v === "string" ? [v]
     : typeof v === "function" ? strings((v as (...a: unknown[]) => unknown)(7, "70", "backend", "junior"))
-        : Array.isArray(v) ? v.flatMap(strings) : v && typeof v === "object" ? Object.values(v).flatMap(strings) : [];
+        : Array.isArray(v) ? v.flatMap(strings)
+            // Ids, file names and paths are not words on the page.
+            : v && typeof v === "object" ? Object.entries(v).filter(([k]) => !["id", "name", "href"].includes(k)).flatMap(([, x]) => strings(x)) : [];
 const all = [...strings(COPY), ...strings(FEATURES.map(({title, nav, body}) => ({title, nav, body}))), ...strings(NAV), ...strings(PRODUCT_PAGE), ...strings(ABOUT_PAGE)];
 
 describe("landing copy", () => {

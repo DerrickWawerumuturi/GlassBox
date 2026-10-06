@@ -125,7 +125,8 @@ export default function CountCard({families, more, data, family, level, date, on
             <p className={"cc-say"}>{C.say(n, fmt(d.jobs), label, level)}</p>
             <div className={"sqwrap"} ref={wrapRef}>
                 <div className={"sq"} role={"img"} aria-label={`${n} of ${d.jobs} ${label} jobs are ${LEVEL_WORD[level]}. One square is ${perSquare === 1 ? "one job" : "10 jobs"}.`}
-                     style={{"--sq": `${size}px`, "--gap": `${gap}px`} as React.CSSProperties}>
+                     // Until the width is measured (the server render), the CSS default size holds the space.
+                     style={width ? {"--sq": `${size}px`, "--gap": `${gap}px`} as React.CSSProperties : undefined}>
                     {levels.map((k, i) => (
                         <i key={`${family}-${i}`} className={`${k === "unstated" ? "ns" : ""} ${k === level ? "lit" : ""} ${reduce ? "" : "enter"}`}
                            style={reduce ? undefined : {animationDelay: `${Math.floor(i / 7) * 14}ms`, transitionDelay: `${Math.floor(i / 7) * 10}ms`}} />

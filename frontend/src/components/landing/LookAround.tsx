@@ -5,12 +5,13 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {track} from "@/lib/analytics";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
-import {CYCLE, familyOrder, getLook, haveSet, Level, LEVELS, Look} from "@/lib/landing/look";
+import {adAsks, adFor, askRows, CYCLE, familyOrder, getLook, haveSet, Level, LEVELS, Look} from "@/lib/landing/look";
 import {COPY, FAMILY_LABEL} from "./copy";
 import CountCard from "./CountCard";
 import CvSection, {PreviewAsk} from "./CvSection";
 import GlassSection from "./GlassSection";
 import LowerSections from "./LowerSections";
+import Showcase from "./Showcase";
 import StickyCta, {StickyContext} from "./StickyCta";
 import {useCvScan} from "./useCvScan";
 import {useReducedMotion, useStepper} from "./useStepper";
@@ -100,9 +101,15 @@ export default function LookAround({initial}: {initial?: Look}) {
         onFocus: () => setHover(true), onBlur: (e: React.FocusEvent) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHover(false); },
     };
 
-    const [asks, setAsks] = useState<{list: PreviewAsk[]; family: string}>({list: [], family: "backend"});
+    // Today's first ad's asks from the start, so the closing preview is in the server HTML too.
+    const [asks, setAsks] = useState<{list: PreviewAsk[]; family: string}>(() => {
+        const f = initial ? familyOrder(initial).find((x) => CYCLE.includes(x)) ?? "backend" : "backend";
+        const data = initial?.families[f];
+        return {family: f, list: data ? askRows(adAsks(adFor(data, "junior"), initial.skills), data)
+            .map((r) => ({key: r.key, name: initial.skills[r.key] ?? r.name, n: r.n})) : []};
+    });
     const onAsks = useCallback((list: PreviewAsk[], f: string) => setAsks({list, family: f}), []);
-    const cvAsk = (where: "sticky" | "closing") => () => { track("cta_clicked", {where}); scan.open(); };
+    const cvAsk = (where: "sticky" | "closing" | "inside") => () => { track("cta_clicked", {where}); scan.open(); };
 
     const stickyContext: StickyContext = lastSeen === "glass" && asks.list.length ? {kind: "ad", n: asks.list.length}
         : lastSeen === "look" && look ? {kind: "count", n: look.families[family].seniority[level]} : {kind: "default"};
@@ -120,15 +127,18 @@ export default function LookAround({initial}: {initial?: Look}) {
                     <p className={"lede"}>{H.lede}</p>
                 </header>
 
-                {!look ? (
-                    <p className={"sub"} style={{padding: "24px 0 48px"}}>{failed ? COPY.count.unavailable : ""}</p>
-                ) : (
-                    <>
-                        <section className={"blk"} id={"look"} aria-labelledby={"hiring-h"} {...hoverProps}>
-                            <div className={"sec-hd"}>
-                                <div className={"chapter on"}><span className={"n"}>01</span><h2 id={"hiring-h"}>{COPY.hiring.title}</h2></div>
-                                <p className={"sec-line"}>{COPY.hiring.line}</p>
-                            </div>
+                <section className={"blk"} id={"look"} aria-labelledby={"hiring-h"} {...hoverProps}>
+                    <div className={"sec-hd"}>
+                        <div className={"chapter on"}><span className={"n"}>01</span><h2 id={"hiring-h"}>{COPY.hiring.title}</h2></div>
+                        <p className={"sec-line"}>{COPY.hiring.line}</p>
+                    </div>
+                    {!look ? (
+                        // Only when the server render couldn't get today's count: the shape, never blank space.
+                        <div className={"look"} aria-busy={!failed}>
+                            <div className={"card skel"} style={{height: 560}}>{failed && <p className={"sub"}>{COPY.count.unavailable}</p>}</div>
+                            <div className={"card skel"} style={{height: 560}} />
+                        </div>
+                    ) : (
                             <div className={"look"}>
                                 <div>
                                     <CountCard families={main} more={more} data={look.families} family={family} level={level} date={dayLabel(look.taken_at)}
@@ -139,16 +149,20 @@ export default function LookAround({initial}: {initial?: Look}) {
                                     <Wall family={family} data={look.families[family]} level={level} reduce={reduce} />
                                 </div>
                             </div>
-                        </section>
+                    )}
+                </section>
+                {look && (
+                    <>
                         <div {...hoverProps}>
                             <GlassSection look={look} family={family} level={level} have={have} subscribe={stepper.subscribe}
                                           onHold={setGlassHeld} onAsks={onAsks} reduce={reduce} />
                         </div>
+                        <Showcase look={look} reduce={reduce} onCv={cvAsk("inside")} />
                         <CvSection asks={asks.list} data={look.families[asks.family] ?? look.families[family]} have={have}
                                    scanning={scan.scanning} onCv={cvAsk("closing")} />
-                        <LowerSections />
                     </>
                 )}
+                <LowerSections look={look} />
             </div>
             <StickyCta show={!seen.hero && !seen.cv && !have && !scan.scanning} context={stickyContext} onCv={cvAsk("sticky")} />
             {scan.dialog}

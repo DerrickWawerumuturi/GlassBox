@@ -7,7 +7,7 @@ import {Button} from "@/components/ui/button";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {track} from "@/lib/analytics";
 import {AdError, pasteBody, readAd, ReadAd} from "@/lib/landing/ad";
-import {AdAsk, adFor, askRows, Level, Look, LookAd, normSkill, rarest} from "@/lib/landing/look";
+import {AdAsk, adAsks, adFor, askRows, Level, Look, LookAd, normSkill, rarest} from "@/lib/landing/look";
 import {COPY, FAMILY_LABEL} from "./copy";
 
 const G = COPY.glass;
@@ -87,13 +87,13 @@ export default function GlassSection({look, family, level, have, subscribe, onHo
     const [pick, setPick] = useState<string | null>(null);
     const barRef = useRef<HTMLSpanElement>(null);
     const sectionRef = useRef<HTMLElement>(null);
-    const keys = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘V" : "Ctrl+V";
+    // Read after hydration: the server can't know the visitor's keyboard.
+    const [keys, setKeys] = useState("Ctrl+V");
+    useEffect(() => { if (/Mac|iPhone|iPad/.test(navigator.userAgent)) setKeys("⌘V"); }, []);
 
     const today = adFor(look.families[family], level);
     const shown: Shown | null = own ? {kind: "own", ad: own} : today ? {kind: "today", ad: today, family} : null;
-    const asks: AdAsk[] = own ? own.asks
-        : today ? [...today.req.map((k) => ({key: k, name: look.skills[k] ?? k, kind: "req" as const})),
-            ...today.pref.filter((k) => !today.req.includes(k)).map((k) => ({key: k, name: look.skills[k] ?? k, kind: "opt" as const}))] : [];
+    const asks: AdAsk[] = own ? own.asks : adAsks(today, look.skills);
     const ownFamily = own && look.families[own.family] ? own.family : "software_engineering";
     const selected = pick ?? (own ? ownFamily : family);
     const data = look.families[selected] ?? look.families[family];

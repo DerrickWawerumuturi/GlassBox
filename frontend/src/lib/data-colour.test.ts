@@ -15,9 +15,7 @@ const ORANGE = /\b(?:bg|text|fill|stroke|border|ring|from|to)-(?:primary|chart-3
 const DATA_FILES = [
     "components/dashboard/DemandBars.tsx", "components/dashboard/GapTally.tsx", "components/dashboard/Bridges.tsx",
     "components/dashboard/MarketParts.tsx", "components/dashboard/SkillBadge.tsx",
-    "components/Market/SkillBarChart.tsx", "components/Market/SkillGapChart.tsx", "components/Market/SkillCoverage.tsx",
-    "components/Market/SkillLandscape.tsx", "components/Market/MarketOverview.tsx", "components/Market/MarketCard.tsx",
-    "components/Market/SkillDemandChart.tsx", "components/Market/UserSkillPresence.tsx", "components/Market/JobMatches.tsx",
+    "components/landing/Showcase.tsx", "components/landing/LowerSections.tsx",
 ];
 
 // Actions inside data components: a link and an expanded card's outline.

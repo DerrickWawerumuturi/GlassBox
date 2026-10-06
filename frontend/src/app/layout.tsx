@@ -8,6 +8,7 @@ import {SessionProvider} from "next-auth/react";
 import Navbar from "@/components/Navbar";
 import {ThemeWatcher} from "@/components/ThemeMenu";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
+import SpotlightWatcher from "@/components/SpotlightWatcher";
 import {themeScript} from "@/lib/theme";
 import {SITE_URL} from "@/lib/site";
 
@@ -95,6 +96,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full bg-background font-sans text-foreground">
       <ThemeWatcher />
+      <SpotlightWatcher />
       <SessionProvider>
           <AnalyticsProvider />
           <AnalysisProvider>

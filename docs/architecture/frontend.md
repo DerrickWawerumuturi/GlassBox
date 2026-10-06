@@ -12,11 +12,13 @@ src/
     auth.ts, proxy.ts            NextAuth (Google); the token subject is Google's account id
     api/token/route.ts           mints the short-lived JWT the backend verifies
     api/logo/route.ts            same-origin company-logo proxy
-    (landing)/page.tsx           landing: "Look around first" (components/landing), metadata from its copy
-    (public)/product, about      the Product and About pages; words in lib/site-copy.ts
+    (landing)/page.tsx           landing, static with ISR (5 min), today's count fetched on the server (lib/landing/look-server.ts): "Look around first" (components/landing), metadata from its copy
+    (public)/product, about      long explainers (components/site/Explainer.tsx, ISR); words in lib/site-copy.ts;
+                                 screenshots in public/product (docs/local/render/product-shots.mjs)
     (auth)/sign-in/page.tsx
     (product)/
-      analysis/…                 overview · skills · gaps · jobs for an anonymous scan
+      analysis/…                 a scan without an account, on the dashboard's views: market · skills · jobs (gaps redirects);
+                                 before a scan, the example (lib/example-scan.json) under an Example banner
       onboarding/page.tsx        CV breakdown after sign-in
       dashboard/
         layout.tsx               sidebar shell + ApplicationsProvider + OpportunitiesProvider
@@ -30,7 +32,7 @@ src/
   app/fonts/                     the four brand faces, self-hosted woff2 (next/font/local), OFL licences
   app/experiments/market-navigation/  dev-only lab of the four rotary concepts (404 in production)
   components/
-    Market/                      analysis charts, shared by /analysis and /dashboard;
+    Market/                      the needle dial, ViewDial and the tab bar; ChartPatterns (hatch, plot frame);
                                  ChartPatterns.tsx holds the SVG hatch and plot frame;
                                  NeedleDial.tsx the Market view dial, ViewDial.tsx where it sits
                                  (left column on a desktop, half circle on a small tablet),
@@ -112,21 +114,15 @@ Next 16.
 
 ## Dashboard sections
 
-All under `src/components/Market/`. Each answers one question:
-
-| Component | Question |
-|---|---|
-| `MarketOverview` / `MarketCard` | What was analyzed? |
-| `SkillDemandChart` | What does the market ask for? |
-| `UserSkillPresence` | How common are my skills? |
-| `SkillGapChart` | What am I missing? |
-| `SkillCoverage` | How much of the core skillset do I cover? |
-| `JobMatches` | Which of this scan's jobs fit me, and why? |
-| `SkillLandscape` | Where do I sit overall? |
-
-`SkillBarChart` is the shared Recharts horizontal bar chart used by the demand
-and my-skills sections. `SkillGapChart` deliberately does not use it — its rows
-carry a reason as well as a magnitude.
+The Market charts (`components/dashboard/MarketCharts.tsx`: the needle dial and its
+four views, DemandBars, GapTally) and Bridges (`components/dashboard/SkillsView.tsx`)
+are one implementation each, used by `/dashboard/market` and `/dashboard/gaps` and,
+for a scan without an account, `/analysis` and `/analysis/skills`. `/analysis/jobs`
+shows the scan's jobs as Opportunities cards (`rankedToRow` in `lib/dashboard-data.ts`).
+The sidebar has a `scan` mode for those pages. The landing page's "Inside Glassbox"
+draws the same components from today's jobs and an example CV
+(`lib/landing/showcase.ts`). The old per section charts (MarketOverview,
+SkillDemandChart, SkillGapChart, SkillLandscape, JobMatches…) were deleted on 6 Oct 2026.
 
 See `decisions/data-visualization.md`.
 

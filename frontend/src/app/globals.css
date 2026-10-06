@@ -294,6 +294,16 @@
 
 }
 
+/* The landing page's .la scope reuses --card, --muted and --chart-ink with its
+   own meanings. These copies resolve on <html>, so a product component placed
+   inside it (the "Inside Glassbox" showcase) gets the app's values back
+   through .la .app-tokens (components/landing/landing.css). */
+html {
+  --app-card: var(--card);
+  --app-muted: var(--muted);
+  --app-chart-ink: var(--chart-ink);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -497,3 +507,17 @@
 :root:not(.dark) .text-accent-lime {
   color: var(--accent-lime-ink);
 }
+
+/* The soft light that follows the pointer across a card (from the dashboard
+   prototype, docs/local/dashboard-supabase.html). Never orange. Off on touch
+   screens and with reduced motion. SpotlightWatcher sets --mx/--my. */
+:root { --spot-glow: oklch(0.25 0.02 70 / 5%); }
+.dark { --spot-glow: oklch(1 0 0 / 6%); }
+.spotlight { position: relative; isolation: isolate; }
+.spotlight::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  opacity: 0; transition: opacity .25s;
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), var(--spot-glow), transparent 60%);
+}
+.spotlight:hover::before { opacity: 1; }
+@media (hover: none), (prefers-reduced-motion: reduce) { .spotlight::before { display: none; } }

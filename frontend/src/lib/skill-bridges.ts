@@ -47,7 +47,14 @@ export function buildSkillData(analysis: JobRadarAnalysis): SkillData {
         const skills = new Set([...(r.job.skills ?? []).map(name), ...required]);
         return {title: r.job.job.title ?? "Untitled role", skills, required};
     });
+    return skillData(postings, mine, names);
+}
 
+/**
+ * The counts Bridges draws, from any set of jobs: a scan's ranked jobs
+ * (buildSkillData) or the landing page's sample of today's jobs (showcase.ts).
+ */
+export function skillData(postings: Posting[], mine: Set<string>, names: Map<string, string>): SkillData {
     const counts = new Map<string, number>();
     for (const p of postings) for (const k of p.skills) counts.set(k, (counts.get(k) ?? 0) + 1);
     const skills = [...counts].map(([key, count]) => ({key, name: names.get(key) ?? key, count, have: mine.has(key)}))

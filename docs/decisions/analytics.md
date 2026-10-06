@@ -29,7 +29,7 @@ changed with `NEXT_PUBLIC_POSTHOG_HOST`.
 | `scan_failed` | `stage`: `upload` or `reuse` |
 | `view_opened` | `page` (overview, market, skills, opportunities, applications), `view` (a Market view) |
 | `ad_pasted` | `kind`: `text` or `url` (never the ad itself) |
-| `cta_clicked` | `where`: `sticky` or `closing` (the landing page's two CV asks; the hero has none since 5 Oct), or `product` (/product) |
+| `cta_clicked` | `where`: `sticky`, `closing` or `inside` (the landing page's CV asks; the hero has none since 5 Oct), or `product` (/product) |
 | `signed_up` | none (not wired yet, see below) |
 
 PostHog adds its own context: browser, OS, device type, screen size,

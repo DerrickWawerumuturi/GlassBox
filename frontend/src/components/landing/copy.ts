@@ -101,6 +101,20 @@ export const COPY = {
         haveNote: "from your scan",
         none: "We couldn't find skills we know in this text. Try pasting the whole ad.",
     },
+    inside: {
+        chapter: "Inside Glassbox.",
+        line: "Today's jobs and one example CV. This is what your dashboard shows.",
+        example: "example",
+        tabs: ["Market", "Your skills", "Opportunities", "Applications"],
+        market: (n: string, family: string) => `What today's ${n} ${family} jobs ask for most. Green is on the example CV.`,
+        skills: "How the example CV's skills connect to what these jobs ask for.",
+        jobs: "Jobs from today's count that ask for what the example CV has.",
+        jobHave: (have: number, n: number) => `${have} of the ${n} required skills are on the CV.`,
+        applications: "Every job applied to, in one list, with its stage.",
+        lead: "Free. One PDF. No account needed.",
+        cta: "Add your CV",
+        signUp: "Sign up",
+    },
     sticky: {
         line: (context: {kind: "default"} | {kind: "count"; n: number} | {kind: "ad"; n: number}) =>
             context.kind === "count" ? `Where would you sit among these ${context.n.toLocaleString("en")}?`
@@ -129,15 +143,22 @@ export const COPY = {
     },
     lower: {
         how: {
-            chapter: "How we count",
-            points: [
-                "New jobs from public job boards, every day.",
-                "A job listed twice counts once.",
-                "Real skill names only. Every number shows its count and date.",
+            chapter: "How it works",
+            lead: "We count today's jobs. Add your CV and the count becomes about you.",
+            steps: [
+                {title: "Read", body: "New jobs from public job boards, every day."},
+                {title: "Deduplicate", body: "A job listed twice counts once."},
+                {title: "Match to real skill names", body: "Real skill names only. A phrase is not a skill."},
+                {title: "Count, with the date", body: "Every number shows its count and date."},
             ],
+            withCv: {title: "With your CV", body: "Your skills meet the count, on four pages."},
+            once: "counted once",
+            /** A real pair from the pool on 6 Oct 2026: one job, two boards. */
+            pair: {title: "Backend Engineer, Control Plane", company: "Tailscale", boards: ["We Work Remotely", "Greenhouse"], note: "a real pair, 6 Oct"},
+            phrase: "custom backend",
+            asOf: (family: string, date: string) => `${family} jobs · ${date}`,
         },
         get: {
-            chapter: "What you get with your CV",
             points: [
                 {title: "Market", body: "What today's jobs ask for most, yours marked first."},
                 {title: "Your skills", body: "How your skills connect to what jobs ask for."},
@@ -145,12 +166,8 @@ export const COPY = {
                 {title: "Applications", body: "Every job you applied to, in one list."},
             ],
         },
-        theCount: {
-            chapter: "The Count",
-            lines: ["One number a month, from every job we read.", "With the data, so you can check it."],
-        },
         faq: {
-            chapter: "Questions",
+            chapter: "FAQ",
             items: [
                 {q: "What happens to my CV?", a: `${TRUST.join(" ")} To read it, its text goes to Groq, a US service.`, link: {href: "/your-cv", label: "What happens to your CV"}},
                 {q: "Do I need an account?", a: "No. Look around and check your CV without one. Sign up to keep your results and track applications across devices."},

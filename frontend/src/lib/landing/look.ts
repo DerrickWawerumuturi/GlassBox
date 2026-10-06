@@ -160,6 +160,13 @@ export function sharePct(n: number, total: number): string {
 
 export interface AdAsk {key: string; name: string; kind: "req" | "opt"}
 
+/** One of today's ads as asks: its required skills, then the optional ones it doesn't also require. */
+export function adAsks(ad: LookAd | undefined, names: Record<string, string>): AdAsk[] {
+    if (!ad) return [];
+    return [...ad.req.map((k) => ({key: k, name: names[k] ?? k, kind: "req" as const})),
+        ...ad.pref.filter((k) => !ad.req.includes(k)).map((k) => ({key: k, name: names[k] ?? k, kind: "opt" as const}))];
+}
+
 /** The asks of an ad with today's counts, required first, then most named. */
 export function askRows(asks: AdAsk[], data: LookFamily) {
     return asks.map((a) => ({...a, n: data.skills[a.key] ?? 0}))
