@@ -288,6 +288,11 @@ class DeleteApplicationsRequest(BaseModel):
     ids: list[int] = Field(min_length=1, max_length=2000)
 
 
+class AppliedDateRequest(BaseModel):
+    """The day the user applied, picked on a calendar: a date, not a time."""
+    applied_on: date
+
+
 class TransitionRequest(BaseModel):
     to_status: Literal[
         "applied", "screening", "interview", "offer", "rejected", "withdrawn"

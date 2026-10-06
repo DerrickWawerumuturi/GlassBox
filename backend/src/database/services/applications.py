@@ -5,7 +5,7 @@ reviewed pasted link), moving it through statuses, and its history.
 Every application's event trail starts at `saved`, however it was created, so
 the timeline always reads from the beginning.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from types import SimpleNamespace
 
 from psycopg.errors import ForeignKeyViolation, UniqueViolation
@@ -35,6 +35,10 @@ class BookmarkNotRemovable(Exception):
 
 
 class ApplicationExists(Exception):
+    pass
+
+
+class BadAppliedDate(ValueError):
     pass
 
 
@@ -127,6 +131,22 @@ class ApplicationService:
                 raise ApplicationNotFound(f"application {application_id}")
             repo.update_status(conn, application_id, to_status, occurred_at)
             repo.insert_event(conn, application_id, status_now, to_status, occurred_at, scheduled_for, note)
+
+    def set_applied(self, payload, application_id, applied_on: date) -> str:
+        """Correct the day the user applied. Stored at noon UTC, like an imported sheet's dates,
+        so it reads as the same day in every time zone. Not for a job only saved, nor a future day."""
+        if applied_on > (datetime.now(timezone.utc) + timedelta(days=1)).date():
+            raise BadAppliedDate("That date is in the future.")
+        applied_at = datetime.combine(applied_on, time(12), timezone.utc)
+        with connection() as conn:
+            user_id = resolve_user_id(conn, payload, create=False)
+            status_now = repo.current_status(conn, user_id, application_id) if user_id else None
+            if status_now is None:
+                raise ApplicationNotFound(f"application {application_id}")
+            if status_now == INITIAL_STATUS:
+                raise BadAppliedDate("This job is only saved. Move it to Applied first.")
+            repo.set_applied(conn, user_id, application_id, applied_at)
+        return applied_at.isoformat()
 
     def remove(self, payload, application_id) -> None:
         """Only terminal rows go; an active application must be withdrawn first."""

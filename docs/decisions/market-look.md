@@ -47,9 +47,24 @@ a reader could rebuild it from, stays on the server.
 
 ### Caching
 
-The pool changes once a day. The result is cached in the process for an hour
-(one computation under a lock, however many first visitors arrive), and sent
-with `Cache-Control: public, max-age=3600`.
+The pool changes once a day. Building the count reads the whole pool, about 6 s
+on the live database, and the first call after a deploy used to hang until the
+ingress timed out. So **no request ever builds it** (founder, 6 Oct):
+
+- The app builds it in the background at startup (`market.keep_fresh`, started
+  in the lifespan), off the event loop, so health checks stay fast.
+- A timer rebuilds it every 50 minutes, before the hour's browser cache runs out.
+- A request only reads what is built. An old one (over an hour) is still
+  served at once while a rebuild starts beside it (stale while revalidate).
+- A failed rebuild is logged and the last good count stays.
+- Before the first build finishes: 503 with `Retry-After: 15` at once. The page
+  keeps its loading state and asks again (`getLook`, up to 5 more times).
+- One rebuild at a time (a non-blocking lock).
+- The daily pool refresh runs as its own process (`python -m src.jobpool.daily`),
+  so it can't nudge this one; the timer catches it within 50 minutes.
+
+Sent with `Cache-Control: public, max-age=3600`, and gzipped (GZipMiddleware
+on the whole API, bodies over 1 KB).
 
 Cost on the production pool (13k rows, 2026-10-05): the SQL runs in about
 110 ms on the server; reading it from a laptop took 1.2 to 4 s, mostly
@@ -131,5 +146,3 @@ The worst input found now takes about a second (text) or 3 s (a 2 MB page).
 
 ## Not done
 
-- **Compression.** The look body is 180 KB, 40 KB gzipped. The API has no
-  GZip middleware; adding it would help every route.

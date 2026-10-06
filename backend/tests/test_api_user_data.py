@@ -171,6 +171,19 @@ def test_application_lifecycle(client, job_ids):
     assert rows["Kept"]["status"] == "interview" and rows["Kept"]["match_method"] == "jobradar-fit-v2"
     assert client.get("/dashboard/applications/999999999/history").status_code == 404
 
+    # The applied date, corrected on a calendar: a day, kept at noon UTC.
+    r = client.post(f"/dashboard/applications/{kept_id}/applied", json={"applied_on": "2026-09-14"})
+    assert r.status_code == 200 and r.json()["applied_at"].startswith("2026-09-14T12:00")
+    row = next(a for a in client.get("/dashboard/applications").json() if a["id"] == kept_id)
+    assert row["applied_at"].startswith("2026-09-14") and row["status"] == "interview"
+    assert client.post(f"/dashboard/applications/{kept_id}/applied", json={"applied_on": "2999-01-01"}).status_code == 422
+    assert client.post("/dashboard/applications/999999999/applied", json={"applied_on": "2026-09-14"}).status_code == 404
+    saved = client.post("/dashboard/applications", json={"job_id": job_ids[1], "title": "Only saved"}).json()["application_id"]
+    assert client.post(f"/dashboard/applications/{saved}/applied", json={"applied_on": "2026-09-14"}).status_code == 422
+    other = TestClient(main.app)
+    other.headers["Authorization"] = f"Bearer {token(str(uuid.uuid4().int % 10**12))}"
+    assert other.post(f"/dashboard/applications/{kept_id}/applied", json={"applied_on": "2026-09-01"}).status_code in (401, 404)
+
 
 def test_delete_data_then_account(client):
     assert client.delete("/account/data").json() == {"deleted": True}

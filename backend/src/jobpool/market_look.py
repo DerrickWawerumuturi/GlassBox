@@ -148,18 +148,57 @@ def compute() -> dict:
 
 
 # One value for the whole process: every visitor sees the same count, and the
-# pool only changes once a day, so an hour old is fresh enough. The lock makes
-# a burst of first visitors wait for one computation instead of starting many.
+# pool only changes once a day. Building it reads the whole pool (about 6s on
+# the live database), so no request ever builds it: startup builds it in the
+# background, a timer rebuilds it every REFRESH_SECONDS, and a request only ever
+# reads what is there (stale while a rebuild runs). A failed rebuild keeps the
+# last good count. decisions/market-look.md
+REFRESH_SECONDS = 50 * 60
+RETRY_SECONDS = 15
 _cache: tuple[float, dict] | None = None
 _lock = threading.Lock()
+_building = threading.Lock()
+
+
+class NotReady(NotAvailable):
+    """Nothing built yet: the first build is still running."""
+
+
+def refresh(now=time.monotonic) -> bool:
+    """Rebuild the count. One rebuild at a time; False if one was already running or it failed."""
+    global _cache
+    if not _building.acquire(blocking=False):
+        return False
+    try:
+        body = compute()
+    except Exception as err:  # keep serving the last good count
+        print(f"market look refresh failed: {err!r}")
+        return False
+    else:
+        with _lock:
+            _cache = (now(), body)
+        return True
+    finally:
+        _building.release()
+
+
+def _refresh_in_background() -> None:
+    threading.Thread(target=refresh, name="market-look-refresh", daemon=True).start()
 
 
 def look(now=time.monotonic) -> dict:
-    global _cache
+    """Today's count as last built. Never builds it here; an old one starts a rebuild beside it."""
     with _lock:
-        if _cache is None or now() - _cache[0] >= CACHE_SECONDS:
-            _cache = (now(), compute())
-        return _cache[1]
+        cached = _cache
+    if cached is None:
+        if not is_configured():
+            raise NotAvailable("Today's count isn't available right now.")
+        if not _building.locked():
+            _refresh_in_background()  # the startup build failed or never ran
+        raise NotReady("Today's count is being made. Try again in a few seconds.")
+    if now() - cached[0] >= CACHE_SECONDS and not _building.locked():
+        _refresh_in_background()
+    return cached[1]
 
 
 def forget() -> None:

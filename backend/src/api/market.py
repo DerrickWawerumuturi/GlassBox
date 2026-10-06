@@ -7,6 +7,8 @@ Public market routes: no sign-in, nothing about the visitor is read or kept.
 Kept out of main.py so its routes stay about the signed-in product. The
 decision behind both, including what is never returned: decisions/market-look.md.
 """
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
@@ -24,10 +26,21 @@ class AdRequest(BaseModel):
     url: str | None = None
 
 
+async def keep_fresh():
+    """Started with the app: builds today's count now and again every REFRESH_SECONDS, off the event loop."""
+    while True:
+        await run_in_threadpool(market_look.refresh)
+        await asyncio.sleep(market_look.REFRESH_SECONDS)
+
+
 @router.get("/look")
-async def look():
+def look():
+    # Only ever reads the built count (market_look.look), so this answers in microseconds.
     try:
-        body = await run_in_threadpool(market_look.look)
+        body = market_look.look()
+    except market_look.NotReady as err:
+        raise HTTPException(status_code=503, detail=str(err),
+                            headers={"Retry-After": str(market_look.RETRY_SECONDS)}) from err
     except market_look.NotAvailable as err:
         raise HTTPException(status_code=503, detail=str(err)) from err
     # The count changes once a day; an hour in a browser or CDN costs nothing.

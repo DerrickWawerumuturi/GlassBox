@@ -29,6 +29,13 @@ set status          = %s,
 where id = %s
 """
 
+SET_APPLIED = """
+update application
+set applied_at = %s,
+    updated_at = now()
+where id = %s and user_id = %s
+"""
+
 INSERT_EVENT = """
 insert into application_events(application_id, from_status, to_status, occurred_at, scheduled_for, note)
 values (%s, %s, %s, %s, %s, %s)
@@ -142,6 +149,11 @@ def current_status(conn, user_id, application_id) -> str | None:
 def update_status(conn, application_id, to_status, occurred_at) -> None:
     with conn.cursor() as cur:
         cur.execute(UPDATE_STATUS,  (to_status, occurred_at, occurred_at, application_id,))
+
+def set_applied(conn, user_id, application_id, applied_at) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(SET_APPLIED, (applied_at, application_id, user_id))
+        return cur.rowcount > 0
 
 def insert_event(conn, application_id, from_status, to_status, occurred_at, scheduled_for, note) -> None:
     with conn.cursor() as cur:

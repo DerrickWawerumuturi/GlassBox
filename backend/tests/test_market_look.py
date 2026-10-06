@@ -118,25 +118,93 @@ def test_skills_stop_at_the_top_150():
     assert len(skills) == ml.SKILLS_PER_FAMILY and next(iter(skills)) in ("skill1", "skill2")
 
 
-def test_the_cache_returns_the_same_object_within_the_hour(monkeypatch):
+def _never_build_here(monkeypatch):
+    """Background rebuilds run inline, and are counted, so a test can see when one starts."""
+    started = []
+    monkeypatch.setattr(ml, "_refresh_in_background", lambda: started.append(1))
+    return started
+
+
+def test_a_warm_cache_is_served_without_building(monkeypatch):
     calls, clock = [], [1000.0]
     monkeypatch.setattr(ml, "compute", lambda: calls.append(1) or {"n": len(calls)})
+    started = _never_build_here(monkeypatch)
     ml.forget()
+    assert ml.refresh(now=lambda: clock[0]) and len(calls) == 1
     first = ml.look(now=lambda: clock[0])
-    clock[0] += ml.CACHE_SECONDS - 1
-    assert ml.look(now=lambda: clock[0]) is first and len(calls) == 1
-    clock[0] += 2
-    assert ml.look(now=lambda: clock[0]) == {"n": 2}
+    for _ in range(50):
+        assert ml.look(now=lambda: clock[0]) is first
+    assert len(calls) == 1 and not started                     # no request built anything
+    clock[0] += ml.CACHE_SECONDS + 1
+    assert ml.look(now=lambda: clock[0]) is first               # stale is served at once...
+    assert len(calls) == 1 and started == [1]                   # ...while a rebuild starts beside it
     ml.forget()
 
 
-def test_the_route_sends_cache_control(monkeypatch):
-    monkeypatch.setattr(ml, "compute", lambda: ml.aggregate(ROWS, TAKEN))
+def test_a_failed_refresh_keeps_the_last_good_count(monkeypatch):
+    _never_build_here(monkeypatch)
+    monkeypatch.setattr(ml, "compute", lambda: {"good": True})
+    ml.forget()
+    ml.refresh()
+
+    def broken():
+        raise RuntimeError("database down")
+    monkeypatch.setattr(ml, "compute", broken)
+    assert ml.refresh() is False
+    assert ml.look() == {"good": True}
+    ml.forget()
+
+
+def test_one_rebuild_at_a_time(monkeypatch):
+    import threading
+    gate, calls = threading.Event(), []
+    monkeypatch.setattr(ml, "compute", lambda: calls.append(1) or gate.wait(5) or {"n": 1})
+    ml.forget()
+    first = threading.Thread(target=ml.refresh)
+    first.start()
+    while not calls:
+        pass
+    assert ml.refresh() is False                                # a second one returns at once
+    gate.set(); first.join()
+    assert len(calls) == 1
+    ml.forget()
+
+
+def test_before_the_first_build_the_route_answers_at_once(monkeypatch):
+    def slow():
+        raise AssertionError("a request must never build the count")
+    monkeypatch.setattr(ml, "compute", slow)
+    monkeypatch.setattr(ml, "is_configured", lambda: True)
+    started = _never_build_here(monkeypatch)
     ml.forget()
     r = TestClient(main.app).get("/market/look")
+    assert r.status_code == 503 and int(r.headers["retry-after"]) > 0
+    assert started == [1]                                        # it starts the build it is missing
+
+
+def test_the_route_sends_cache_control_and_gzip(monkeypatch):
+    monkeypatch.setattr(ml, "compute", lambda: ml.aggregate(ROWS, TAKEN))
+    _never_build_here(monkeypatch)
+    ml.forget()
+    ml.refresh()
+    r = TestClient(main.app).get("/market/look", headers={"Accept-Encoding": "gzip"})
     ml.forget()
     assert r.status_code == 200 and r.headers["cache-control"] == "public, max-age=3600"
     assert r.json()["families"]["backend"]["jobs"] == 5
+    assert r.headers.get("content-encoding") == "gzip"
+
+
+def test_the_app_builds_the_count_at_startup(monkeypatch):
+    monkeypatch.setattr(ml, "compute", lambda: ml.aggregate(ROWS, TAKEN))
+    monkeypatch.setattr(main, "WARM_AFTER_SECONDS", 3600)
+    ml.forget()
+    with TestClient(main.app) as client:                          # runs the lifespan
+        for _ in range(100):
+            if client.get("/market/look").status_code == 200:
+                break
+            import time; time.sleep(0.02)
+        assert client.get("/market/look").status_code == 200
+    ml.forget()
 
 
 def test_without_a_database_the_route_says_so(monkeypatch):
@@ -179,11 +247,12 @@ def test_reads_the_live_pool_from_the_database(monkeypatch):
             job(3, "Senior Backend Engineer", "Requirements: 6+ years. Go and Kubernetes. " + "We ship. " * 100)]
     try:
         ml.forget()
+        ml.refresh()
         before = ml.look()["families"].get("backend", {"jobs": 0, "seniority": {"junior": 0, "senior": 0}})
         ingestion = JobIngestionService()
         ids = list(ingestion.persist_jobs(None, jobs, observe=False, profile=False).values())
         ingestion.refresh_profiles(ids)
-        ml.forget()
+        ml.refresh()
         after = TestClient(main.app).get("/market/look").json()["families"]["backend"]
         assert after["jobs"] - before["jobs"] == 2                       # the cross-posted role once
         assert after["seniority"]["junior"] - before["seniority"]["junior"] == 1
