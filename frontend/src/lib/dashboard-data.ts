@@ -1,4 +1,4 @@
-import {DateBasis, Match, MatchTier, Opportunity} from "@/types/jobradar";
+import {DateBasis, Match, MatchTier, Opportunity, RankedJob} from "@/types/jobradar";
 
 /** An opportunity as the dashboard's cards and tables render it. */
 export interface OpportunityRow {
@@ -51,6 +51,38 @@ export function toRow(o: Opportunity): OpportunityRow {
         provider: o.provider,
         also: o.also,
         detail: o.match
+    };
+}
+
+/**
+ * A job from a scan (an analysis kept in the browser, no account) as the same
+ * card row. Null for a job scanned before the fit matcher, which has no
+ * explanation to show. Its date is the source's when it gives an absolute one.
+ */
+export function rankedToRow(r: RankedJob, index: number, scannedAt: string): OpportunityRow | null {
+    const match = r.match;
+    if (!match) return null;
+    const job = r.job.job;
+    const required = match.required;
+    return {
+        key: `scan-${job.id ?? index}`,
+        jobId: job.db_id ?? -(index + 1),
+        role: job.title ?? "Untitled role",
+        company: job.company,
+        location: placeLabel(job.location, job.remote ? "remote" : null),
+        match: match.score,
+        tier: match.tier,
+        have: [...required.matched, ...required.partial],
+        missing: required.missing,
+        required: required.matched.length + required.partial.length + required.missing.length,
+        listedAt: job.posted_at_utc ?? scannedAt,
+        dateBasis: job.posted_at_utc ? "posted" : "fetched",
+        salary: null,
+        type: job.employment_type,
+        url: job.url,
+        provider: "scan",
+        also: [],
+        detail: match,
     };
 }
 

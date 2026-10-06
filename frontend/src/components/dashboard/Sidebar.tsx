@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import {cn, initials} from "@/lib/utils";
+import {Button} from "@/components/ui/button";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
 import {useApplications} from "@/lib/applications-store";
@@ -33,6 +34,8 @@ import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import InstallApp from "@/components/dashboard/InstallApp";
 import {GlassboxWordmark} from "@/components/brand/Logo";
 import AccountMenuItems from "@/components/AccountMenuItems";
+
+const SIGN_UP_LEAD = "Sign up to keep your results.";
 
 interface NavItem {
     href: string;
@@ -75,7 +78,19 @@ function NavLink({item, active, compact, collapsed}: {
 /** Pages that open with the sidebar collapsed: Market charts, to make room for its dial. */
 const AUTO_COLLAPSE = ["/dashboard/market"];
 
-export default function Sidebar() {
+/** A scan kept in this browser, without an account (/analysis): the pages it can show. */
+const SCAN_PAGES: NavItem[] = [
+    {href: "/analysis", label: "Market charts", icon: ActivityIcon},
+    {href: "/analysis/skills", label: "Your skills", icon: TrendingUpIcon},
+    {href: "/analysis/jobs", label: "Jobs", icon: RadarIcon},
+];
+
+/**
+ * The workspace rail. `scan` is the same rail for a scan without an account:
+ * only the pages that scan can fill, and a gentle sign up prompt where the
+ * account menu would be.
+ */
+export default function Sidebar({scan = false}: {scan?: boolean}) {
     const pathname = usePathname();
     const {data: session} = useSession();
     const {analysis} = useAnalysis();
@@ -90,7 +105,7 @@ export default function Sidebar() {
     useEffect(() => {
         try { setSaved(localStorage.getItem("sidebar-collapsed") === "1") } catch {}
     }, []);
-    const auto = AUTO_COLLAPSE.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    const auto = scan ? pathname === "/analysis" : AUTO_COLLAPSE.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     const [visit, setVisit] = useState<boolean | null>(null);
     useEffect(() => setVisit(null), [auto]);
     const collapsed = visit ?? (auto || saved);
@@ -109,7 +124,7 @@ export default function Sidebar() {
         if (el) setStripAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 8);
     };
 
-    const workspace: NavItem[] = [
+    const workspace: NavItem[] = scan ? SCAN_PAGES : [
         {href: "/dashboard", label: "Overview", icon: HomeIcon},
         {href: "/dashboard/opportunities", label: "Opportunities", icon: RadarIcon,
             count: opportunities ? opportunities.counts.strong + opportunities.counts.good : undefined},
@@ -117,16 +132,23 @@ export default function Sidebar() {
         {href: "/dashboard/gaps", label: "Your skills", icon: TrendingUpIcon}
     ];
 
-    const you: NavItem[] = [
+    const you: NavItem[] = scan ? [{href: "/#cv", label: "New scan", icon: PlusIcon}] : [
         ...(analysis ? [{href: "/dashboard/market", label: "Market charts", icon: ActivityIcon}] : []),
         ...(cv ? [{href: "/dashboard/profile", label: "My profile", icon: UserIcon}] : []),
         {href: "/dashboard/scan", label: "New scan", icon: PlusIcon}
     ];
 
     const isActive = (href: string) =>
-        href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+        href === "/dashboard" || href === "/analysis" ? pathname === href : pathname.startsWith(href);
 
-    const account = session?.user ? (
+    const account = scan && !session?.user ? (
+        <div className={cn("border-t border-border", collapsed ? "px-2 py-3" : "flex flex-col gap-2 px-3 py-3")}>
+            {!collapsed && <p className={"text-[12.5px] leading-snug text-muted-foreground"}>{SIGN_UP_LEAD}</p>}
+            <Button size={"sm"} className={"w-fit"} nativeButton={false} render={<Link href={"/sign-in"} />}>
+                {collapsed ? "→" : "Sign up"}
+            </Button>
+        </div>
+    ) : session?.user ? (
         <div className={"border-t border-border p-2"}>
             <DropdownMenu>
                 <DropdownMenuTrigger render={(props) => (
@@ -235,6 +257,11 @@ export default function Sidebar() {
                                 <AccountMenuItems extra={<InstallApp />} />
                             </DropdownMenuContent>
                         </DropdownMenu>
+                    ) : scan ? (
+                        <span className={"flex items-center gap-2.5"}>
+                            <span className={"text-[12px] text-muted-foreground max-[360px]:hidden"}>{SIGN_UP_LEAD}</span>
+                            <Button size={"xs"} nativeButton={false} render={<Link href={"/sign-in"} />}>Sign up</Button>
+                        </span>
                     ) : (
                         <Link href={"/sign-in"} className={"font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground"}>
                             Sign in

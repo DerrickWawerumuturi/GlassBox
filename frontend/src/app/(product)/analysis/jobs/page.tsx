@@ -1,21 +1,35 @@
 'use client'
 
-import React from 'react'
-import {useAnalysis} from "@/lib/analysis-store";
-import JobMatches from "@/components/Market/JobMatches";
-import Annotation from "@/components/Annotation";
+import React, {useMemo, useState} from 'react'
 
-export default function DashboardJobsPage() {
+import {useAnalysis} from "@/lib/analysis-store";
+import {OpportunityRow, rankedToRow} from "@/lib/dashboard-data";
+import {EmptyScan, PageBar} from "@/components/dashboard/bits";
+import OpportunityCard from "@/components/dashboard/OpportunityCard";
+
+/** The scan's jobs as the dashboard's Opportunities cards, best match first. */
+export default function AnalysisJobsPage() {
     const {analysis} = useAnalysis();
-    if (!analysis) return null;
+    const [open, setOpen] = useState<string | null>(null);
+    const rows = useMemo(() => {
+        const now = new Date().toISOString();
+        return (analysis?.ranked_jobs ?? []).map((r, i) => rankedToRow(r, i, now))
+            .filter((r): r is OpportunityRow => r !== null)
+            .sort((a, b) => b.match - a.match);
+    }, [analysis]);
 
     return (
-        <div className={"flex flex-col gap-1"}>
-            <Annotation className={"ml-3 self-start"}>real jobs, live right now → ranked by fit</Annotation>
-            <JobMatches
-                jobs={analysis.ranked_jobs}
-                userSkills={analysis.market.user_skill_presence}
-            />
+        <div className={"flex min-h-screen flex-col"}>
+            <PageBar title={"Jobs"} meta={`${rows.length} jobs from your scan`} />
+            {rows.length === 0 ? (
+                <div className={"px-4 py-8 sm:px-8"}><EmptyScan message={"This scan has no jobs to show. Run a new one from the home page."} /></div>
+            ) : (
+                <div className={"grid gap-3 px-4 py-5 sm:grid-cols-2 sm:px-8 sm:py-8 xl:grid-cols-3"}>
+                    {rows.map((row) => (
+                        <OpportunityCard key={row.key} row={row} open={open === row.key} onOpen={() => setOpen(row.key)} onClose={() => setOpen(null)} />
+                    ))}
+                </div>
+            )}
         </div>
     )
 }

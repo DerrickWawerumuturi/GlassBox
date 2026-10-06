@@ -1,73 +1,58 @@
 'use client'
 
-import React, {useEffect} from 'react'
+import React, {useEffect, useState} from 'react'
 import Link from "next/link";
-import {usePathname, useRouter} from "next/navigation";
+import {ArrowRightIcon} from "lucide-react";
 
-import {useAnalysis} from "@/lib/analysis-store";
-import {cn} from "@/lib/utils";
-import SiteFooter from "@/components/SiteFooter";
+import {ExampleAnalysisProvider, useAnalysis} from "@/lib/analysis-store";
+import {JobRadarAnalysis} from "@/types/jobradar";
+import {Button} from "@/components/ui/button";
+import Sidebar from "@/components/dashboard/Sidebar";
+import {useCvScan} from "@/components/landing/useCvScan";
+import {ApplicationsProvider} from "@/lib/applications-store";
+import {OpportunitiesProvider} from "@/lib/opportunities-store";
 
-const TABS = [
-    {href: "/analysis", label: "Overview"},
-    {href: "/analysis/skills", label: "Skills"},
-    {href: "/analysis/gaps", label: "Gaps"},
-    {href: "/analysis/jobs", label: "Matches"}
-] as const;
+const EXAMPLE = {line: "This is an example. Add your CV to see yours.", cta: "Add your CV", signUp: "Sign up", reading: "Reading your CV. A run takes about a minute."};
 
+/**
+ * A scan without an account: the dashboard's shell and pages, read from the
+ * scan kept in this browser. Before there is one, the same pages show an
+ * example scan (lib/example-scan.json) under a banner that says so, never an
+ * empty dashboard. A scan replaces the example the moment it lands.
+ */
 export default function AnalysisLayout({children}: LayoutProps<"/analysis">) {
-    const {analysis, hydrated, fileName} = useAnalysis();
-    const pathname = usePathname();
-    const router = useRouter();
-
-    // Only redirect once localStorage has actually been read, otherwise the
-    // first paint would bounce every visitor back to the landing page.
+    const {analysis, hydrated} = useAnalysis();
+    const scan = useCvScan();
+    const [example, setExample] = useState<JobRadarAnalysis | null>(null);
+    const needExample = hydrated && !analysis;
     useEffect(() => {
-        if (hydrated && !analysis) router.replace("/");
-    }, [hydrated, analysis, router]);
+        if (needExample && !example) import("@/lib/example-scan.json").then((m) => setExample(m.default as unknown as JobRadarAnalysis));
+    }, [needExample, example]);
 
-    if (!hydrated || !analysis) return null;
+    if (!hydrated || (needExample && !example)) return null;
 
-    return (
-        <div className={"mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-5 py-6 lg:px-8"}>
-            <header className={"flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"}>
-                <nav className={"no-scrollbar flex w-full gap-1 overflow-x-auto rounded-lg border border-border bg-card p-1 sm:w-fit"}>
-                    {TABS.map((tab) => {
-                        const active = pathname === tab.href;
-                        return (
-                            <Link
-                                key={tab.href}
-                                href={tab.href}
-                                aria-current={active ? "page" : undefined}
-                                className={cn(
-                                    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3.5 py-1.5 font-mono text-xs uppercase tracking-[0.12em] transition-colors",
-                                    active
-                                        ? "bg-secondary text-foreground"
-                                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                                )}
-                            >
-                                <span
-                                    aria-hidden
-                                    className={cn(
-                                        "size-1.5 rounded-full transition-colors",
-                                        active ? "bg-primary" : "bg-border"
-                                    )}
-                                />
-                                {tab.label}
-                            </Link>
-                        )
-                    })}
-                </nav>
-
-                <p className={"font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground"}>
-                    <span className={"text-foreground"}>{analysis.market.jobs_analyzed.toLocaleString()}</span>
-                    {" "}jobs analyzed
-                    {fileName ? ` · ${fileName}` : ""}
-                </p>
-            </header>
-
-            {children}
-            <SiteFooter className={"mt-10"} />
-        </div>
-    )
+    const shell = (
+        <ApplicationsProvider>
+            <OpportunitiesProvider>
+                <div className={"flex min-h-screen flex-col bg-background lg:flex-row"}>
+                    <Sidebar scan />
+                    <div className={"min-w-0 flex-1 overflow-x-clip"}>
+                        {needExample && (
+                            <div role={"note"} className={"sticky top-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background/95 px-4 py-2.5 backdrop-blur sm:px-8"}>
+                                <span className={"rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"}>Example</span>
+                                <span className={"text-[13.5px]"}>{scan.scanning ? EXAMPLE.reading : EXAMPLE.line}</span>
+                                <span className={"ml-auto flex items-center gap-3"}>
+                                    <Button size={"sm"} onClick={scan.open} disabled={scan.scanning}>{EXAMPLE.cta} <ArrowRightIcon className={"size-3.5"} /></Button>
+                                    <Button variant={"link"} size={"sm"} className={"px-0 text-foreground"} nativeButton={false} render={<Link href={"/sign-in"} />}>{EXAMPLE.signUp}</Button>
+                                </span>
+                            </div>
+                        )}
+                        {children}
+                    </div>
+                </div>
+                {scan.dialog}
+            </OpportunitiesProvider>
+        </ApplicationsProvider>
+    );
+    return needExample ? <ExampleAnalysisProvider example={example!}>{shell}</ExampleAnalysisProvider> : shell;
 }

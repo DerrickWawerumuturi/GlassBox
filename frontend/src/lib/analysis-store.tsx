@@ -124,6 +124,20 @@ export function AnalysisProvider({children}: { children: React.ReactNode }) {
     return <AnalysisContext.Provider value={value}>{children}</AnalysisContext.Provider>;
 }
 
+/**
+ * The example scan in place of the visitor's own, for /analysis before they
+ * have one (lib/example-scan.json: real public jobs, a sample CV). Saving a
+ * real scan still goes to the app's store, and replaces the example.
+ */
+export function ExampleAnalysisProvider({example, children}: {example: JobRadarAnalysis; children: React.ReactNode}) {
+    const outer = useAnalysis();
+    const value = useMemo<AnalysisContextValue>(
+        () => ({...outer, analysis: example, hydrated: true, fileName: null}),
+        [outer, example]
+    );
+    return <AnalysisContext.Provider value={value}>{children}</AnalysisContext.Provider>;
+}
+
 export function useAnalysis(): AnalysisContextValue {
     const context = useContext(AnalysisContext);
     if (!context) {

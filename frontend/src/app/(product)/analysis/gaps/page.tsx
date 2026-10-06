@@ -1,21 +1,6 @@
-'use client'
+import {redirect} from "next/navigation";
 
-import React from 'react'
-import {useAnalysis} from "@/lib/analysis-store";
-import SkillGapChart from "@/components/Market/SkillGapChart";
-import Annotation from "@/components/Annotation";
-
-export default function DashboardGapsPage() {
-    const {analysis} = useAnalysis();
-    if (!analysis) return null;
-
-    return (
-        <div className={"flex flex-col gap-1"}>
-            <Annotation className={"ml-3 self-start"}>everyone has gaps → here are yours, counted</Annotation>
-            <SkillGapChart
-                gaps={analysis.market.skill_gaps}
-                jobsAnalyzed={analysis.market.jobs_analyzed}
-            />
-        </div>
-    )
+/** Gaps is a view of the Market charts now. */
+export default function AnalysisGapsPage() {
+    redirect("/analysis?view=gaps");
 }
