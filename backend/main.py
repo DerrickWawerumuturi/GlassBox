@@ -23,19 +23,20 @@ from typing import Literal
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from pdf_inspector import pdf_inspector
 
 from src.Agent.utils.location import LocationPreferences
 from src.api import market
 from src.Agent.utils.types import (
-    AnalysisPayload, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
+    AnalysisPayload, AppliedDateRequest, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
     LocationPreferencesRequest, ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
 )
 from src.cv.current_user import current_user, optional_user
 from src.database.services import application_import
 from src.database.services.applications import (
-    ApplicationExists, ApplicationNotFound, BookmarkNotRemovable, JobNotFound, application_service,
+    ApplicationExists, ApplicationNotFound, BadAppliedDate, BookmarkNotRemovable, JobNotFound, application_service,
 )
 from src.database.services.spreadsheet import MAX_BYTES, InvalidSpreadsheet
 from src.database.services.users import NoLatestCV, StaleLatestCV, UserNotFound, user_service
@@ -84,9 +85,10 @@ async def _warm_when_quiet():
 
 @asynccontextmanager
 async def lifespan(_app):
-    warm = asyncio.create_task(_warm_when_quiet())
+    tasks = [asyncio.create_task(_warm_when_quiet()), asyncio.create_task(market.keep_fresh())]
     yield
-    warm.cancel()
+    for task in tasks:
+        task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -119,7 +121,8 @@ async def unexpected_errors(request, call_next):
 # the preflight with a 400 and the frontend cannot talk to the API at all.
 #
 # Set ALLOWED_ORIGINS as a comma-separated list on the container app, e.g.
-#   ALLOWED_ORIGINS=https://jobradar-frontend-pearl.vercel.app/,http://localhost:3000
+#   ALLOWED_ORIGINS=https://seeglassbox.com,https://www.seeglassbox.com,http://localhost:3000
+# (no trailing slash: a browser's Origin header never has one)
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
@@ -136,6 +139,7 @@ ALLOWED_ORIGIN_REGEX = (
     or r"http://(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}):3000"
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=1024)  # /market/look: 183 KB of JSON, about 40 KB gzipped
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -149,7 +153,7 @@ app.add_middleware(
 # HTTPException, and their messages are written for users.
 for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (NoProfile, 404), (NoLatestCV, 404),
                   (UserNotFound, 401), (BookmarkNotRemovable, 409), (ApplicationExists, 409),
-                  (StaleLatestCV, 409), (InvalidJobUrl, 422), (InvalidSpreadsheet, 422)):
+                  (StaleLatestCV, 409), (InvalidJobUrl, 422), (InvalidSpreadsheet, 422), (BadAppliedDate, 422)):
     app.add_exception_handler(
         exc,
         lambda request, err, code=code: JSONResponse(status_code=code, content={"detail": str(err)}),
@@ -387,6 +391,11 @@ async def delete_applications(body: DeleteApplicationsRequest, user=Depends(curr
 async def transition_application(application_id: int, body: TransitionRequest, user=Depends(current_user)):
     await run_in_threadpool(application_service.transition, user, application_id, **body.model_dump())
     return {"status": body.to_status}
+
+
+@app.post("/dashboard/applications/{application_id}/applied")
+async def set_applied_date(application_id: int, body: AppliedDateRequest, user=Depends(current_user)):
+    return {"applied_at": await run_in_threadpool(application_service.set_applied, user, application_id, body.applied_on)}
 
 
 @app.delete("/dashboard/applications/{application_id}")

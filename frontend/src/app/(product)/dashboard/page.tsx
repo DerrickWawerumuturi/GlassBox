@@ -283,9 +283,11 @@ export default function OverviewPage() {
                                     {" "}to save jobs and track applications across devices.
                                 </p>
                             ) : (
-                                <div className={"grid grid-cols-5 rounded-lg border border-border bg-card/50 divide-x divide-border/60"}>
-                                    {PIPELINE.map((status) => (
-                                        <div key={status} className={"px-3 py-3 text-center"}>
+                                // Five across from sm up. On a phone five labels collided, so it wraps
+                                // to three over two, each cell full width of its row; the gap draws the lines.
+                                <div className={"grid grid-cols-6 gap-px overflow-hidden rounded-lg border border-border bg-border/60 sm:grid-cols-5"}>
+                                    {PIPELINE.map((status, i) => (
+                                        <div key={status} className={cn("bg-card px-3 py-3 text-center sm:col-span-1", i < 3 ? "col-span-2" : "col-span-3")}>
                                             <p className={"font-mono text-lg font-bold tabular-nums"}><AnimatedCounter value={counts[status]} /></p>
                                             <p className={"mt-0.5 flex items-center justify-center gap-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground"}>
                                                 <StatusChip status={status} className={"px-0 py-0 !bg-transparent"} />
