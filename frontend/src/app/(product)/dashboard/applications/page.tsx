@@ -9,7 +9,6 @@ import {
     BuildingIcon,
     CalendarIcon,
     CircleDashedIcon,
-    ClockIcon,
     FileTextIcon,
     GaugeIcon,
     MapPinIcon,
@@ -21,14 +20,17 @@ import {
 import {cn} from "@/lib/utils";
 import {ApplicationRow} from "@/types/jobradar";
 import {CLOSED, PIPELINE, STATUS_LABEL, useApplications} from "@/lib/applications-store";
-import {ageLabel, timeAgo} from "@/lib/dashboard-data";
 import {GRID_TD, GridTh, PageBar, ScoreChip, Toolbar, ViewChip} from "@/components/dashboard/bits";
 import CompanyLogo from "@/components/dashboard/CompanyLogo";
 import SourceBadge from "@/components/dashboard/SourceBadge";
 import AddApplicationDialog from "@/components/dashboard/AddApplicationDialog";
 import ImportApplicationsDialog from "@/components/dashboard/ImportApplicationsDialog";
 import ApplicationSheet from "@/components/dashboard/ApplicationSheet";
-import {ApplicationsSkeleton, CvSnapshot, RemoveCell, RowMeta, TrackJobMenu, workplaceLabel} from "@/components/dashboard/ApplicationParts";
+import {ApplicationsSkeleton, CvSnapshot, RemoveCell, TrackJobMenu, workplaceLabel} from "@/components/dashboard/ApplicationParts";
+import ApplicationCards from "@/components/dashboard/ApplicationCards";
+import AppliedDatePicker from "@/components/dashboard/AppliedDatePicker";
+import {Checkbox} from "@/components/ui/checkbox";
+import {rowClickToggles} from "@/lib/application-rows";
 import {DeleteButton} from "@/components/ui/delete-button";
 import {Folder} from "@/components/ui/folder-component";
 import {useViewOpened} from "@/components/AnalyticsProvider";
@@ -63,7 +65,7 @@ export default function ApplicationsPage() {
     const [sheet, setSheet] = useState<ApplicationRow | null>(null);
     const pressTimer = useRef<number | null>(null);
     const longPressed = useRef(false);
-    const startPress = (event: React.TouchEvent, app: ApplicationRow) => {
+    const startPress = (event: React.TouchEvent<HTMLElement>, app: ApplicationRow) => {
         // A touch that lands on a control belongs to it. The status menu renders
         // inside the row, so without this a slow tap on "Withdrawn" opened the
         // sheet and swallowed the tap instead of changing the status.
@@ -82,11 +84,27 @@ export default function ApplicationsPage() {
             pressTimer.current = null;
         }
     };
-    const endPress = (event: React.TouchEvent) => {
+    const endPress = (event: React.TouchEvent<HTMLElement>) => {
         // The finger lifting must not also open the link the sheet opened over.
         if (longPressed.current) event.preventDefault();
         cancelPress();
     };
+    const rowHandlers = (app: ApplicationRow): React.HTMLAttributes<HTMLElement> => ({
+        onTouchStart: (event) => startPress(event, app),
+        onTouchEnd: endPress,
+        onTouchMove: cancelPress,
+        // A long press is ours, not the browser's copy menu or link preview.
+        onContextMenu: (event) => { if (pressTimer.current != null || longPressed.current) event.preventDefault(); },
+        // While selecting, a click on the row toggles it, but the checkbox and the
+        // date picker keep their own clicks (rowClickToggles has the story).
+        onClickCapture: selecting ? (event) => {
+            if (!rowClickToggles(event.target as HTMLElement)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (app.id > 0) toggle(app.id);
+        } : undefined,
+    });
+
     // Optimistic updates replace rows, so read the live one while open.
     const sheetApp = sheet ? apps.find((a) => a.id === sheet.id) ?? sheet : null;
 
@@ -164,69 +182,55 @@ export default function ApplicationsPage() {
                     </Toolbar>
 
                     {visible.length > 0 ? (
-                        <div className={"flex-1 overflow-x-auto"}>
-                            {/* Fixed on phones: the status column gets what its chip needs and the role
-                                column the rest, so both fit the screen and long lines truncate. */}
-                            <table className={"w-full border-collapse max-sm:table-fixed"}>
+                        <div className={"flex-1"}>
+                            <ApplicationCards apps={visible} selected={selected} toggle={toggle} rowHandlers={rowHandlers} />
+                            <div className={"hidden overflow-x-auto sm:block"}>
+                            <table className={"w-full border-collapse"}>
                                 <thead>
                                     <tr>
-                                        <GridTh className={cn("w-9 pl-4 sm:pl-5", !selecting && "max-sm:hidden")}>
-                                            <input
-                                                type={"checkbox"}
+                                        <GridTh className={"w-9 pl-5"}>
+                                            <Checkbox
                                                 aria-label={"Select every application in this view"}
                                                 checked={allSelected}
-                                                ref={(box) => { if (box) box.indeterminate = selecting && !allSelected; }}
-                                                onChange={() => setSelected(allSelected ? new Set()
+                                                indeterminate={selecting && !allSelected}
+                                                onCheckedChange={() => setSelected(allSelected ? new Set()
                                                     : new Set(visible.filter((app) => app.id > 0).map((app) => app.id)))}
-                                                className={"accent-primary"}
                                             />
                                         </GridTh>
-                                        <GridTh icon={TypeIcon} className={cn("sm:min-w-36 md:min-w-44", !selecting && "max-sm:border-l-0 max-sm:pl-4")}>Role</GridTh>
+                                        <GridTh icon={TypeIcon} className={"sm:min-w-36 md:min-w-44"}>Title</GridTh>
                                         <GridTh icon={BuildingIcon} className={"hidden min-w-32 md:table-cell"}>Company</GridTh>
-                                        <GridTh icon={GaugeIcon} className={"hidden sm:table-cell"}>Match</GridTh>
-                                        <GridTh icon={MapPinIcon} className={"hidden lg:table-cell"}>Location</GridTh>
-                                        <GridTh icon={GlobeIcon} className={"hidden md:table-cell"}>Source</GridTh>
-                                        <GridTh icon={CircleDashedIcon} className={"max-sm:w-32 max-sm:px-2"}>Status</GridTh>
-                                        <GridTh icon={FileTextIcon} className={"hidden md:table-cell"}>CV</GridTh>
-                                        <GridTh icon={CalendarIcon} className={"hidden xl:table-cell"}>Applied</GridTh>
-                                        <GridTh icon={ClockIcon} className={"hidden sm:table-cell"}>Added</GridTh>
-                                        <GridTh className={"hidden w-16 sm:table-cell"} />
+                                        <GridTh icon={CalendarIcon}>Date</GridTh>
+                                        <GridTh icon={GlobeIcon} className={"hidden lg:table-cell"}>Source</GridTh>
+                                        <GridTh icon={CircleDashedIcon}>Status</GridTh>
+                                        <GridTh icon={FileTextIcon} className={"hidden 2xl:table-cell"}>Applied with</GridTh>
+                                        <GridTh icon={MapPinIcon} className={"hidden xl:table-cell"}>Location</GridTh>
+                                        <GridTh icon={GaugeIcon}>Match</GridTh>
+                                        <GridTh className={"w-16"} />
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {visible.map((app) => (
                                         <tr
                                             key={app.id}
-                                            onTouchStart={(event) => startPress(event, app)}
-                                            onTouchEnd={endPress}
-                                            onTouchMove={cancelPress}
-                                            // A long press is ours, not the browser's copy menu or link preview.
-                                            onContextMenu={(event) => {
-                                                if (pressTimer.current != null || longPressed.current) event.preventDefault();
-                                            }}
-                                            onClickCapture={selecting ? (event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                if (app.id > 0) toggle(app.id);
-                                            } : undefined}
+                                            {...rowHandlers(app)}
                                             className={cn(
-                                                "transition-colors hover:bg-foreground/3 [-webkit-touch-callout:none] max-sm:select-none",
+                                                "transition-colors hover:bg-foreground/3",
                                                 // Closed rows read quieter, but their controls stay legible:
                                                 // fading the whole row dimmed the status menu the user had just used.
                                                 CLOSED.includes(app.status) && "text-muted-foreground",
                                                 selected.has(app.id) && "bg-primary/8 hover:bg-primary/10"
                                             )}>
-                                            <td className={cn(GRID_TD, "w-9 pl-4 sm:pl-5", !selecting && "max-sm:hidden")}>
-                                                <input
-                                                    type={"checkbox"}
-                                                    aria-label={`Select ${app.title ?? "application"}`}
-                                                    checked={selected.has(app.id)}
-                                                    disabled={app.id < 0}
-                                                    onChange={() => toggle(app.id)}
-                                                    className={"accent-primary"}
-                                                />
+                                            <td className={cn(GRID_TD, "w-9 pl-5")}>
+                                                <span data-row-select className={"inline-flex"}>
+                                                    <Checkbox
+                                                        aria-label={`Select ${app.title ?? "application"}`}
+                                                        checked={selected.has(app.id)}
+                                                        disabled={app.id < 0}
+                                                        onCheckedChange={() => toggle(app.id)}
+                                                    />
+                                                </span>
                                             </td>
-                                            <td className={cn(GRID_TD, !selecting && "max-sm:border-l-0 max-sm:pl-4")}>
+                                            <td className={GRID_TD}>
                                                 {app.url ? (
                                                     <a
                                                         href={app.url}
@@ -246,11 +250,10 @@ export default function ApplicationsPage() {
                                                     </NotebookTextIcon>
                                                 )}
                                                 {app.company && (
-                                                    <span className={"mt-0.5 hidden truncate font-mono text-[10.5px] text-muted-foreground sm:block md:hidden"}>
+                                                    <span className={"mt-0.5 block truncate font-mono text-[10.5px] text-muted-foreground md:hidden"}>
                                                         {app.company}
                                                     </span>
                                                 )}
-                                                <RowMeta app={app} />
                                             </td>
                                             <td className={cn(GRID_TD, "hidden md:table-cell")}>
                                                 {app.company ? (
@@ -260,29 +263,22 @@ export default function ApplicationsPage() {
                                                     </span>
                                                 ) : <span className={"text-muted-foreground/50"}>—</span>}
                                             </td>
-                                            <td className={cn(GRID_TD, "hidden sm:table-cell")}><ScoreChip value={app.match_score} /></td>
-                                            <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground lg:table-cell")}>
-                                                {workplaceLabel(app)}
-                                            </td>
-                                            <td className={cn(GRID_TD, "hidden md:table-cell")}>
+                                            <td className={cn(GRID_TD, "whitespace-nowrap")}><AppliedDatePicker app={app} /></td>
+                                            <td className={cn(GRID_TD, "hidden lg:table-cell")}>
                                                 <SourceBadge url={app.url} provider={app.provider} source={app.source} />
                                             </td>
-                                            <td className={cn(GRID_TD, "max-sm:px-2")}><StatusDisclosure app={app} /></td>
-                                            <td className={cn(GRID_TD, "hidden md:table-cell")}><CvSnapshot app={app} /></td>
+                                            <td className={GRID_TD}><StatusDisclosure app={app} /></td>
+                                            <td className={cn(GRID_TD, "hidden 2xl:table-cell")}><CvSnapshot app={app} /></td>
                                             <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground xl:table-cell")}>
-                                                {app.status !== "saved" && app.applied_at
-                                                    ? new Date(app.applied_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})
-                                                    : app.status !== "saved" ? <span title={"No application date was given"}>unknown</span> : "—"}
+                                                {workplaceLabel(app)}
                                             </td>
-                                            <td className={cn(GRID_TD, "hidden font-mono text-[11px] text-muted-foreground sm:table-cell")}
-                                                title={`Status last changed ${timeAgo(app.last_status_at)}`}>
-                                                {ageLabel(app.added_at ?? app.last_status_at)}
-                                            </td>
-                                            <td className={cn(GRID_TD, "hidden py-1 sm:table-cell")}><RemoveCell app={app} /></td>
+                                            <td className={GRID_TD}><ScoreChip value={app.match_score} /></td>
+                                            <td className={cn(GRID_TD, "py-1")}><RemoveCell app={app} /></td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                            </div>
                             <TrackJobMenu />
                         </div>
                     ) : state === "loading" ? (

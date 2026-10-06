@@ -50,10 +50,20 @@ export function familyOrder(look: Look): string[] {
     return [...CYCLE.filter((f) => present.includes(f)), ...present.filter((f) => !CYCLE.includes(f))];
 }
 
-export async function getLook(signal?: AbortSignal): Promise<Look> {
-    const response = await fetch(`${API_BASE_URL}/market/look`, {signal});
-    if (!response.ok) throw new Error(`market look failed: ${response.status}`);
-    return response.json();
+/**
+ * Today's count. Right after the API starts it is still being built: the API
+ * answers 503 with Retry-After, and we ask again (the page keeps its loading
+ * state) for up to about a minute.
+ */
+export async function getLook(signal?: AbortSignal, wait = (ms: number) => new Promise((r) => setTimeout(r, ms))): Promise<Look> {
+    for (let attempt = 0; ; attempt++) {
+        const response = await fetch(`${API_BASE_URL}/market/look`, {signal});
+        if (response.ok) return response.json();
+        const retry = Number(response.headers.get("Retry-After"));
+        if (response.status !== 503 || !retry || attempt >= 5) throw new Error(`market look failed: ${response.status}`);
+        await wait(Math.min(retry, 15) * 1000);
+        if (signal?.aborted) throw new DOMException("aborted", "AbortError");
+    }
 }
 
 // ------------------------------------------------------------ squares

@@ -205,6 +205,11 @@ export function TransitionApplication(
     return authed("POST", `/dashboard/applications/${id}/transition`, "Status change", {to_status});
 }
 
+/** Corrects the day the user applied (YYYY-MM-DD); not for a job only saved. */
+export function SetAppliedDate(id: number, applied_on: string): Promise<{ applied_at: string }> {
+    return authed("POST", `/dashboard/applications/${id}/applied`, "Applied date", {applied_on});
+}
+
 /** Deletes a terminal application (saved, withdrawn, rejected) and its history. */
 export function DeleteApplication(id: number): Promise<{ deleted: number }> {
     return authed("DELETE", `/dashboard/applications/${id}`, "Delete");

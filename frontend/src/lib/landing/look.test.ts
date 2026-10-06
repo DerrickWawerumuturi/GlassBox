@@ -1,7 +1,7 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 
 import fixture from "./look.fixture.json";
-import {apportion, askRows, familyOrder, haveSet, Look, normSkill, pickWall, rarest, sharePct, squaresFor, topTenHave, WALL_CAP} from "./look";
+import {apportion, askRows, familyOrder, getLook, haveSet, Look, normSkill, pickWall, rarest, sharePct, squaresFor, topTenHave, WALL_CAP} from "./look";
 
 const look = fixture as unknown as Look;
 
@@ -52,5 +52,23 @@ describe("the user's skills", () => {
             {key: "rust", name: "Rust", kind: "req"}], look.families.backend);
         expect(rows[0].kind).toBe("req");
         expect(rarest(rows)?.key).toBe(rows.filter((r) => r.kind === "req").sort((a, b) => a.n - b.n)[0].key);
+    });
+});
+
+describe("getLook", () => {
+    it("waits while the count is being built, then returns it", async () => {
+        const answers = [new Response("{}", {status: 503, headers: {"Retry-After": "2"}}), new Response(JSON.stringify({taken_at: "x"}), {status: 200})];
+        const waits: number[] = [];
+        vi.stubGlobal("fetch", vi.fn(async () => answers.shift()!));
+        const look = await getLook(undefined, async (ms) => { waits.push(ms); });
+        expect(look.taken_at).toBe("x");
+        expect(waits).toEqual([2000]);
+        vi.unstubAllGlobals();
+    });
+
+    it("gives up on other errors at once", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", {status: 500})));
+        await expect(getLook(undefined, async () => {})).rejects.toThrow("500");
+        vi.unstubAllGlobals();
     });
 });

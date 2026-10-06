@@ -5,7 +5,8 @@ import {useSession} from "next-auth/react";
 import {toast} from "sonner";
 
 import {ApplicationRow, ApplicationStatus} from "@/types/jobradar";
-import {ApiError, CreateApplicationFromUrl, CreateManualApplication, DeleteApplication, DeleteApplications, ListApplications, ManualApplicationPayload, ToggleBookmark, TransitionApplication, UrlApplicationPayload} from "@/lib/api";
+import {ApiError, CreateApplicationFromUrl, CreateManualApplication, DeleteApplication, DeleteApplications, ListApplications, ManualApplicationPayload, SetAppliedDate, ToggleBookmark, TransitionApplication, UrlApplicationPayload} from "@/lib/api";
+import {dayKey} from "@/lib/application-rows";
 import {useCv} from "@/lib/cv-store";
 
 export const PIPELINE: ApplicationStatus[] = ["saved", "applied", "screening", "interview", "offer"];
@@ -70,6 +71,8 @@ interface ApplicationsContextValue {
     /** Deletes the terminal ones among these; active ones stay, and the toast says so. */
     removeMany: (apps: ApplicationRow[]) => void;
     transition: (id: number, to: Exclude<ApplicationStatus, "saved">) => void;
+    /** The day the user applied, picked on a calendar (local date). */
+    setApplied: (id: number, day: Date) => void;
     refresh: () => Promise<void>;
     /** The token was refused: this browser's session predates an app update. */
     staleSession: boolean;
@@ -223,6 +226,13 @@ export function ApplicationsProvider({children}: { children: React.ReactNode }) 
         void sync(() => TransitionApplication(id, to));
     }, [sync]);
 
+    const setApplied = useCallback((id: number, day: Date) => {
+        const ymd = dayKey(day);
+        setApps((prev) => prev.map((app) => app.id === id ? {...app, applied_at: `${ymd}T12:00:00+00:00`} : app));
+        toast(`Applied date set to ${day.toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})}`);
+        void sync(() => SetAppliedDate(id, ymd));
+    }, [sync]);
+
     const markApplied = useCallback((job: SaveTarget) => {
         const existing = byJobId.get(job.jobId);
         if (existing) {
@@ -312,8 +322,8 @@ export function ApplicationsProvider({children}: { children: React.ReactNode }) 
     }, [sync]);
 
     const value = useMemo<ApplicationsContextValue>(
-        () => ({apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, removeMany, transition, refresh, staleSession, syncing}),
-        [apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, removeMany, transition, refresh, staleSession, syncing]
+        () => ({apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, removeMany, transition, setApplied, refresh, staleSession, syncing}),
+        [apps, state, byJobId, counts, pending, toggleSave, saveMany, markApplied, addManual, addFromUrl, remove, removeMany, transition, setApplied, refresh, staleSession, syncing]
     );
 
     return <ApplicationsContext.Provider value={value}>{children}</ApplicationsContext.Provider>;
