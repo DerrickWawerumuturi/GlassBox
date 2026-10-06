@@ -11,11 +11,12 @@ import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
 
 /*
- * Adding a CV from the landing page: the same scan the dashboard runs, but
- * the visitor stays here and the page lights up with what their scan found.
+ * Adding a CV from the landing page (and /product): the same scan the dashboard
+ * runs. On the landing page the visitor stays and the page lights up with what
+ * their scan found; elsewhere `onDone` takes them to the results.
  * Started by the upload button only, never by closing the dialog.
  */
-export function useCvScan() {
+export function useCvScan({onDone}: {onDone?: () => void} = {}) {
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
     const [open, setOpen] = useState(false);
@@ -31,6 +32,7 @@ export function useCvScan() {
             const result = await analysis;
             save(result, upload.name);
             events.finished(result.market?.jobs_analyzed ?? 0);
+            onDone?.();
         } catch (e) {
             events.failed();
             setStatus("error");

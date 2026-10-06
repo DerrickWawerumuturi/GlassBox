@@ -3,6 +3,7 @@ import type {Metadata} from "next";
 import LookAround from "@/components/landing/LookAround";
 import {COPY} from "@/components/landing/copy";
 import SiteFooter from "@/components/SiteFooter";
+import {SITE_URL} from "@/lib/site";
 
 export const metadata: Metadata = {
     title: COPY.meta.title,
@@ -15,7 +16,7 @@ const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: "Glassbox",
-    url: "https://jobradar-frontend-pearl.vercel.app",
+    url: SITE_URL,
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description: COPY.meta.description,

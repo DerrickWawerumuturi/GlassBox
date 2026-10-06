@@ -13,6 +13,7 @@ src/
     api/token/route.ts           mints the short-lived JWT the backend verifies
     api/logo/route.ts            same-origin company-logo proxy
     (landing)/page.tsx           landing: "Look around first" (components/landing), metadata from its copy
+    (public)/product, about      the Product and About pages; words in lib/site-copy.ts
     (auth)/sign-in/page.tsx
     (product)/
       analysis/…                 overview · skills · gaps · jobs for an anonymous scan
@@ -20,7 +21,8 @@ src/
       dashboard/
         layout.tsx               sidebar shell + ApplicationsProvider + OpportunitiesProvider
         page.tsx                 overview
-        applications/page.tsx    the tracker table
+        applications/page.tsx    the tracker: a table from sm up, ApplicationCards below sm;
+                                 AppliedDatePicker changes the applied date (Calendar in a Popover)
         opportunities/page.tsx   the daily pool matched to the CV
         market/page.tsx          the scan's market, one view at a time, picked on a needle dial (?view=demand)
         gaps/page.tsx            the skills page: Bridges, from your skills to what the scan's jobs ask for
@@ -52,6 +54,8 @@ src/
     analysis-store.tsx           the analysis, cached in localStorage and on the account
     cv-store.tsx                 the CV, same pattern
     applications-store.tsx       tracked applications, optimistic writes, per-user cache
+    site-copy.ts                 the header's Product menu, /product and /about, in one place
+    application-rows.ts          the applied day as a date, which row clicks select (tested)
     opportunities-store.tsx      matched pool jobs, per-user cache
     market.ts                    display transforms over the analysis
     market-views.ts              the Market tab's four views and the ?view= fallback

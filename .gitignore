@@ -14,3 +14,6 @@ docs/growth/
 # read on localhost and never committed.
 docs/brand/
 docs/local/
+
+# Claude rules (private, like docs/brand)
+CLAUDE.md

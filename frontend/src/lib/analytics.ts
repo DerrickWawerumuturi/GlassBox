@@ -20,7 +20,7 @@ type Events = {
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
     ad_pasted: {kind: "text" | "url"};
-    cta_clicked: {where: "sticky" | "closing"};
+    cta_clicked: {where: "sticky" | "closing" | "product"};
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {

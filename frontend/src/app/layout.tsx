@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import {ThemeWatcher} from "@/components/ThemeMenu";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
 import {themeScript} from "@/lib/theme";
+import {SITE_URL} from "@/lib/site";
 
 
 /*
@@ -54,7 +55,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://jobradar-frontend-pearl.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   applicationName: "Glassbox",
   title: {
     default: "Glassbox",

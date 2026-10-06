@@ -1,4 +1,5 @@
 import type {MetadataRoute} from "next";
+import {SITE_URL} from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
     return {
@@ -8,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
             // Private or thin pages add nothing to search.
             disallow: ["/dashboard", "/api/", "/onboarding", "/analysis"],
         },
-        sitemap: "https://jobradar-frontend-pearl.vercel.app/sitemap.xml",
+        sitemap: `${SITE_URL}/sitemap.xml`,
     };
 }

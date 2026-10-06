@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, {useState} from 'react'
 import Link from "next/link";
 import {MenuIcon} from "lucide-react";
 import {usePathname} from "next/navigation";
@@ -8,6 +8,12 @@ import {useSession} from "next-auth/react";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
 import {cn} from "@/lib/utils";
+import {Button} from "@/components/ui/button";
+import {
+    NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
+import {Sheet, SheetContent, SheetTitle, SheetTrigger} from "@/components/ui/sheet";
+import {FEATURES, NAV} from "@/lib/site-copy";
 import {
     DropdownMenu,
     DropdownMenuContent, DropdownMenuItem,
@@ -24,6 +30,7 @@ const Navbar = () => {
     const {analysis} = useAnalysis();
     const {cv} = useCv();
     const pathname = usePathname();
+    const [menuOpen, setMenuOpen] = useState(false);
 
     // The dashboard brings its own shell — a second header would fight the sidebar.
     if (pathname.startsWith("/dashboard")) return null;
@@ -36,10 +43,13 @@ const Navbar = () => {
         ...(analysis ? [{href: "/analysis", label: "Analysis"}] : []),
     ];
 
-    // Newcomers get somewhere to go too.
-    const links = productLinks.length > 0
-        ? productLinks
-        : [{href: "/#about", label: "About"}, {href: "/#faq", label: "FAQ"}];
+    // The public site, for everyone; the product links join them once there is something to open.
+    const siteLinks = [{href: "/#how-we-count", label: NAV.how}, {href: "/about", label: NAV.about}, {href: "/#faq", label: NAV.faq}];
+    const links = [...siteLinks, ...productLinks];
+    const linkClass = (href: string) => cn(
+        "font-mono text-xs uppercase tracking-[0.12em] transition-colors",
+        pathname === href ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+    );
 
     return (
         <header className={"flex items-center justify-between gap-4  px-5 py-5 lg:px-8"}>
@@ -52,21 +62,30 @@ const Navbar = () => {
 
 
             <div className={"flex items-center gap-5"}>
-                {links.length > 0 && (
-                    <nav className={"relative hidden items-center gap-5 sm:flex"}>
+                <nav aria-label={"Main"} className={"relative hidden items-center gap-5 md:flex"}>
+                        <NavigationMenu>
+                            <NavigationMenuList>
+                                <NavigationMenuItem>
+                                    <NavigationMenuTrigger className={"h-auto bg-transparent px-0 py-0 font-mono text-xs font-normal uppercase tracking-[0.12em] text-muted-foreground hover:bg-transparent hover:text-foreground data-popup-open:bg-transparent data-open:bg-transparent"}>
+                                        {NAV.product}
+                                    </NavigationMenuTrigger>
+                                    <NavigationMenuContent>
+                                        <ul className={"grid w-[440px] grid-cols-2 gap-1 p-1"}>
+                                            {FEATURES.map((f) => (
+                                                <li key={f.id}>
+                                                    <NavigationMenuLink render={<Link href={`/product#${f.id}`} />} className={"flex flex-col items-start gap-1 rounded-md p-3 hover:bg-muted"}>
+                                                        <span className={"text-sm font-medium text-foreground"}>{f.title}</span>
+                                                        <span className={"text-[13px] leading-snug text-muted-foreground"}>{f.nav}</span>
+                                                    </NavigationMenuLink>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </NavigationMenuContent>
+                                </NavigationMenuItem>
+                            </NavigationMenuList>
+                        </NavigationMenu>
                         {links.map((link) => (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={cn(
-                                    "font-mono text-xs uppercase tracking-[0.12em] transition-colors",
-                                    pathname.startsWith(link.href)
-                                        ? "text-foreground"
-                                        : "text-muted-foreground hover:text-foreground"
-                                )}
-                            >
-                                {link.label}
-                            </Link>
+                            <Link key={link.href} href={link.href} className={linkClass(link.href)}>{link.label}</Link>
                         ))}
 
                         {pathname === "/" && productLinks.length >= 2 && (
@@ -85,30 +104,30 @@ const Navbar = () => {
                                 </span>
                             </div>
                         )}
-                    </nav>
-                )}
+                </nav>
 
-                {links.length > 0 && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger render={(props) => (
-                            <button {...props} aria-label={"Menu"} className={"flex text-muted-foreground hover:text-foreground sm:hidden"}>
-                                <MenuIcon className={"size-5"} />
-                            </button>
-                        )} />
-                        <DropdownMenuContent align={"end"} className={"w-44"}>
-                            {links.map((link) => (
-                                <DropdownMenuItem
-                                    key={link.href}
-                                    render={(props) => (
-                                        <Link {...props} href={link.href} className={cn(props.className, "cursor-pointer")}>
-                                            {link.label}
-                                        </Link>
-                                    )}
-                                />
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
+                <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                    <SheetTrigger render={<Button variant={"ghost"} size={"icon-sm"} aria-label={NAV.menu} className={"text-muted-foreground md:hidden"} />}>
+                        <MenuIcon className={"size-5"} />
+                    </SheetTrigger>
+                    <SheetContent side={"right"} className={"gap-6 p-6"}>
+                        <SheetTitle className={"font-mono text-[11px] font-normal uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.menu}</SheetTitle>
+                        <nav aria-label={"Main"} className={"flex flex-col gap-5"}>
+                            <div className={"flex flex-col gap-3"}>
+                                <span className={"font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.product}</span>
+                                {FEATURES.map((f) => (
+                                    <Link key={f.id} href={`/product#${f.id}`} onClick={() => setMenuOpen(false)} className={"flex flex-col"}>
+                                        <span className={"text-[15px] font-medium"}>{f.title}</span>
+                                        <span className={"text-[13px] text-muted-foreground"}>{f.nav}</span>
+                                    </Link>
+                                ))}
+                            </div>
+                            <div className={"flex flex-col gap-3 border-t border-border pt-5"}>
+                                {links.map((link) => <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className={"text-[15px] font-medium"}>{link.label}</Link>)}
+                            </div>
+                        </nav>
+                    </SheetContent>
+                </Sheet>
 
                 {session?.user ? (
                         <DropdownMenu>
@@ -136,7 +155,7 @@ const Navbar = () => {
                             "px-3 py-1.5 font-mono font-bold text-xs uppercase tracking-[0.12em] " +
                             "text-foreground transition-colors hover:border-primary/40"}
                     >
-                        Sign in
+                        {NAV.signIn}
                     </Link>
                 )}
 

@@ -1,6 +1,7 @@
 import {describe, expect, it} from "vitest";
 
 import {pasteBody} from "@/lib/landing/ad";
+import {ABOUT_PAGE, FEATURES, NAV, PRODUCT_PAGE} from "@/lib/site-copy";
 import {COPY, TRUST} from "./copy";
 
 /* The founder's honesty rules for the landing copy (2026-10-05). */
@@ -8,7 +9,7 @@ import {COPY, TRUST} from "./copy";
 const strings = (v: unknown): string[] => typeof v === "string" ? [v]
     : typeof v === "function" ? strings((v as (...a: unknown[]) => unknown)(7, "70", "backend", "junior"))
         : Array.isArray(v) ? v.flatMap(strings) : v && typeof v === "object" ? Object.values(v).flatMap(strings) : [];
-const all = strings(COPY);
+const all = [...strings(COPY), ...strings(FEATURES.map(({title, nav, body}) => ({title, nav, body}))), ...strings(NAV), ...strings(PRODUCT_PAGE), ...strings(ABOUT_PAGE)];
 
 describe("landing copy", () => {
     it("keeps the trust line word for word where the CV is asked for", () => {
@@ -28,9 +29,16 @@ describe("landing copy", () => {
     it("has no em dashes, hyphenated asides or banned phrases", () => {
         for (const s of all) {
             expect(s).not.toMatch(/—/);
+            if (!s.startsWith("/")) expect(s).not.toMatch(/[a-z]-[a-z]/i);  // links are paths, not words
             expect(s).not.toMatch(/\b(next step|start here|learn next|1st)\b/i);
             expect(s).not.toMatch(/\bpostings?\b/i);
+            expect(s).not.toMatch(/\b(join|put yourself|recommended for you)\b/i);
+            expect(s).not.toMatch(/!/);
         }
+    });
+
+    it("keeps what a CV gets you to nine words each", () => {
+        for (const p of COPY.lower.get.points) expect(p.body.split(" ").length).toBeLessThanOrEqual(9);
     });
 
     it("keeps button labels short and the sticky button fixed", () => {

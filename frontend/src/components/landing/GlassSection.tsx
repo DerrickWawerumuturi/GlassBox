@@ -154,7 +154,7 @@ export default function GlassSection({look, family, level, have, subscribe, onHo
             <div className={"chapter on"}><span className={"n"}>02</span><h2>{G.chapter}</h2></div>
             <div className={"glass-hd"}>
                 <div>
-                    <p className={"sub"} style={{fontSize: 13}}>{G.lede(fmt(data.readable), FAMILY_LABEL[selected] ?? selected)}</p>
+                    <p className={"sub"} style={{fontSize: 13}}>{G.lede}</p>
                 </div>
                 <div className={"pastewrap"}>
                     <Button variant={"outline"} className={"pastepill h-auto"} onClick={pasteFromButton}>
