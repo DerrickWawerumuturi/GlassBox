@@ -91,3 +91,56 @@ describe("pageviews", () => {
         expect(posthog.capture.mock.calls.map((c) => c[1].$current_url)).toEqual(["/dashboard", "/dashboard/gaps"]);
     });
 });
+
+describe("where a visit came from", () => {
+    const visit = (referrer: string, search = "", host = "seeglassbox.com") => {
+        vi.stubGlobal("document", {referrer});
+        vi.stubGlobal("location", {search, hostname: host});
+    };
+
+    it("the first pageview carries the referring site's name and the utm tags, nothing more", async () => {
+        visit("https://www.reddit.com/r/cscareerquestions/comments/abc?share=1", "?utm_source=reddit&utm_campaign=launch&ref=x&email=a@b.c");
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.trackPageview("/");
+        a.trackPageview("/product");
+        const [first, second] = posthog.capture.mock.calls.map((c) => c[1]);
+        expect(first).toEqual({$current_url: "/", ref_domain: "reddit.com", utm_source: "reddit", utm_campaign: "launch"});
+        expect(second).toEqual({$current_url: "/product"});
+    });
+
+    it("drops our own site and trims utm values to 100 characters", async () => {
+        visit("https://seeglassbox.com/about", `?utm_content=${"x".repeat(150)}`, "www.seeglassbox.com");
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.trackPageview("/");
+        expect(posthog.capture.mock.calls[0][1]).toEqual({$current_url: "/", utm_content: "x".repeat(100)});
+    });
+
+    it("drops a utm value that looks like an address or an email", async () => {
+        const {visitSource} = await load();
+        expect(visitSource("", "?utm_source=https://evil.example/p?q=1&utm_medium=a@b.c&utm_term=jobs", "seeglassbox.com"))
+            .toEqual({utm_term: "jobs"});
+    });
+
+    it("scrub never lets a full referrer address or a query string through", async () => {
+        const {scrub} = await load();
+        const out = scrub({
+            uuid: "4", event: "$pageview",
+            properties: {
+                $current_url: "https://seeglassbox.com/?utm_source=reddit", ref_domain: "https://reddit.com/r/x?y=1",
+                utm_source: "reddit", utm_medium: "https://x.example/?a=b", referrer: "https://reddit.com/r/x", title: "Glassbox",
+                $referrer: "https://reddit.com/r/x", token: "phc_x", distinct_id: "u_1",
+            },
+        } as never);
+        expect(out?.properties).toEqual({$current_url: "/", utm_source: "reddit", token: "phc_x", distinct_id: "u_1"});
+    });
+
+    it("scrub keeps a bare referring domain on a pageview, and only there", async () => {
+        const {scrub} = await load();
+        const page = scrub({uuid: "5", event: "$pageview", properties: {ref_domain: "news.ycombinator.com", utm_source: "hn"}} as never);
+        expect(page?.properties).toEqual({ref_domain: "news.ycombinator.com", utm_source: "hn"});
+        const leave = scrub({uuid: "6", event: "$pageleave", properties: {ref_domain: "news.ycombinator.com", utm_source: "hn"}} as never);
+        expect(leave?.properties).toEqual({});
+    });
+});

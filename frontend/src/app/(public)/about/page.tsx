@@ -1,14 +1,13 @@
-import type {Metadata} from "next";
-
 import {Explainer, Numbers} from "@/components/site/Explainer";
 import {lookForPage} from "@/lib/landing/look-server";
 import {ABOUT_PAGE as A} from "@/lib/site-copy";
 import {COPY, FAMILY_LABEL} from "@/components/landing/copy";
+import {publicPage} from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = publicPage("/about", {
     title: "About",
     description: "Why Glassbox exists: job ads list everything, so we count what today's jobs really ask for.",
-};
+});
 
 export const revalidate = 300;
 

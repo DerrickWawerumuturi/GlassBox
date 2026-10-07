@@ -89,7 +89,9 @@ background, so after a scale-from-zero every other route answers in under a
 second instead of waiting for the model.
 
 Every signed-in request becomes a user through `services/users.py::resolve_user_id`,
-which refuses non-numeric (stale-session) subjects on every route. Unhandled
+which refuses non-numeric (stale-session) subjects on every route. A write by
+an unknown user creates them; that response carries `X-Account-Created: 1`
+(a middleware, exposed through CORS) for analytics' `signed_up`. Unhandled
 errors become a generic 500 from a middleware registered inside CORS, so the
 browser gets a readable error and never the raw exception text.
 

@@ -193,3 +193,18 @@ Left alone, worth a look later: `ml` as Machine learning in product postings
 72 / 176); `relational databases` as SQL; a tool name used as a company
 ("Grafana Labs CEO" as an investor).
 
+
+## Unity Catalog is not Unity (2026-10-07, `requirements-v5`)
+
+Unity (the game engine) was named in 197 readable tech jobs; 179 of them were
+at Databricks (103 in solutions). They meant **Unity Catalog**, Databricks'
+data catalog. `^Unity` matched its first word.
+
+The vocabulary gained a fourth alias mark: `!words` means "not this skill". The
+Unity line now ends `!unity catalog`. In prose the longest spelling still wins,
+so "Unity Catalog" is consumed whole and counts as nothing; "Unity and C#"
+still counts. As a CV name, "Unity Catalog" is kept as written and not matched.
+The title rule follows: `game` no longer claims "Unity Catalog" in a title.
+
+Unity after: 10 readable tech jobs, 1 in solutions. Databricks itself is
+unchanged; a job that says "Unity Catalog" almost always says "Databricks" too.

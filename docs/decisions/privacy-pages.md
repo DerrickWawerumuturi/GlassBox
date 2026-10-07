@@ -17,6 +17,7 @@ Change a page when the code it cites changes.
 | Database in the EU: Neon, Frankfurt | `DATABASE_URL` host `…eu-central-1.aws.neon.tech` |
 | Google sign-in: name, email address and profile picture | NextAuth Google provider, default scope `openid email profile` (`app/auth.ts`) |
 | PostHog (US): pages and a few steps; no cookies or recordings; Do Not Track; never the CV, file name or skills | `lib/analytics.ts` and `decisions/analytics.md` |
+| First page: the referring site's name and the link's campaign tags, never the full link | `visitSource` and `scrub` in `lib/analytics.ts` (since 2026-10-07) |
 | Our own fonts, no requests to Google Fonts | `app/fonts` with `next/font/local` |
 
 ## Corrections to the brief (2026-10-05, first draft)

@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import {Toaster} from "sonner";
@@ -10,7 +10,7 @@ import {ThemeWatcher} from "@/components/ThemeMenu";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
 import SpotlightWatcher from "@/components/SpotlightWatcher";
 import {themeScript} from "@/lib/theme";
-import {SITE_URL} from "@/lib/site";
+import {rootMetadata} from "@/lib/seo";
 
 
 /*
@@ -55,32 +55,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  applicationName: "Glassbox",
-  title: {
-    default: "Glassbox",
-    template: "%s · Glassbox",
-  },
-  alternates: {
-    canonical: "/",
-  },
-  description:
-      "Upload your CV and Glassbox scans live jobs. In about a minute it shows the skills your market wants, the ones you have, and the ones you don't yet.",
-  openGraph: {
-    type: "website",
-    siteName: "Glassbox",
-    title: "Glassbox: your job market, mapped",
-    description:
-        "Your CV vs the live job market: top skills, the ones you have, the ones you don't yet, and real jobs ranked by fit.",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Glassbox: your job market, mapped",
-    description:
-        "Your CV vs the live job market: top skills, the ones you have, the ones you don't yet, and real jobs ranked by fit.",
-  },
-};
+export const metadata = rootMetadata;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

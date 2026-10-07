@@ -73,6 +73,31 @@ transfer. The aggregation takes 0.1 to 0.3 s. The body is about 180 KB
 clause with `POOL` and reads only the profile fields counted, which took the
 transfer from about 8 MB to a fraction of it.
 
+### On the landing page (ISR, 2026-10-07)
+
+`/`, `/product` and `/about` render today's count on the server and are
+rebuilt at most every 5 minutes (`lib/landing/look-server.ts`). Before this
+change a failed fetch rendered the page without the count, and that thin page
+was cached for the full 5 minutes. After an API restart (503 until the count
+is built) visitors and crawlers got it: 280 words instead of 800 on 7 Oct.
+
+Next's rule (docs: "Incremental Static Regeneration", "Handling uncaught
+exceptions"): when a render throws during revalidation, the last good page
+keeps being served and the next request tries again. So `lookForPage`
+decides by `keepLastPage()`:
+
+| When | A failed fetch |
+|---|---|
+| A running production server (`NODE_ENV=production`, not the build phase): every render is a revalidation of a page that exists | throws; the last good page stays |
+| `next build` (`NEXT_PHASE=phase-production-build`): no page yet | renders without the count; the browser fetches it |
+| `next dev`, tests | renders without the count |
+
+If the build itself could not get the count, the thin build page stays until
+a revalidation succeeds, as before. Checked on a local production build: with
+the API stopped and the fetch cache cleared, `/` kept its count after the
+revalidate window (`x-nextjs-cache: STALE`, then `HIT`, the error in the log;
+after a failure Next retries within 30 s). Tests: `look-server.test.ts`.
+
 ## POST /market/ad
 
 `{"text": "..."}` or `{"url": "..."}`, exactly one. Returns

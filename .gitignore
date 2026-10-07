@@ -17,3 +17,6 @@ docs/local/
 
 # Claude rules (private, like docs/brand)
 CLAUDE.md
+
+# The Figma plugin: a local tool, never part of the repo.
+backend/GlassBox/

@@ -8,20 +8,26 @@ page's anonymous scan shows its result under `/analysis`.
 ```
 src/
   app/
-    layout.tsx                   fonts, dark lock, SessionProvider, AnalysisProvider, CVProvider, Toaster
+    layout.tsx                   fonts, dark lock, SessionProvider, AnalysisProvider, CVProvider, Toaster;
+                                 metadata from lib/seo.ts (no canonical at the root)
+    not-found.tsx                the 404: one sentence, a link home (Next answers 404 and noindex)
+    sitemap.ts, robots.ts        the sitemap lists lib/seo.ts PUBLIC_PATHS
     auth.ts, proxy.ts            NextAuth (Google); the token subject is Google's account id
     api/token/route.ts           mints the short-lived JWT the backend verifies
     api/logo/route.ts            same-origin company-logo proxy
-    (landing)/page.tsx           landing, static with ISR (5 min), today's count fetched on the server (lib/landing/look-server.ts): "Look around first" (components/landing), metadata from its copy
+    (landing)/page.tsx           landing, static with ISR (5 min), today's count fetched on the server (lib/landing/look-server.ts;
+                                 a failed fetch during revalidation keeps the last good page, decisions/market-look.md):
+                                 "Look around first" (components/landing), metadata from its copy, WebSite/Organization JSON-LD
     (public)/product, about      long explainers (components/site/Explainer.tsx, ISR); words in lib/site-copy.ts;
                                  screenshots in public/product (docs/local/render/product-shots.mjs)
-    (auth)/sign-in/page.tsx
+    (auth)/sign-in/page.tsx      layout.tsx only gives it a title (the page is a client component)
     (product)/
       analysis/…                 a scan without an account, on the dashboard's views: market · skills · jobs (gaps redirects);
                                  before a scan, the example (lib/example-scan.json) under an Example banner
       onboarding/page.tsx        CV breakdown after sign-in
       dashboard/
-        layout.tsx               sidebar shell + ApplicationsProvider + OpportunitiesProvider
+        layout.tsx               the title; components/dashboard/DashboardShell.tsx: sidebar shell +
+                                 ApplicationsProvider + OpportunitiesProvider (analysis/layout.tsx and AnalysisShell.tsx likewise)
         page.tsx                 overview
         applications/page.tsx    the tracker: a table from sm up, ApplicationCards below sm;
                                  AppliedDatePicker changes the applied date (Calendar in a Popover)
@@ -63,7 +69,8 @@ src/
     market-views.ts              the Market tab's four views and the ?view= fallback
     theme.ts                     Theme (System/Dark/Light), the no-flash <head> script, ?paper= previews
     latest-cv.ts                 the kept CV skills: hook, dates, reuse errors, the privacy line
-    analytics.ts                 PostHog: the only events, property allowlists, scrub (decisions/analytics.md)
+    analytics.ts                 PostHog: the only events, property allowlists, scrub, visit source (decisions/analytics.md)
+    seo.ts                       root metadata, publicPage() (canonical, og:url, share block), sitemap entries, home JSON-LD
     skill-bridges.ts             what Bridges reads: skill pairs, reach, most connected, roles
     use-rotor.ts                 the dial's motion: aim, ease, snap, wheel, drag, keys
     landing/look.ts              GET /market/look and the count's helpers (squares, wall, asks);
@@ -185,7 +192,8 @@ have local edits.
 `src/lib/api.ts` is the only place the backend is called. `API_BASE_URL` comes
 from `NEXT_PUBLIC_API_BASE_URL`. Signed-in calls go through `authed()`, which
 fetches a 15-minute token from `/api/token`. Timeouts are 60s for ordinary
-calls, long enough to outlast a cold start, and longer for analysis.
+calls, long enough to outlast a cold start, and longer for analysis. A response
+with `X-Account-Created` sends analytics' `signed_up` (decisions/analytics.md).
 
 ## Commands
 

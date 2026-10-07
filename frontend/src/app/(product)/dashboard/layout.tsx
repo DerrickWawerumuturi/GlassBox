@@ -1,29 +1,10 @@
-'use client'
+import type {Metadata} from "next";
 
-import React from 'react'
-import Sidebar from "@/components/dashboard/Sidebar";
-import StaleSessionBanner from "@/components/dashboard/StaleSessionBanner";
-import {ApplicationsProvider} from "@/lib/applications-store";
-import {OpportunitiesProvider} from "@/lib/opportunities-store";
+import DashboardShell from "@/components/dashboard/DashboardShell";
 
-/**
- * The workspace shell: sidebar left, content center-right, solid ground —
- * the blueprint grid stays off in here so the tables own the page.
- */
+// The shell is a client component; the title has to come from a server layout.
+export const metadata: Metadata = {title: "Dashboard"};
+
 export default function DashboardLayout({children}: LayoutProps<"/dashboard">) {
-    return (
-        <ApplicationsProvider>
-            <OpportunitiesProvider>
-                <div className={"flex min-h-screen flex-col bg-background lg:flex-row"}>
-                    <Sidebar />
-                    {/* Table pages go full-bleed; Overview centers itself. Wide
-                        content must scroll inside its own container, never the page. */}
-                    <div className={"min-w-0 flex-1 overflow-x-clip"}>
-                        <StaleSessionBanner />
-                        {children}
-                    </div>
-                </div>
-            </OpportunitiesProvider>
-        </ApplicationsProvider>
-    )
+    return <DashboardShell>{children}</DashboardShell>;
 }

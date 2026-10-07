@@ -1,18 +1,18 @@
-import type {Metadata} from "next";
 import Link from "next/link";
 
 import {LegalPage, LegalSection} from "@/components/LegalPage";
+import {publicPage} from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = publicPage("/privacy", {
     title: "Privacy",
     description: "What Glassbox keeps, where it lives, who else sees it, and how to delete it.",
-};
+});
 
 const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 
 export default function PrivacyPage() {
     return (
-        <LegalPage title={"Privacy"} updated={"5 October 2026"}
+        <LegalPage title={"Privacy"} updated={"7 October 2026"}
                    summary={"What we keep, where it lives, who else sees it, and how to delete it."}>
             <LegalSection title={"Your CV"}>
                 <li>We never store your PDF. We read it and delete it at once.</li>
@@ -30,6 +30,7 @@ export default function PrivacyPage() {
             </LegalSection>
             <LegalSection title={"Analytics"}>
                 <li>We use PostHog, a US service, to count which pages people open and a few steps, like a scan starting and finishing.</li>
+                <li>On the first page you open, it also gets the name of the site that sent you, like reddit.com, and any campaign tags in the link. Never the full link.</li>
                 <li>No cookies and no screen recordings. We respect Do Not Track.</li>
                 <li>It never receives your CV, its file name or your skills.</li>
             </LegalSection>

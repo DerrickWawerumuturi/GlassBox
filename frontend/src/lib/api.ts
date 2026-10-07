@@ -13,6 +13,7 @@ import {
     OpportunitiesResponse,
     Workplace
 } from "@/types/jobradar";
+import {track} from "@/lib/analytics";
 
 const CONFIGURED_API = (
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:7456"
@@ -61,6 +62,10 @@ export class ApiError extends Error {
     }
 }
 
+// The API creates an account on its first write and says so on that one response
+// (backend main.py). Nothing else can tell a first sign in from a later one.
+export const ACCOUNT_CREATED = "X-Account-Created";
+
 async function request<T>(path: string, init: RequestInit, timeoutMs: number, label: string): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -75,6 +80,7 @@ async function request<T>(path: string, init: RequestInit, timeoutMs: number, la
             const detail = await response.json().then((b) => b?.detail).catch(() => null);
             throw new ApiError(detail || `${label} failed: ${response.status}`, response.status)
         }
+        if (response.headers.get(ACCOUNT_CREATED)) track("signed_up");
 
         return await response.json();
     } catch (error) {

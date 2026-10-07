@@ -1,12 +1,12 @@
-import type {Metadata} from "next";
 import Link from "next/link";
 
 import {LegalPage, LegalSection} from "@/components/LegalPage";
+import {publicPage} from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = publicPage("/your-cv", {
     title: "What happens to your CV",
     description: "Your PDF is read and deleted at once. What we keep, where, and how to delete it.",
-};
+});
 
 export default function YourCvPage() {
     return (

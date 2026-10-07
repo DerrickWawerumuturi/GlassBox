@@ -1,4 +1,3 @@
-import type {Metadata} from "next";
 import Link from "next/link";
 
 import AddCvButton from "@/components/AddCvButton";
@@ -6,11 +5,12 @@ import {Explainer, Numbers} from "@/components/site/Explainer";
 import {Button} from "@/components/ui/button";
 import {lookForPage} from "@/lib/landing/look-server";
 import {PRODUCT_PAGE as P} from "@/lib/site-copy";
+import {publicPage} from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = publicPage("/product", {
     title: "Product",
     description: "Today's jobs, counted. Then where you stand, once your CV is in.",
-};
+});
 
 // Static, with today's counts for the numbers box (ISR, like the home page).
 export const revalidate = 300;

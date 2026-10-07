@@ -43,7 +43,9 @@ Job side, once per posting and stored in `job_profiles`: role family and level
 from the title (a level stated by the board, the posting's language, or its
 years when the title says nothing); years — the **highest** required figure,
 since required figures all apply, the lowest preferred one otherwise, a figure
-softened in its own clause ("ideally 5+") counting as preferred; required,
+softened in its own clause ("ideally 5+") counting as preferred, a range
+gating on its lower end and placing the level at its middle, and "no prior
+experience required" read as 0; required,
 preferred and mentioned skills by section, sections opened only by
 heading-like markers; the technologies the title names; work authorisation
 stated in the body; a non-English working language; a PhD requirement; a stale
@@ -126,6 +128,67 @@ The end state for that CV is 2 strong, 8 good and 173 stretch. The strong and
 good fits are mid-level or open-to-junior software roles open to Kenya, plus a
 Nairobi NLP internship. For the ML track, the CV shows no professional
 ML years, which is what an internship is for.
+
+## Years: why the highest figure (rechecked 2026-10-07)
+
+The audit asked whether the highest figure overstates what jobs require. On the
+live pool (4,284 counted tech jobs, read only), 2,673 state a required figure
+and 542 state two or more. Read by hand, nearly all of those say "8+ years of
+software engineering, including 2+ with LLMs": the lower figures sit inside the
+overall one. So the highest is the role's overall requirement; the lowest would
+have moved 374 jobs out of 5+ and understated them. Taking the first figure
+instead would move 50. The rule stays.
+
+What was wrong was smaller:
+
+| Fix | Example | Tech jobs |
+|---|---|---|
+| A range after the word "experience" read its upper end | "Experience: 5-7+ years" read 7, now 5 (level 6, senior not lead) | 16 (72 counted jobs in all) |
+| A privacy notice read as a requirement | "Your data is kept for up to 2 years in our candidate pool" | 1 |
+| "No prior experience required" with no figure was silence | now a requirement of 0 | 0 (1 counted job in all) |
+
+"0-1 years" and "0-2 years" were already read as 0. Most entry level ads state no
+figure at all and are levelled by their title. Known limit: "Staff candidates
+will typically have 8+ years" in a senior ad still reads 8 (1 job).
+
+The years mix stays senior after the fixes: of tech jobs stating a required
+figure, 2% ask a year or less and 75% ask 5 or more (Indeed's US tech postings:
+18% and 42%). That is the employer list (AI labs and late stage infrastructure
+companies hire few juniors), not the reading.
+
+## Families: physical and support "engineers" (2026-10-07, `requirements-v5`)
+
+`classify_family` filed any title with "engineer" or "engineering" under
+software engineering when nothing more specific matched. On the live pool 334
+counted jobs leave it under the rules below, and 13 join. The rules now:
+
+- **A title that names no software word** (software, developer, programmer,
+  technical staff...) and names **chip or electronics work** (RTL, ASIC,
+  physical design, design verification, PCB, RF, power electronics) is
+  `embedded`; one that names **physical work** (facilities, fire protection,
+  fluids, optical, construction, commissioning, power generation, controls,
+  data centre, mechanical, electrical...) is `non_tech`.
+- **A job function named before the technical word** makes that word its
+  subject: "Legal Engineer", "Recruiter, Field Engineering", "Tax Information
+  Reporting Intern". A role part (before the first comma or dash) that ends in a
+  function is that function: "Copywriter, Developer", "Developer Community
+  Manager". Not when the function is the role's own name ("Technical Account
+  Manager").
+- **Team names count:** "Field/Solutions/Sales/Forward Deployed Engineering",
+  "Consulting", "Professional Services", "Partner" and "Value" engineers are
+  `solutions`; detection, threat, identity, privacy, cryptography and GRC
+  engineers are `security`; IT, AV, technical services and escalations
+  engineers are `it_support`; "Platform/Site Reliability Engineering" and
+  "System Engineer" are `devops`; "Data/Analytics Engineering" is
+  `data_engineering`.
+- **The reverse:** "Product Management" and "Head/Director/VP of Product" are
+  `product`, "Tech Lead" is software, and a title that names IT as its
+  department, in capitals ("IT Intern", "Werkstudent:in IT ..."), or "Business
+  Technology", is `it_support` when nothing else claimed it.
+
+575 of 10,067 counted jobs change family; tech jobs go from 4,284 to 4,257
+(137 leave tech, 110 join). Software engineering goes from 1,581 to 1,260.
+Every move was read by hand (`docs/local/publishable-counts.html`).
 
 ## Known limits
 
