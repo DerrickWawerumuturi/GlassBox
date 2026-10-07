@@ -152,9 +152,22 @@ def remotive():
 
 
 def arbeitnow():
+    """
+    The whole feed, page by page until it says there is no next page. It holds
+    about a week of jobs: 28 pages and 2,986 recent jobs on 2026-10-07, when
+    pages 1 and 2 alone missed 76 of its 101 early career tech jobs.
+    """
     out = []
-    for page in (1, 2):
-        for j in _json(f"https://www.arbeitnow.com/api/job-board-api?page={page}").get("data", []):
+    for page in range(1, ARBEITNOW_PAGES + 1):
+        try:
+            d = _json(f"https://www.arbeitnow.com/api/job-board-api?page={page}")
+        except Exception:
+            # A dead first page is a dead source, reported as one. Later, keep
+            # what was read: the live window covers a day of missed sightings.
+            if page == 1:
+                raise
+            break
+        for j in d.get("data", []):
             out.append(Job(
                 provider="arbeitnow", external_id=j.get("slug"),
                 title=j.get("title"), company=j.get("company_name"),
@@ -165,6 +178,8 @@ def arbeitnow():
                 posted_at=str(j.get("created_at") or ""), posted_at_utc=iso_utc(j.get("created_at")),
                 raw=_slim(j, "description"),
             ))
+        if not d.get("data") or not (d.get("links") or {}).get("next"):
+            break
     return out
 
 
@@ -330,6 +345,9 @@ def workable(slug):
 POOL_COUNTRIES = [c.strip().upper() for c in
                   os.getenv("JOBRADAR_POOL_COUNTRIES", "KE,NG,ZA,GH,UG,RW,TZ,EG").split(",") if c.strip()]
 REGIONAL_PAGES = int(os.getenv("JOBRADAR_POOL_REGIONAL_PAGES", "5"))
+# A ceiling, not a target: arbeitnow() stops where the feed ends (28 pages of
+# 100 to 325 jobs on 2026-10-07). Each page is one request, read in turn.
+ARBEITNOW_PAGES = int(os.getenv("JOBRADAR_POOL_ARBEITNOW_PAGES", "40"))
 
 AGGREGATORS = [remoteok, remotive, arbeitnow, jobicy, himalayas, himalayas_regional, weworkremotely]
 ATS = {"greenhouse": greenhouse, "ashby": ashby, "lever": lever, "workable": workable}

@@ -188,3 +188,94 @@ workable:kuda               # 19 Africa
 greenhouse:alxafrica
 workable:renmoney
 workable:fairmoney
+
+# Early career, verified live 2026-10-07 (docs/changelog/2026-10-07-early-career-sources.md).
+# Found through new grad and internship lists (names and board slugs only), kept
+# when at least 5% of a board's recent jobs are early career tech and at least
+# 35% are tech. Counts are that day's, by the pool's own rules.
+# Campus and early career boards: separate boards for students and graduates.
+# The year in a slug changes; check these each autumn.
+greenhouse:asteraearlycareer2027        # 50 early career tech of 82, 7 outside the US
+greenhouse:klaviyocampus                # 7 early career tech of 15
+greenhouse:morsecorpcoop                # 18 early career tech of 20
+greenhouse:tenstorrentuniversity        # 7 early career tech of 9, 4 outside the US
+
+# Early career roles outside the US too (3 or more early career tech jobs).
+ashby:aiprise                           # 3 early career tech of 11, 2 outside the US
+ashby:armadin                           # 3 early career tech of 19, 1 outside the US
+ashby:backmarket                        # 4 early career tech of 31, 3 outside the US
+ashby:bree                              # 3 early career tech of 7, 3 outside the US
+ashby:docplanner                        # 4 early career tech of 22, 4 outside the US
+ashby:rivianvw.tech                     # 13 early career tech of 108, 1 outside the US
+ashby:skydio                            # 7 early career tech of 97, 1 outside the US
+ashby:snowflake                         # 17 early career tech of 246, 6 outside the US
+ashby:talos-trading                     # 5 early career tech of 10, 3 outside the US
+ashby:telus-digital                     # 6 early career tech of 51, 3 outside the US
+ashby:the-exploration-company           # 6 early career tech of 53, 4 outside the US
+ashby:zip                               # 4 early career tech of 56, 3 outside the US
+greenhouse:affirm                       # 8 early career tech of 110, 3 outside the US
+greenhouse:akunacapital                 # 11 early career tech of 20, 2 outside the US
+greenhouse:alarmcom                     # 13 early career tech of 56, 6 outside the US
+greenhouse:amperesand                   # 3 early career tech of 34, 1 outside the US
+greenhouse:aperaaiinc                   # 4 early career tech of 9, 4 outside the US
+greenhouse:appsflyer                    # 3 early career tech of 26, 2 outside the US
+greenhouse:atoms                        # 7 early career tech of 107, 1 outside the US
+greenhouse:catonetworks                 # 3 early career tech of 50, 3 outside the US
+greenhouse:celonis                      # 25 early career tech of 137, 24 outside the US
+greenhouse:drweng                       # 17 early career tech of 85, 12 outside the US
+greenhouse:dvtrading                    # 10 early career tech of 35, 5 outside the US
+greenhouse:fiveringsllc                 # 5 early career tech of 12, 1 outside the US
+greenhouse:gallup                       # 8 early career tech of 28, 1 outside the US
+greenhouse:gardacp                      # 3 early career tech of 11, 2 outside the US
+greenhouse:imc                          # 13 early career tech of 84, 9 outside the US
+greenhouse:jumptrading                  # 19 early career tech of 46, 17 outside the US
+greenhouse:rocketlab                    # 43 early career tech of 342, 14 outside the US
+greenhouse:rubrik                       # 7 early career tech of 99, 4 outside the US
+greenhouse:shifttechnology              # 7 early career tech of 17, 7 outside the US
+greenhouse:squarepointcapital           # 4 early career tech of 24, 3 outside the US
+greenhouse:togetherai                   # 5 early career tech of 37, 1 outside the US
+greenhouse:towerresearchcapital         # 15 early career tech of 48, 7 outside the US
+greenhouse:tripadvisor                  # 4 early career tech of 59, 4 outside the US
+greenhouse:veeamsoftware                # 13 early career tech of 144, 6 outside the US
+greenhouse:verkada                      # 11 early career tech of 145, 1 outside the US
+greenhouse:virtu                        # 5 early career tech of 12, 3 outside the US
+lever:ekimetrics                        # 6 early career tech of 16, 6 outside the US
+lever:palantir                          # 6 early career tech of 25, 3 outside the US
+workable:onlogic-inc                    # 4 early career tech of 28, 1 outside the US
+workable:twgai                          # 6 early career tech of 13, 2 outside the US
+
+# US early career (5 or more early career tech jobs each).
+ashby:allen-control-systems             # 6 early career tech of 39
+ashby:antares                           # 11 early career tech of 78
+ashby:apex-technology-inc               # 9 early career tech of 105
+ashby:blissway                          # 5 early career tech of 11
+ashby:cowboyspace                       # 6 early career tech of 79
+ashby:fab2                              # 7 early career tech of 32
+ashby:gritt                             # 5 early career tech of 7
+ashby:netic                             # 7 early career tech of 13
+ashby:radiant-industries                # 9 early career tech of 68
+ashby:reflect-orbital                   # 5 early career tech of 18
+greenhouse:amca                         # 5 early career tech of 25
+greenhouse:astranis                     # 26 early career tech of 91
+greenhouse:audaxgroup                   # 5 early career tech of 14
+greenhouse:botauto                      # 5 early career tech of 16
+greenhouse:freedomconsulting            # 6 early career tech of 54
+greenhouse:freeformfuturecorp           # 10 early career tech of 35
+greenhouse:generalmatter                # 7 early career tech of 73
+greenhouse:genevatrading                # 5 early career tech of 9
+greenhouse:graphcore                    # 5 early career tech of 75
+greenhouse:hpiq                         # 8 early career tech of 15
+greenhouse:k2spacecorporation           # 14 early career tech of 99
+greenhouse:katalyst                     # 5 early career tech of 23
+greenhouse:machindustries               # 21 early career tech of 136
+greenhouse:mill                         # 5 early career tech of 21
+greenhouse:muonspace                    # 8 early career tech of 114
+greenhouse:nisc                         # 9 early career tech of 29
+greenhouse:singlestore                  # 8 early career tech of 26
+greenhouse:trueanomalyinc               # 9 early career tech of 102
+greenhouse:vardaspace                   # 8 early career tech of 74
+greenhouse:wehrtyou                     # 8 early career tech of 44
+lever:hermeus                           # 13 early career tech of 41
+lever:steerbridge                       # 5 early career tech of 29
+workable:saalex                         # 13 early career tech of 49
+workable:tp-link-usa-corp               # 8 early career tech of 49

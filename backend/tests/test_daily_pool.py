@@ -1,6 +1,8 @@
 """Daily pool refresh contract. Offline: sources and storage are faked."""
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from src.Agent.utils.types import Job
 from src.jobpool import daily, sources
 
@@ -93,3 +95,45 @@ def test_remotive_normalization(monkeypatch):
     assert (j.provider, j.external_id, j.title, j.company) == ("remotive", "55", "Data Analyst", "Remotive Co")
     assert (j.location, j.remote, j.remote_eligibility, j.employment_type) == ("Africa", True, "Africa", "full_time")
     assert (j.url, j.posted_at_utc) == ("https://remotive.test/55", "2026-09-11T10:00:00")
+
+
+def arbeitnow_feed(pages: int, fail_at: int | None = None):
+    """A fake Arbeitnow feed of `pages` pages, one job each; the requested pages are recorded."""
+    asked = []
+
+    def fetch(url):
+        page = int(url.rsplit("=", 1)[1])
+        asked.append(page)
+        if page == fail_at:
+            raise TimeoutError()
+        if page > pages:
+            return {"data": [], "links": {"next": None}}
+        nxt = f"https://www.arbeitnow.com/api/job-board-api?page={page + 1}" if page < pages else None
+        return {"data": [{"slug": f"job-{page}", "title": "Werkstudent Software", "created_at": 1759795200}],
+                "links": {"next": nxt}}
+    return fetch, asked
+
+
+def test_arbeitnow_reads_the_whole_feed_and_stops_where_it_ends(monkeypatch):
+    # Pages 1 and 2 alone missed three quarters of its early career jobs (2026-10-07).
+    fetch, asked = arbeitnow_feed(5)
+    monkeypatch.setattr(sources, "_json", fetch)
+    assert [j.external_id for j in sources.arbeitnow()] == [f"job-{p}" for p in range(1, 6)]
+    assert asked == [1, 2, 3, 4, 5]
+
+
+def test_arbeitnow_pages_are_capped_by_the_setting(monkeypatch):
+    fetch, asked = arbeitnow_feed(50)
+    monkeypatch.setattr(sources, "_json", fetch)
+    monkeypatch.setattr(sources, "ARBEITNOW_PAGES", 3)
+    assert len(sources.arbeitnow()) == 3 and asked == [1, 2, 3]
+
+
+def test_arbeitnow_keeps_the_pages_read_before_a_later_one_fails(monkeypatch):
+    fetch, _ = arbeitnow_feed(10, fail_at=4)
+    monkeypatch.setattr(sources, "_json", fetch)
+    assert len(sources.arbeitnow()) == 3
+    fetch, _ = arbeitnow_feed(10, fail_at=1)
+    monkeypatch.setattr(sources, "_json", fetch)
+    with pytest.raises(TimeoutError):
+        sources.arbeitnow()

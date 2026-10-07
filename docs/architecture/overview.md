@@ -107,8 +107,9 @@ mirrors this exactly (`frontend/src/types/jobradar.ts`).
   each distinct location string once, about 3 s for 5,000 jobs, and every user
   after it shares those lookups. The result is cached per user and CV for ten
   minutes, and the dashboard paints its own cached copy while it waits.
-- **The daily run** fetches ~16k postings from ~200 sources in a minute or
-  two and profiles only what changed — typically 700-850 postings a day.
+- **The daily run** fetches ~27k postings from ~275 sources (since 7 Oct, with
+  the early career boards and Arbeitnow's whole feed) in a minute or two and
+  profiles only what changed. Which sources, and why: `decisions/job-sources.md`.
 
 ## Operational notes
 
