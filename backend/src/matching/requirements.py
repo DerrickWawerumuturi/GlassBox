@@ -27,7 +27,10 @@ from src.matching.skills import find_skills, scan, tokens
 # v3: role families and levels audited against the live pool (2026-10-05).
 # v4: bare "observability" needs context, spellings stop at commas, and the
 # employer's own name is not a skill (2026-10-05).
-PROFILER_VERSION = "requirements-v4"
+# v5: physical and support "engineer" titles leave software engineering, a range
+# after "experience" no longer reads its upper end, "Unity Catalog" is not Unity
+# (2026-10-07, decisions/skill-vocabulary.md).
+PROFILER_VERSION = "requirements-v5"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
@@ -152,9 +155,14 @@ _SINGLE = [
 _NUMBER_WORDS = {w: str(n) for n, w in enumerate("zero one two three four five six seven eight nine ten".split())}
 _WORD_YEARS = re.compile(rf"\b({'|'.join(_NUMBER_WORDS)})\b(?:\s*\(\d{{1,2}}\))?(?=\s*\+?\s*(?:or more\s+)?{_YEARS})",
                          re.I)
-# A figure in a sentence with these words is prose about the company.
+# A figure in a sentence with these words is prose about the company, or about
+# how long it keeps an applicant's data ("kept for up to 2 years in our candidate pool").
 _PROSE = re.compile(r"founded|years ago|in business|over the past|established|anniversary|years old|of age\b|"
-                    r"\bwe(?:'ve| have)\b|\bour (?:team|company|founders?)\b", re.I)
+                    r"\bwe(?:'ve| have)\b|\bour (?:team|company|founders?)\b|\b(?:kept|stored|retained) for\b|"
+                    r"candidate pool", re.I)
+# "No prior experience required": a stated requirement of zero, not silence.
+_NO_EXPERIENCE = re.compile(r"\bno (?:prior |previous |professional |work |industry )?(?:work )?experience "
+                            r"(?:is )?(?:required|necessary|needed)\b", re.I)
 MAX_PLAUSIBLE_YEARS = 15
 
 
@@ -168,14 +176,16 @@ def _figures(text: str) -> list[tuple[int, int, int, int]]:
     text = _WORD_YEARS.sub(lambda m: _NUMBER_WORDS[m.group(1).lower()].ljust(len(m.group())), text or "")
     found, masked = [], []
     # Ranges first: "2-4 years" gates on 2, and its span is masked so the single
-    # patterns cannot read the 4 back out as a separate requirement.
+    # patterns cannot read the 4 back out as a separate requirement. The mask is
+    # checked at the figure itself, not where a pattern starts: "Experience: 3-5
+    # years" starts its match at "Experience", and read 5 (2026-10-07).
     for m in _RANGE.finditer(text):
         low, high = sorted((int(m.group(1)), int(m.group(2))))
         found.append((m.start(), m.end(), low, (low + high) // 2))
         masked.append((m.start(), m.end()))
     for pattern in _SINGLE:
         found.extend((m.start(), m.end(), int(m.group(1)), int(m.group(1))) for m in pattern.finditer(text)
-                     if not any(s <= m.start() < e for s, e in masked))
+                     if not any(s <= m.start(1) < e for s, e in masked))
     return [f for f in found if f[2] <= MAX_PLAUSIBLE_YEARS and not _PROSE.search(_around(text, f[0], f[1], _SENTENCE))]
 
 
@@ -186,9 +196,13 @@ def _experience(title: str | None, description: str | None) -> tuple[dict, int |
     Required figures are conjunctive, so the HIGHEST one is the gate: a posting
     asking "4+ years shipping Go" AND "2+ years on distributed systems" needs
     four (measured on a real Supabase posting in jobhunt, where taking the
-    lowest let a four-year role through). Preferred figures are aspirations, so
-    the lowest one counts. A figure softened in its own clause ("ideally 5+
-    years") is preferred wherever it appears.
+    lowest let a four-year role through). Rechecked on the live pool
+    (2026-10-07): of 542 tech ads with two or more required figures, nearly all
+    read "8+ years, including 2+ with LLMs", so the highest is the overall
+    figure and the lowest would understate them. A range gates on its lower end.
+    Preferred figures are aspirations, so the lowest one counts. A figure
+    softened in its own clause ("ideally 5+ years") is preferred wherever it
+    appears. "No prior experience required" with no figure is a requirement of 0.
     """
     text = description or ""
     spans = _spans(text)
@@ -209,6 +223,8 @@ def _experience(title: str | None, description: str | None) -> tuple[dict, int |
     if required or general:
         # The gate is the highest required figure; the level reads the same figures at their middles.
         return {"years": max(required or general), "kind": "required"}, max(middles)
+    if _NO_EXPERIENCE.search(text):
+        return {"years": 0, "kind": "required"}, 0
     if wished:
         return {"years": min(wished), "kind": "preferred"}, None
     return {"years": None, "kind": "unstated"}, None

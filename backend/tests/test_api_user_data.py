@@ -71,6 +71,20 @@ def test_stale_non_numeric_session_is_refused_everywhere():
         assert response.status_code == 401, (path, response.status_code, response.text)
 
 
+def test_the_first_write_says_it_created_the_account():
+    sub = f"8{int(time.time() * 1000)}{uuid.uuid4().int % 1000:03d}"
+    fresh = TestClient(main.app)
+    fresh.headers["Authorization"] = f"Bearer {token(sub)}"
+    try:
+        assert fresh.get("/cv").status_code == 404  # a read creates nothing
+        first = fresh.put("/cv", json=CV)
+        assert first.status_code == 200 and first.headers.get("x-account-created") == "1"
+        assert "x-account-created" not in fresh.put("/cv", json=CV).headers
+    finally:
+        with connection() as conn, conn.cursor() as cur:
+            cur.execute("delete from users where sub = %s", (sub,))
+
+
 def test_cv_and_analysis_round_trip(client):
     assert client.get("/cv").status_code == 404
     assert client.put("/cv", json=CV).status_code == 200

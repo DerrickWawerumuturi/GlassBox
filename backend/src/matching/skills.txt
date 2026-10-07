@@ -13,6 +13,9 @@
 #            ?word[context words]  a name, but in prose only in a sentence that
 #                   also says a context word. For a skill postings also use as
 #                   a quality ("performance, observability and security").
+#            !words  NOT this skill: a longer name that contains the skill's
+#                   name but is something else ("Unity Catalog" is Databricks'
+#                   data catalog, not the Unity game engine). Skipped whole.
 #          The words of one alias may be joined by spaces, hyphens or slashes,
 #          never a comma or full stop: "product, design" is not Product design.
 # related  key=credit: knowing THIS skill earns partial credit toward THAT one.
@@ -200,7 +203,7 @@ shopify | Shopify | cms | shopify, shopify liquid |
 salesforce | Salesforce | crm | salesforce, apex, salesforce apex, sfdc |
 sap | SAP | enterprise | ^SAP, sap erp, sap abap, abap, s/4hana |
 intersystems | InterSystems (Caché, IRIS) | enterprise | intersystems, intersystems iris, objectscript, cache objectscript, ^MUMPS, trakcare, healthshare |
-unity | Unity | game | unity3d, unity 3d, unity engine, ^Unity | c#=0.5
+unity | Unity | game | unity3d, unity 3d, unity engine, ^Unity, !unity catalog | c#=0.5
 unreal engine | Unreal Engine | game | unreal engine, unreal, ue5, ue4 | c++=0.5
 blockchain | Blockchain | blockchain | blockchain, web3, ethereum, smart contracts, smart contract, defi | solidity=0.6
 embedded systems | Embedded systems | embedded | embedded systems, embedded software, embedded c, firmware, microcontrollers, rtos, arduino, raspberry pi, stm32, freertos, zephyr rtos, real time operating systems, real time operating system | c=0.6

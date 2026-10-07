@@ -15,7 +15,7 @@ on conflict (sub) do update set
     name  = excluded.name,
     image = excluded.image,
     updated_at = now()
-returning id
+returning id, (xmax = 0) as created
 """
 
 SAVE_CV = """
@@ -95,10 +95,12 @@ def get_user_id(conn, sub: str) -> int | None:
         return row["id"] if row else None
 
 
-def upsert_user(conn, sub, email, name, image) -> int:
+def upsert_user(conn, sub, email, name, image) -> tuple[int, bool]:
+    """The user's id, and whether this call inserted the row (xmax is 0 only on a fresh insert)."""
     with conn.cursor() as cur:
         cur.execute(UPSERT_USER, (sub, email, name, image))
-        return cur.fetchone()["id"]
+        row = cur.fetchone()
+        return row["id"], row["created"]
 
 
 def save_cv(conn, user_id: int, data: dict) -> None:

@@ -54,6 +54,19 @@ def test_nothing_stored_fails_the_run(monkeypatch):
     assert daily.main() == 1
 
 
+def test_a_failed_snapshot_warns_on_the_run_and_keeps_it_green(monkeypatch, capsys):
+    # 2 to 5 October 2026 wrote no snapshot and nobody saw why: the failure was
+    # a plain log line. Now it is a GitHub Actions warning annotation, one line.
+    def fail():
+        raise RuntimeError("relation \"market_snapshots\" does not exist\nLINE 1: insert into")
+
+    monkeypatch.setattr(daily.snapshot, "take", fail)
+    daily.take_snapshot()
+    out = capsys.readouterr().out.strip()
+    assert out.startswith("::warning title=Market snapshot not taken::RuntimeError: relation")
+    assert "\n" not in out and "%0ALINE 1" in out
+
+
 def pytest_fail(message):
     raise AssertionError(message)
 

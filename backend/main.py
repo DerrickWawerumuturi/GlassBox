@@ -39,7 +39,7 @@ from src.database.services.applications import (
     ApplicationExists, ApplicationNotFound, BadAppliedDate, BookmarkNotRemovable, JobNotFound, application_service,
 )
 from src.database.services.spreadsheet import MAX_BYTES, InvalidSpreadsheet
-from src.database.services.users import NoLatestCV, StaleLatestCV, UserNotFound, user_service
+from src.database.services.users import NoLatestCV, StaleLatestCV, UserNotFound, account_created, user_service
 from src.jobpool.extract import InvalidJobUrl
 from src.jobpool.opportunities import NoProfile, opportunity_service
 from src.jobpool.service import job_url_service
@@ -115,6 +115,25 @@ async def unexpected_errors(request, call_next):
         return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
 
 
+# Read by the frontend (lib/api.ts) to send analytics' signed_up exactly once.
+ACCOUNT_CREATED_HEADER = "X-Account-Created"
+
+
+@app.middleware("http")
+async def account_created_header(request, call_next):
+    """
+    Accounts are created on a user's first write (resolve_user_id), so only
+    the API knows when one is new. That response says so in a header. A
+    request that fails says nothing: its transaction may have rolled back.
+    """
+    news = []
+    account_created.set(news)
+    response = await call_next(request)
+    if news and response.status_code < 400:
+        response.headers[ACCOUNT_CREATED_HEADER] = "1"
+    return response
+
+
 # The browser calls this container directly — a Next.js proxy is not an option,
 # because an analysis takes far longer than a serverless function is allowed to
 # run. That makes CORS load-bearing: an origin missing from here is refused at
@@ -147,6 +166,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[ACCOUNT_CREATED_HEADER],
 )
 
 # Expected failures, each with its status code. Handled inside CORS, like

@@ -56,7 +56,7 @@ def tokens(text: str) -> list[re.Match]:
 
 
 def _load(path: Path = VOCABULARY_FILE):
-    skills, folded, exact, in_list, gated = {}, {}, {}, {}, {}
+    skills, folded, exact, in_list, gated, not_it = {}, {}, {}, {}, {}, set()
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -71,6 +71,8 @@ def _load(path: Path = VOCABULARY_FILE):
             if alias[0] == "?":
                 word, context = _GATED_ALIAS.fullmatch(alias).groups()
                 gated[tuple(t.group().lower() for t in tokens(word))] = (key, frozenset(context.lower().split()))
+            elif alias[0] == "!":
+                not_it.add(tuple(t.group().lower() for t in tokens(alias[1:])))
             elif alias[0] in "^~":
                 (exact if alias[0] == "^" else in_list)[alias[1:]] = key
             else:
@@ -79,11 +81,11 @@ def _load(path: Path = VOCABULARY_FILE):
     unknown = {o for s in skills.values() for o in s.related if o not in skills}
     if unknown:
         raise ValueError(f"skills.txt relates to skills it does not define: {sorted(unknown)}")
-    return skills, folded, exact, in_list, gated
+    return skills, folded, exact, in_list, gated, not_it
 
 
-SKILLS, _FOLDED, _EXACT, _IN_LIST, _GATED = _load()
-_LONGEST = max(len(alias) for alias in (*_FOLDED, *_GATED))
+SKILLS, _FOLDED, _EXACT, _IN_LIST, _GATED, _NOT_IT = _load()
+_LONGEST = max(len(alias) for alias in (*_FOLDED, *_GATED, *_NOT_IT))
 
 
 def display(key: str) -> str:
@@ -152,6 +154,11 @@ def scan(text: str | None) -> list[tuple[str, int, int]]:
             if n > 1 and not all(joined[i:i + n - 1]):
                 continue
             phrase = tuple(words[i:i + n])
+            if phrase in _NOT_IT:
+                # A longer name that contains a skill's name but is another thing
+                # ("Unity Catalog" is Databricks, not the game engine): skipped whole.
+                i += n
+                break
             key = _FOLDED.get(phrase) or _gated(text, phrase, found[i].start(), found[i + n - 1].end())
             if key is None and n == 1:
                 surface = found[i].group()

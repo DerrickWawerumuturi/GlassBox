@@ -99,6 +99,17 @@ def test_only_headings_open_sections():
     ("Requirements: two (2) years of experience with React.", {"years": 2, "kind": "required"}),
     ("We have 10+ years in business. You need 2+ years of experience.", {"years": 2, "kind": "required"}),
     ("Requirements: 0-2 years of professional experience.", {"years": 0, "kind": "required"}),
+    # Real phrasings, 2026-10-07. A range after "experience" read its upper end.
+    ("- Experience: 5-7+ years in data center commissioning, construction, or critical infrastructure delivery",
+     {"years": 5, "kind": "required"}),
+    ("Experience and Skills: 0-2+ years of experience reading and interpreting mechanical drawings",
+     {"years": 0, "kind": "required"}),
+    # The overall figure is the highest; the "including" figure sits inside it.
+    ("You Have: 8+ years of software engineering experience, with at least 2 years working directly with LLMs",
+     {"years": 8, "kind": "required"}),
+    ("Capability over Tenure: No prior experience required.", {"years": 0, "kind": "required"}),
+    ("Your data is kept for up to 2 years in our candidate pool. Read our Privacy Notice.",
+     {"years": None, "kind": "unstated"}),
 ])
 def test_extract_experience(description, expected):
     assert extract_experience("Engineer", description) == expected
@@ -163,6 +174,51 @@ def test_role_family_audit_cases(title, family):
     assert classify_family(title) == family
 
 
+# Real titles from the live pool, 2026-10-07 (publishable counts audit).
+@pytest.mark.parametrize("title, family", [
+    # Engineering of physical things reached software only through "engineer".
+    ("Facilities Engineer - Memphis", "non_tech"), ("Fire Protection Engineer - Memphis", "non_tech"),
+    ("Fluids Engineer (Power Generation) - Memphis", "non_tech"), ("Optical Engineer (Data Center)", "non_tech"),
+    ("Rack Design Engineer (Data Center)", "non_tech"), ("Controls Engineer, Supercomputer Infrastructure - Memphis", "non_tech"),
+    ("Associate Construction Engineer - Power Infrastructure", "non_tech"), ("Commissioning Engineer II", "non_tech"),
+    ("Power Systems Engineer, Data Center Infrastructure - Memphis", "non_tech"),
+    # Chip and electronics design is hardware.
+    ("Physical Design Engineer", "embedded"), ("Lead RTL Design Engineer", "embedded"),
+    ("Staff Design Verification Engineer", "embedded"), ("Senior Radio Frequency Engineer", "embedded"),
+    # A job function named first: the technical word is its subject.
+    ("Tax Information Reporting Intern", "non_tech"), ("Legal Engineer (In-House)", "non_tech"),
+    ("Tutorial Fellow, School Of Computing & Informatics- Nairobi Campus", "non_tech"),
+    ("Recruiter, Field Engineering & FDE", "non_tech"), ("Executive Assistant to Head of Engineering", "non_tech"),
+    ("Copywriter, Developer", "non_tech"), ("Developer Community Manager", "non_tech"),
+    ("(Senior) Account Executive - Software Sales (d/f/m)", "non_tech"), ("GTM Engineer", "non_tech"),
+    ("Senior HR Business Partner - Engineering, Product, and Design", "non_tech"),
+    ("Technical Account Manager", "solutions"),
+    # Customer-facing engineering, security specialisms, IT and systems work.
+    ("Manager, Field Engineering", "solutions"), ("Deployed Engineer (Early Career- SF)", "solutions"),
+    ("Consulting Engineer", "solutions"), ("Senior Professional Services Engineer - West", "solutions"),
+    ("Detection and Response Engineer", "security"), ("Staff Identity Governance and Access Engineer", "security"),
+    ("Head of Product Security", "security"), ("IT Ops Engineer", "it_support"), ("Technical Services Engineer", "it_support"),
+    ("Senior System Engineer", "devops"), ("Director, Site Reliability Engineering", "devops"),
+    ("Intern, Data Engineering", "data_engineering"),
+    # Tech titles that sat in `other`.
+    ("Product Management - Interns", "product"), ("Director of Product Management, Fintech", "product"),
+    ("VP, Product", "product"), ("Director of Product Design", "design"), ("IT Intern", "it_support"),
+    ("ICT & Database Intern", "it_support"), ("Intern, Business Technology", "it_support"),
+    ("Werkstudent:in (m/w/d) IT Workplace Management & Deployment", "it_support"),
+    ("Tech Lead Manager, Agent Runtime Platform", "software_engineering"),
+    # ...and what must not move: the department-IT rule reads capitals only.
+    ("Confidential Executive Search in Kenya: When Should Employers Use It?", "other"),
+    ("IT Sales Representative", "non_tech"), ("Software Engineer, Stripe Tax", "software_engineering"),
+    ("Engineering Manager, Accounting Products", "software_engineering"),
+    ("Senior Software Engineer, Battery Management", "software_engineering"),
+    ("Kernel Engineer - New Grad", "software_engineering"), ("Engineering Intern (Summer 2027)", "software_engineering"),
+    ("Senior Distribution Engineer, Gitlab: Build", "software_engineering"), ("Founding Engineer", "software_engineering"),
+    ("Unity Developer", "game"), ("Unity Catalog Engineer", "software_engineering"),
+])
+def test_role_family_publishable_counts_cases(title, family):
+    assert classify_family(title) == family
+
+
 @pytest.mark.parametrize("title, level", [
     # "Manager" in a product or project title names the function, not a team.
     ("Senior Product Manager - Product & Experience", "senior"), ("Product Manager", "unknown"),
@@ -171,6 +227,14 @@ def test_role_family_audit_cases(title, family):
 ])
 def test_product_titles_are_not_all_leads(title, level):
     assert classify_seniority(title) == level
+
+
+def test_a_range_after_the_word_experience_is_read_as_a_range():
+    # Read as 7 before 2026-10-07: the pattern starting at "Experience" got past
+    # the range's mask and took its upper end, so the level was lead, not senior.
+    title, text = "Staff Commissioning Engineer, Mechanical", "- Experience: 5-7+ years in data center commissioning."
+    assert experience_level_years(title, text) == 6
+    assert classify_seniority("Commissioning Engineer", "", None, experience_level_years(title, text)) == "senior"
 
 
 def test_a_year_range_places_the_level_at_its_middle():

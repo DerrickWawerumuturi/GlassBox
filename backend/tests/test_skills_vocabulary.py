@@ -84,3 +84,11 @@ def test_a_spelling_stops_at_a_comma():
     assert skills.find_skills("Strong product design and data analytics skills.") == ["product design", "data analysis"]
     # Hyphens and slashes still join one spelling.
     assert skills.find_skills("React-Native, CI/CD and infrastructure-as-code.") == ["react native", "ci/cd", "terraform"]
+
+
+def test_unity_catalog_is_databricks_not_the_game_engine():
+    # 103 Databricks solutions jobs counted Unity (2026-10-07 audit).
+    assert skills.find_skills("Govern data with Unity Catalog and Delta Lake.") == ["databricks"]
+    assert skills.find_skills("unity-catalog permissions") == []
+    assert skills.find_skills("Ship games in Unity and C#.") == ["unity", "c#"]
+    assert skills.resolve_all(["Unity Catalog", "Unity"]) == ({"unity"}, ["Unity Catalog"])

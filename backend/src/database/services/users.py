@@ -6,6 +6,7 @@ the one way any request becomes a users.id — the applications service uses it
 too — so the stale-session guard cannot be skipped by one endpoint and not another.
 """
 import hashlib
+from contextvars import ContextVar
 from types import SimpleNamespace
 
 from src.Agent.utils import location as loc
@@ -15,6 +16,13 @@ from src.database.repositories import user_repository
 from src.database.session import connection
 from src.matching.candidate import Candidate
 from src.matching.kept_cv import as_cv_shape, kept_cv, kept_profile
+
+
+# The API sets a fresh list per request (main.py) and says on the response when
+# this request created the account, for analytics' signed_up. A list, not a bool:
+# services run in a thread with a copy of the context, so only a shared object
+# carries the news back to the request.
+account_created: ContextVar[list | None] = ContextVar("account_created", default=None)
 
 
 class UserNotFound(Exception):
@@ -57,7 +65,10 @@ def resolve_user_id(conn, payload: dict, create: bool = True) -> int | None:
     """
     sub = _subject(payload)
     if create:
-        return user_repository.upsert_user(conn, sub, payload.get("email"), payload.get("name"), payload.get("image"))
+        user_id, created = user_repository.upsert_user(conn, sub, payload.get("email"), payload.get("name"), payload.get("image"))
+        if created and (news := account_created.get()) is not None:
+            news.append(user_id)
+        return user_id
     return user_repository.get_user_id(conn, sub)
 
 

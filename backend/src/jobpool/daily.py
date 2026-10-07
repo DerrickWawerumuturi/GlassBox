@@ -89,12 +89,20 @@ def take_snapshot() -> None:
     # After profiling, so the counts describe today's pool. A failure here must
     # not turn a good refresh red: the pool is fine, only today's record is
     # missing, and `python -m src.jobpool.snapshot` can take it later that day.
+    # But it must be seen: a plain log line went unread while 2 to 5 October
+    # wrote no snapshot at all. A GitHub Actions warning annotation shows on
+    # the run's summary page and keeps the run green.
     try:
         written = snapshot.take()
         if written is not None:
             print(f"snapshot: {written} families")
     except Exception as err:
-        print(f"snapshot failed: {err}")
+        print(f"::warning title=Market snapshot not taken::{_annotation(f'{type(err).__name__}: {err}')}")
+
+
+def _annotation(text: str) -> str:
+    """A workflow command's message, escaped as GitHub requires: one line."""
+    return text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
 if __name__ == "__main__":

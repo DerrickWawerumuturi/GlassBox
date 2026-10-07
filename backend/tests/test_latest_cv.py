@@ -62,7 +62,7 @@ def world(monkeypatch):
     monkeypatch.setattr(main, "_pdf_text", text)
 
     monkeypatch.setattr(users, "connection", lambda: nullcontext(None))
-    monkeypatch.setattr(user_repository, "upsert_user", lambda conn, sub, *_: sub)
+    monkeypatch.setattr(user_repository, "upsert_user", lambda conn, sub, *_: (sub, False))
     monkeypatch.setattr(user_repository, "get_user_id", lambda conn, sub: sub)
     monkeypatch.setattr(user_repository, "get_location_preferences", lambda conn, user_id: None)
 

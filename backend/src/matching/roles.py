@@ -43,7 +43,8 @@ _NON_TECH_WORDS = (r"\b(?:sales|marketing|account (?:executive|manager)|recruit\
                    r"monitoring and evaluation|operations (?:manager|officer|associate|assistant))\b"
                    r"|\b(?:policy|seo|creative|creators?|communication|gtm|go to market|payroll|partnerships?|events?|"
                    r"enablement|steuerberater\w*|pflege\w*|instructor|docente|coordinator|art director|"
-                   r"growth marketing|product marketing)\b")
+                   r"growth marketing|product marketing|people partners|chief of staff|sourc(?:er|ing)|risk|sox|"
+                   r"tutorial fellow|professor)\b")
 
 # Ordered: the first match wins. The job's function ("Designer", "Product
 # Manager") decides before its domain ("AI"), so "AI Product Manager" is product
@@ -59,44 +60,70 @@ _FAMILIES = [
               r"mining|agricultural|environmental|geotechnical|site|field service|maintenance|sound|audio) engineer|"
               r"\bbusiness develop|\b(?:real estate|property|curriculum|course|content|talent|people|leadership) develop|"
               r"\bsales (?:executive|representative|rep|manager|associate|director|lead|agent)\b"),
-    ("solutions", r"\b(?:solutions?|sales|pre ?sales|customer(?: success)?|forward deployed|implementation|"
-                  r"integrations?|field|technical account) (?:engineer|architect)\b|\btechnical account manager\b|"
+    ("solutions", r"\b(?:solutions?|sales|pre ?sales|customer(?: success)?|forward deployed|deployed|implementation|"
+                  r"integrations?|field|technical account|(?<!business )partner(?: success)?|professional services|"
+                  r"consulting|value) "
+                  r"(?:engineer\w*|architect)\b|\btechnical account manager\b|"
                   r"\bdeveloper (?:advocate|relations)\b|\bdevrel\b"),
-    ("design", r"\b(?:designer|ux researcher|user researcher|ux design|ui design|ui ux|head of product design|product design (?:intern|lead|director|manager))\b"),
+    ("design", r"\b(?:designer|ux researcher|user researcher|ux design|ui design|ui ux|head of product design|"
+               r"product design (?:intern|lead|director|manager)|"
+               r"(?:director|(?<!program )manager|vp)(?: of)? product design)\b"),
+    # "Head of Product Security" is security work, "Director of Product Design" design.
     ("product", r"\b(?:product manager|product owner|program manager|project manager|technical program manager|"
-                r"scrum master|delivery manager)\b"),
+                r"scrum master|delivery manager|product management|program management|technical program lead|"
+                r"product lead|product director|chief product officer)\b|"
+                r"\b(?:head|director|vp|svp|gm)(?: of)? product\b(?! (?:security|design|marketing|development|"
+                r"operations|support|analytics|engineering|communications?))"),
     ("machine_learning", r"\b(?:machine learning|ml|mlops|deep learning|computer vision|nlp|applied scientist|"
                          r"research scientist|research engineer|ai ml|ml ai)\b"),
     ("ai", r"\b(?:ai|llm|genai|generative ai|gen ai|prompt engineer|conversational ai|ki)\b"),
     ("data_science", r"\b(?:data scien\w*|decision scientist|quantitative (?:analyst|researcher)|quant|statistician)\b"),
-    ("data_engineering", r"\b(?:data|analytics|etl|big data|data platform|database) (?:engineer|architect|developer)\b|"
+    ("data_engineering", r"\b(?:data|analytics|analytical|etl|big data|data platform|database) "
+                         r"(?:engineer\w*|architect|developer)\b|"
                          r"\bdatabase administrator\b|\bdba\b"),
     ("data_analytics", r"\b(?:data|bi|business intelligence|reporting|insights?|business|product) analyst\b|"
                        r"\bbusiness intelligence\b|\bbi (?:developer|engineer)\b"),
-    ("security", r"\b(?:security|appsec|cyber ?security|information security|infosec|soc|penetration|pen)"
-                 r"(?: operations)? (?:engineer|analyst|architect|specialist|tester)\b|\bpentester\b|"
-                 r"\bcyber ?security\b|\b(?:dev)?secops\b"),
+    # Up to three words between the specialism and the role: "Detection and
+    # Response Engineer", "Identity Governance and Access Engineer".
+    ("security", r"\b(?:security|appsec|cyber ?security|information security|infosec|soc|penetration|pen|privacy|"
+                 r"detection|threat|red team|cryptography|identity|iam|grc|sirt)(?: \w+){0,3}? "
+                 r"(?:engineer\w*|analyst|architect|specialist|tester)\b|\bpentester\b|"
+                 r"\bcyber ?security\b|\binformation security\b|\bproduct security\b|\b(?:dev)?secops\b"),
     ("qa", r"\b(?:qa|quality assurance|test|testing|sdet|software tester|tester|quality engineer)\b"),
-    ("devops", r"\b(?:devops|dev ops|site reliability|sre|platform|infrastructure|cloud|systems|release|build|"
-               r"kubernetes|linux) (?:engineer|architect|developer|specialist)\b|\bdevops\b|\bsre\b"),
+    ("devops", r"\b(?:devops|dev ops|site reliability|sre|platform|infrastructure|cloud|systems?|release|build|"
+               r"kubernetes|linux)(?: operations| reliability)? (?:engineer\w*|architect|developer|specialist)\b|"
+               r"\bdevops\b|\bsre\b"),
     ("it_support", r"\b(?:it|ict|technical|desktop|helpdesk|help desk|service desk) (?:support|officer|technician|"
                    r"specialist|administrator|assistant|analyst)\b|\b(?:system|systems|network|sys) administrator\b|"
-                   r"\bsysadmin\b|\bsystemadministrator\w*|\bnetwork engineer\b|\bsupport engineer\b|\btse\b"),
+                   r"\bsysadmin\b|\bsystemadministrator\w*|\bnetwork engineer\b|\bsupport engineer\b|\btse\b|"
+                   r"\b(?:it|ict|av|audiovisual|corporate|service desk|technical services|technical escalations|"
+                   r"unified communications)"
+                   r"(?: (?!software)\w+){0,3}? engineer\w*"),
     ("mobile", r"\b(?:ios|android|flutter|react native)\b|\bmobile (?:engineer|developer|app\w*|software)\b"),
     ("embedded", r"\b(?:embedded|firmware|fpga|hardware engineer|iot|robotics)\b"),
-    ("game", r"\b(?:game|gameplay|unity|unreal)\b"),
+    ("game", r"\b(?:game|gameplay|unity(?! catalog)|unreal)\b"),
     ("frontend", r"\b(?:front ?end|ui engineer|ui developer|ux engineer)\b|"
                  r"\b(?:react|vue|angular|svelte|next\.?js|javascript|typescript) (?:engineer|developer)\b"),
     ("backend", r"\b(?:back ?end|api (?:engineer|developer)|server side)\b|\b(?:python|java|golang|go|"
                 r"node(?:\.js)?|php|ruby|rails|django|laravel|\.net|c#|scala|elixir|rust) (?:engineer|developer)\b"),
     ("full_stack", r"\b(?:full ?stack|web developer|web engineer|mern|mean stack)\b"),
     ("software_engineering", r"\b(?:software|developer|programmer|coder|engineer|engineering|member of technical staff|"
-                             r"technical staff|swe|sde|entwickler\w*|softwareentwickl\w*|informati\w*|it specialist|it architect)\b"),
+                             r"technical staff|swe|sde|entwickler\w*|softwareentwickl\w*|informati(?:k|ker|cs)\w*|"
+                             r"it specialist|it architect|tech lead|technical lead)\b"),
     # Clearly not technical, once no technical family has claimed the title
     # (jobhunt's non-technical list, from what Kenyan boards actually carry).
     ("non_tech", _NON_TECH_WORDS),
 ]
 TECH_FAMILIES = frozenset(name for name, _ in _FAMILIES) - {"other", "non_tech", "ai_data"}
+_PATTERN = {}
+for _name, _pattern in _FAMILIES:
+    _PATTERN.setdefault(_name, _pattern)
+# IT work named by its department, not a role: "IT Intern", "Werkstudent:in IT
+# Workplace Management", "Intern, Business Technology". Read only when nothing
+# else claimed the title, so "IT Sales Representative" stays non_tech, and in
+# capitals, so a blog post's "When Should Employers Use It?" is not IT work.
+_IT_CAPITALS = re.compile(r"\b(?:IT|ICT)\b")
+_IT_WORDS = re.compile(r"\b(?:information technology|business technology|computer technician)\b")
 
 # An AI-titled posting that is really about shipping an application which
 # calls a model is software work; one about training models is ML work.
@@ -125,10 +152,56 @@ _PHYSICAL = re.compile(r"\b(?:hardware|manufacturing|npi|propulsion|battery|metr
                        r"electrical|electronics|rf|thermal|structural|design quality)\b")
 _SOFTWARE_QA = re.compile(r"\b(?:software|sdet|automation|automated|api|web|mobile|game|localisation|localization|data)\b")
 
+# A title that reached software_engineering only through "engineer" or
+# "engineering" names no software. Engineering of physical things is not
+# software work: chip and electronics design is hardware (embedded), plant,
+# power and building work is not technical in this product's sense (non_tech).
+# Found in the live pool on 2026-10-07: SpaceXAI's Memphis data centre roles
+# (Facilities, Fire Protection, Fluids, Optical, Rack Design, Controls...),
+# Crusoe's construction and commissioning roles, OpenAI's Physical Design.
+_SOFTWARE_WORD = re.compile(r"\b(?:software|developer|programmer|coder|swe|sde|technical staff|entwickler\w*|"
+                            r"softwareentwickl\w*|informati(?:k|ker|cs)\w*)\b")
+_HARDWARE_DESIGN = re.compile(r"\b(?:hardware|asic|rtl|silicon|physical design|(?:design|digital) verification|"
+                              r"signal integrity|power integrity|pcb\w*|power electronics|electronics|rf|radio frequency|"
+                              r"emc|wireless|analog|ee|component)\b")
+_PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mechanical|hvac|plumbing|construction|"
+                            r"commissioning|power (?:generation|systems?|plant)|transmission|battery|thermal|actuators?|"
+                            r"structural|civil|electrical|cabling|fiber|osp|rack|data ?cent(?:er|re)s?|datacenter|controls|"
+                            r"instrumentation|scada|propulsion|metrology|manufacturing|npi|quality control|qc|accident|"
+                            r"helicopter|estimator|welder|physical)\b")
+# A job function named before the technical word makes that word its subject,
+# not its job: "Legal Engineer", "Recruiter, Field Engineering", "Executive
+# Assistant to Head of Engineering". And the role part of a title (before the
+# first comma or dash) that ends in a function is that function: "Copywriter,
+# Developer", "Account Executive - Software Sales", "Developer Community Manager".
+_ROLE_PART = re.compile(r"\s[-–—|]\s|[,(:|]")
+
+
+def _serves_function(title: str | None, t: str, family: str, generic: bool) -> bool:
+    head = normalise_title(_ROLE_PART.split(re.sub(r"^\s*\([^)]*\)", "", title or ""), maxsplit=1)[0])
+    function, role = re.search(rf"(?:{_NON_TECH_WORDS}) $", head), re.search(_PATTERN[family], head)
+    # Unless the function is part of the role's own name: "Technical Account Manager".
+    if function and (role is None or function.start() >= role.end()):
+        return True
+    role_at = re.search(_PATTERN[family], t).start()
+    function = re.search(_NON_TECH_WORDS, t)
+    return generic and function is not None and function.start() < role_at
+
 
 def classify_family(title: str | None, description: str | None = None) -> str:
     t = normalise_title(title)
     family = _first(_FAMILIES, t, "other")
+    if family == "other" and (_IT_CAPITALS.search(title or "") or _IT_WORDS.search(t)):
+        return "it_support"
+    if family in ("software_engineering", "solutions", "devops"):
+        generic = not _SOFTWARE_WORD.search(t)
+        if _serves_function(title, t, family, generic and family == "software_engineering"):
+            return "non_tech"
+        if family in ("software_engineering", "devops") and generic:
+            if _HARDWARE_DESIGN.search(t):
+                return "embedded"
+            if _PHYSICAL_WORK.search(t):
+                return "non_tech"
     if family == "ai":
         if re.search(_NON_TECH_WORDS, t) and not _TECH_ROLE.search(t):
             return "non_tech"
