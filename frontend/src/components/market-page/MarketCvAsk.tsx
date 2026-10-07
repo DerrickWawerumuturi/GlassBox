@@ -1,30 +1,42 @@
 'use client'
 
-import React from "react";
+import React, {createContext, useContext} from "react";
 
-import AddCvButton from "@/components/AddCvButton";
-import {MarketPage} from "@/lib/analytics";
+import AskCard from "@/components/cv-ask/AskCard";
+import {useCvScan} from "@/components/cv-ask/useCvScan";
+import {MarketPage, track} from "@/lib/analytics";
+import {Ask, ASK} from "@/lib/cv-ask";
 
-/**
- * "See where you stand": the page's one ask, at the end. It only wires the
- * existing CV flow (AddCvButton: the same dialog and scan, the page's name on
- * the click and the scan); the visitor stays and the figures above mark their
- * skills. Its look is a placeholder: the CV ask redesign replaces the inside.
+/*
+ * A market page's CV ask (docs/decisions/cv-ask.md): one scan and one sheet
+ * for the page, shared by the ask card after the figures and the sticky line
+ * in the title bar. The visitor stays: the card answers and the figures mark
+ * their skills. The click and the scan carry the page's name.
  */
-export default function MarketCvAsk({page, thin}: {page: MarketPage; thin?: boolean}) {
+
+type MarketAsk = {ask: Ask; page: MarketPage; scanning: boolean; sheetOpen: boolean; find: (where: "card" | "sticky") => void};
+const Ctx = createContext<MarketAsk | null>(null);
+
+export function useMarketAsk(): MarketAsk {
+    const value = useContext(Ctx);
+    if (!value) throw new Error("useMarketAsk must be used inside <MarketAskProvider>");
+    return value;
+}
+
+export function MarketAskProvider({ask, page, children}: {ask: Ask; page: MarketPage; children: React.ReactNode}) {
+    const scan = useCvScan({from: page});
+    const find = (where: "card" | "sticky") => { track("cta_clicked", {where: page, ask: where}); scan.open(ask); };
     return (
-        <section id={"cv"} aria-labelledby={"cv-h"}
-                 className={"mt-20 grid scroll-mt-[70px] items-center gap-[18px] rounded-[14px] bg-foreground p-7 text-background sm:mt-28 md:grid-cols-[1fr_auto]"}>
-            <div>
-                <h2 id={"cv-h"} className={"m-0 mb-1.5 font-heading text-[25px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[30px]"}>See where you stand</h2>
-                <p className={"m-0 font-read text-[16px] text-background/80"}>
-                    {thin ? "Add your CV and see which skills today's jobs name are already on it." : "Add your CV and the charts above mark which of these skills are already on it."}
-                </p>
-                <p className={"mt-2.5 mb-0 font-mono text-[12px] text-background/70"}>About a minute. No account needed.</p>
-            </div>
-            <div className={"flex flex-wrap items-center gap-3"}>
-                <AddCvButton label={"Add your CV"} reading={"Reading your CV…"} page={page} />
-            </div>
-        </section>
+        <Ctx.Provider value={{ask, page, scanning: scan.scanning, sheetOpen: scan.isOpen, find}}>
+            {children}
+            {scan.sheet}
+        </Ctx.Provider>
     );
+}
+
+/** The ask card, at the end of the figures: "How many of these are on your CV?" */
+export default function MarketCvAsk() {
+    const {ask, scanning, find} = useMarketAsk();
+    return <AskCard ask={ask} scanning={scanning} onFind={() => find("card")} read
+                    done={{href: "/analysis/jobs", label: ASK.doneLink, note: ASK.doneNote}} />;
 }

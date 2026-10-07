@@ -132,10 +132,15 @@ revalidation keeps the last good page, `builtForPage`). In reading order:
    - *Levels* (role pages): junior, mid, senior, not stated.
    - *Who is hiring, and where*: employers, the largest one, US / elsewhere /
      no country (hatched), internships, remote.
-7. **See where you stand**: the CV ask, at the end (`MarketCvAsk`, which only
-   wires `AddCvButton`; the CV ask redesign replaces its inside). After a scan
-   every skill in the figures carries the visitor's mark, green on the CV or
-   grey dashed not yet, and a line counts them (`SkillName`, `ScanStatus`).
+7. **The CV ask**, as a question (`MarketCvAsk` on `AskCard`, since
+   2026-10-07; `decisions/cv-ask.md`): "How many of these are on your CV?",
+   "? of 15" over the 15 broad skills the page's jobs name most, "Find out".
+   One sheet per page (`MarketAskProvider`) also serves the sticky line in the
+   title bar ("? of 15 skills here on your CV"; at the foot on a phone),
+   which hides while the card is in view and after a scan. After a scan the
+   card answers ("9 of these are on your CV"), every skill in the figures
+   carries the visitor's mark, green on the CV or grey dashed not yet, and a
+   line counts them (`SkillName`, `ScanStatus`).
 8. **How we counted**, the jobs in a `<details>` fold, a cite line.
 9. **The rail**: In this count (jobs, employers, internships, remote, date) and
    More from the count (the other pages with their job counts, the hub,
@@ -204,7 +209,7 @@ About 11 KB a page.
 
 ### Analytics
 
-`cta_clicked {where}`, `fact_copied {page}` and `scan_started` /
+`cta_clicked {where, ask}` (`ask`: `card` or `sticky`), `fact_copied {page}` and `scan_started` /
 `scan_finished {from}` carry the page's name; a name that is not one of the
 five (`lib/market-names.ts`) is dropped before sending, so no free text rides
 in on it.

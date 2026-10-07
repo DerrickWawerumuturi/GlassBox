@@ -8,7 +8,7 @@ import {ExampleAnalysisProvider, useAnalysis} from "@/lib/analysis-store";
 import {JobRadarAnalysis} from "@/types/jobradar";
 import {Button} from "@/components/ui/button";
 import Sidebar from "@/components/dashboard/Sidebar";
-import {useCvScan} from "@/components/landing/useCvScan";
+import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {ApplicationsProvider} from "@/lib/applications-store";
 import {OpportunitiesProvider} from "@/lib/opportunities-store";
 
@@ -42,7 +42,7 @@ export default function AnalysisShell({children}: {children: React.ReactNode}) {
                                 <span className={"rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"}>Example</span>
                                 <span className={"text-[13.5px]"}>{scan.scanning ? EXAMPLE.reading : EXAMPLE.line}</span>
                                 <span className={"ml-auto flex items-center gap-3"}>
-                                    <Button size={"sm"} onClick={scan.open} disabled={scan.scanning}>{EXAMPLE.cta} <ArrowRightIcon className={"size-3.5"} /></Button>
+                                    <Button size={"sm"} onClick={() => scan.open()} disabled={scan.scanning}>{EXAMPLE.cta} <ArrowRightIcon className={"size-3.5"} /></Button>
                                     <Button variant={"link"} size={"sm"} className={"px-0 text-foreground"} nativeButton={false} render={<Link href={"/sign-in"} />}>{EXAMPLE.signUp}</Button>
                                 </span>
                             </div>
@@ -50,7 +50,7 @@ export default function AnalysisShell({children}: {children: React.ReactNode}) {
                         {children}
                     </div>
                 </div>
-                {scan.dialog}
+                {scan.sheet}
             </OpportunitiesProvider>
         </ApplicationsProvider>
     );

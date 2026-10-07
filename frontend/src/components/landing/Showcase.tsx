@@ -119,7 +119,7 @@ export default function Showcase({look, reduce, onCv}: {look: Look; reduce: bool
                     <div className={"chapter on"}><span className={"n"}>03</span><h2 id={"inside-h"}>{I.chapter}</h2></div>
                     <p className={"sec-line"}>{I.line}</p>
                 </div>
-                <div className={"inside-ask"}>
+                <div className={"inside-ask"} data-cv-ask>
                     <div className={"acts"}>
                         <Button className={"btn"} onClick={onCv}>{I.cta} <ArrowRightIcon className={"size-3.5"} /></Button>
                         <Button variant={"link"} className={"textlink"} nativeButton={false} render={<Link href={"/sign-in"} />}>{I.signUp}</Button>

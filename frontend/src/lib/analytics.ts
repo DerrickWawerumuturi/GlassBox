@@ -16,7 +16,9 @@ import {MARKET_NAMES, MarketName} from "@/lib/market-names";
 export type Page = "overview" | "market" | "skills" | "opportunities" | "applications";
 /** The public market pages, by name (lib/market-pages.ts): where a CTA, a copied fact or a scan came from. */
 export type MarketPage = MarketName;
-const CTA_PLACES = ["sticky", "closing", "inside", "product"] as const;
+const CTA_PLACES = ["sticky", "closing", "inside", "count", "product"] as const;
+/** Which ask on a page was used: the ask card, or the sticky line. */
+const ASKS = ["card", "sticky"] as const;
 
 type Events = {
     scan_started: {from?: MarketPage};
@@ -27,7 +29,7 @@ type Events = {
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
     ad_pasted: {kind: "text" | "url"};
-    cta_clicked: {where: (typeof CTA_PLACES)[number] | MarketPage};
+    cta_clicked: {where: (typeof CTA_PLACES)[number] | MarketPage; ask?: (typeof ASKS)[number]};
     fact_copied: {page: MarketPage};
 };
 
@@ -38,7 +40,7 @@ const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
     view_opened: ["page", "view"],
     signed_up: [],
     ad_pasted: ["kind"],
-    cta_clicked: ["where"],
+    cta_clicked: ["where", "ask"],
     fact_copied: ["page"],
 };
 
@@ -49,7 +51,7 @@ export const PROXY_PATH = "/ingest";
 // Properties that name a place on the site take only known names, so no free text rides in on them.
 const NAMED: Partial<Record<keyof Events, Record<string, readonly string[]>>> = {
     fact_copied: {page: MARKET_NAMES}, scan_started: {from: MARKET_NAMES}, scan_finished: {from: MARKET_NAMES},
-    cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES]},
+    cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES], ask: ASKS},
 };
 
 /** Only an event's allowed properties survive, and a page name only when it is one we know; anything else is dropped. */

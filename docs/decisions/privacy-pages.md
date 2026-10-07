@@ -7,6 +7,8 @@ Change a page when the code it cites changes.
 | Statement | Source |
 |---|---|
 | We never store your PDF; it is read, then deleted at once | `backend/main.py` `_pdf_text`: a temp file, removed in `finally` (both `/analyze` and `/cv/parse`) |
+| The CV sheet, while reading: "The file is deleted once it's read." (since 2026-10-07, `decisions/cv-ask.md`) | the same `_pdf_text` `finally` |
+| The CV sheet, signed out: "Keep them with a free account, to compare again later." | `cv-store.tsx` moves the browser's CV skills to the account on sign in (kept by `kept_cv`); Opportunities compares them with each day's jobs |
 | Its text goes to Groq, an AI service from a US company | `llm_client.py` `GroqModel` (`groq` SDK). Where Groq processes it is not visible in our code |
 | Not signed in: nothing kept on our servers; results stay in the browser | `analysis-store.tsx` and `cv-store.tsx` save to the server only when authenticated; otherwise `localStorage` |
 | Signed in: only what matching needs (skills, roles aimed for, level, years, education level, location, languages), file name, date, a fingerprint of the text; never the file or its text | `src/matching/kept_cv.py` on `cvs`, `latest_cvs` and `application.cv_snapshot` (`decisions/cv-storage.md`, "Keep less") |

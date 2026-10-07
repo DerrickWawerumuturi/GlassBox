@@ -5,25 +5,23 @@ import {useRouter} from "next/navigation";
 import {ArrowRightIcon} from "lucide-react";
 
 import {Button} from "@/components/ui/button";
-import {useCvScan} from "@/components/landing/useCvScan";
-import {MarketPage, track} from "@/lib/analytics";
+import {useCvScan} from "@/components/cv-ask/useCvScan";
+import {track} from "@/lib/analytics";
 
 /**
- * "Add your CV" away from the landing page: the same upload dialog and scan
- * (useCvScan), then the results. `reading` shows beside it while the scan runs.
- * On a market page (`page`) the visitor stays: the page lights up with what
- * the scan found, and the click and the scan carry the page's name.
+ * "Add your CV" on /product: the CV sheet and the scan (useCvScan), then the
+ * results on /analysis. `reading` shows beside it while the scan runs.
  */
-export default function AddCvButton({label, reading, page}: {label: string; reading: string; page?: MarketPage}) {
+export default function AddCvButton({label, reading}: {label: string; reading: string}) {
     const router = useRouter();
-    const scan = useCvScan({onDone: page ? undefined : () => router.push("/analysis"), from: page});
+    const scan = useCvScan({onDone: () => router.push("/analysis")});
     return (
         <>
-            <Button onClick={() => { track("cta_clicked", {where: page ?? "product"}); scan.open(); }} disabled={scan.scanning}>
+            <Button onClick={() => { track("cta_clicked", {where: "product"}); scan.open(); }} disabled={scan.scanning}>
                 {label} <ArrowRightIcon className={"size-3.5"} />
             </Button>
             {scan.scanning && <span className={"font-mono text-[12px] text-muted-foreground"} role={"status"}>{reading}</span>}
-            {scan.dialog}
+            {scan.sheet}
         </>
     );
 }

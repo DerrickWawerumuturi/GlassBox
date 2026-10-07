@@ -20,7 +20,7 @@ src/
                                  "Look around first" (components/landing), metadata from its copy, WebSite/Organization JSON-LD
     market/[page]                the five market pages, one editorial template (ISR, 5 min, keeps the last good page; any other
                                  name is a 404): question, dek, byline, one square per job, findings at a glance with copy
-                                 links, finding sections the data supports, the CV ask, how we counted, the rail; Article and
+                                 links, finding sections the data supports, the CV ask (one sheet per page), how we counted, the rail; Article and
                                  BreadcrumbList JSON-LD; title, description and opengraph-image.tsx from the data
                                  (components/market-page, lib/market-pages.ts, lib/market-story.ts, decisions/market-pages.md).
                                  Outside the (public) group so share images keep plain addresses; layout.tsx adds the footer
@@ -63,8 +63,15 @@ src/
     landing/                     the landing page: LookAround.tsx runs it; CountCard (job types,
                                  levels, the squares), Wall (titles behind the count), GlassSection
                                  (an ad on the glass, paste your own), CvSection, LowerSections,
-                                 StickyCta; useStepper.ts the shared 4.6s timer; useCvScan.tsx the
-                                 upload dialog; copy.ts every word on the page; landing.css scoped `.la`
+                                 StickyCta (the sticky line); useStepper.ts the shared 4.6s timer;
+                                 copy.ts every word on the page; landing.css scoped `.la`
+    cv-ask/                      the CV ask as a question (decisions/cv-ask.md): AskCard ("? of 15",
+                                 the skills as chips; AskInline for the count card), StickyAsk (the
+                                 phone sticky line, AskLine, useAskInView for one ask at a time),
+                                 CvSheet (bottom sheet on a phone, panel from 640px: idle, reading,
+                                 result, error), CvPicker (choose or drop a PDF; it starts the scan;
+                                 also on /dashboard/scan), useCvScan.tsx (the sheet and the scan, for
+                                 every public page, the header and /analysis)
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token
@@ -78,6 +85,8 @@ src/
     market-views.ts              the Market tab's four views and the ?view= fallback
     theme.ts                     Theme (System/Dark/Light), the no-flash <head> script, ?paper= previews
     latest-cv.ts                 the kept CV skills: hook, dates, reuse errors, the privacy line
+    cv-ask.ts                    the CV ask's words, which skills it asks about, k of N, the one ask rule,
+                                 the sheet's states and honest reading steps, the file check (tested)
     analytics.ts                 PostHog: the only events, property allowlists, scrub, visit source (decisions/analytics.md)
     seo.ts                       root metadata, publicPage() (canonical, og:url, share block), sitemap entries, home JSON-LD
     skill-bridges.ts             what Bridges reads: skill pairs, reach, most connected, roles

@@ -142,12 +142,6 @@ export function haveSet(skills: Iterable<string>): Set<string> {
     return new Set([...skills].filter(Boolean).map(normSkill));
 }
 
-/** How many of a family's 10 most asked skills are on the CV. */
-export function topTenHave(data: LookFamily, have: Set<string>): number {
-    return Object.entries(data.skills).sort((a, b) => b[1] - a[1]).slice(0, 10)
-        .filter(([k]) => have.has(normSkill(k))).length;
-}
-
 export function adFor(data: LookFamily, level: Level): LookAd | undefined {
     return data.ads.find((a) => a.lvl === level) ?? data.ads[0];
 }

@@ -14,7 +14,7 @@ import {
     NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import {FEATURES, NAV} from "@/lib/site-copy";
-import {useCvScan} from "@/components/landing/useCvScan";
+import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -219,7 +219,7 @@ const Navbar = () => {
 
 
             </div>
-            {scan.dialog}
+            {scan.sheet}
         </header>
     )
 }

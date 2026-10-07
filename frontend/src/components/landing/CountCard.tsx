@@ -9,7 +9,9 @@ import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {useWidth} from "@/components/dashboard/MarketParts";
-import {Level, LEVELS, LookFamily, sharePct, squaresFor, topTenHave} from "@/lib/landing/look";
+import {AskInline} from "@/components/cv-ask/AskCard";
+import {Ask} from "@/lib/cv-ask";
+import {Level, LEVELS, LookFamily, sharePct, squaresFor} from "@/lib/landing/look";
 import {COPY, FAMILY_LABEL} from "./copy";
 
 const C = COPY.count;
@@ -69,10 +71,12 @@ function MoreTypes({more, data, family, level, onPick}: {
     );
 }
 
-export default function CountCard({families, more, data, family, level, date, onPick, subscribe, playing, onPlaying, state, reduce, have}: {
+export default function CountCard({families, more, data, family, level, date, onPick, subscribe, playing, onPlaying, state, reduce, ask, scanning, onFind}: {
     families: string[]; more: string[]; data: Record<string, LookFamily>; family: string; level: Level; date: string;
     onPick: (family: string, level: Level) => void; subscribe: (fn: (p: number) => void) => () => void;
-    playing: boolean; onPlaying: (p: boolean) => void; state: string; reduce: boolean; have: Set<string> | null;
+    playing: boolean; onPlaying: (p: boolean) => void; state: string; reduce: boolean;
+    /** The CV ask for this job type: its 10 most asked skills. */
+    ask: Ask; scanning: boolean; onFind: () => void;
 }) {
     const d = data[family];
     const {perSquare, levels} = useMemo(() => squaresFor(family, d), [family, d]);
@@ -149,7 +153,7 @@ export default function CountCard({families, more, data, family, level, date, on
                     <Link href={`/market/${ROLE_PAGE[family]}`} className={"text-primary underline-offset-4 hover:underline"}>What {label} jobs ask for</Link>
                 </p>
             )}
-            {have && <p className={"cvline"}>{C.yourCv(topTenHave(d, have), label)}</p>}
+            {ask.skills.length > 0 && <AskInline ask={ask} scanning={scanning} onFind={onFind} />}
             {reduce ? <p className={"sub"} style={{marginTop: 12}}>{C.reduced}</p> : (
                 <div className={"timer"}>
                     <Button variant={"ghost"} size={"icon"} className={"ringbtn"} aria-label={playing ? "Pause" : "Play"} onClick={() => onPlaying(!playing)}>

@@ -1,11 +1,23 @@
 'use client'
 
-import React from "react";
+import {useAskInView} from "@/components/cv-ask/StickyAsk";
+import {useHave} from "@/components/landing/useHave";
+import {useMarketAsk} from "@/components/market-page/MarketCvAsk";
+import {stickyShows, StickyContext} from "@/lib/cv-ask";
 
-import AddCvButton from "@/components/AddCvButton";
-import {MarketPage} from "@/lib/analytics";
-
-/** The title bar's CV button: the same flow as the page's ask, nothing more. The CV ask redesign replaces it. */
-export default function StickyCvAsk({page}: {page: MarketPage}) {
-    return <AddCvButton label={"Add your CV"} reading={""} page={page} />;
+/**
+ * The market page's sticky line, "? of 15 skills here on your CV": shown once
+ * the lead visual has scrolled away (`past`), and only while nothing else
+ * asks. The title bar draws it (TitleBar.tsx): in the bar on a wider screen,
+ * at the foot of a phone's.
+ */
+export function useMarketSticky(past: boolean): {show: boolean; context: StickyContext; onFind: () => void} {
+    const {ask, scanning, sheetOpen, find} = useMarketAsk();
+    const askInView = useAskInView();
+    const answered = useHave() !== null;
+    return {
+        show: stickyShows({past, askInView, sheetOpen, scanning, answered}),
+        context: {kind: "page", n: ask.skills.length},
+        onFind: () => find("sticky"),
+    };
 }

@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 
 import fixture from "./look.fixture.json";
-import {apportion, askRows, familyOrder, getLook, haveSet, Look, normSkill, pickWall, rarest, sharePct, squaresFor, topTenHave, WALL_CAP} from "./look";
+import {apportion, askRows, familyOrder, getLook, haveSet, Look, normSkill, pickWall, rarest, sharePct, squaresFor, WALL_CAP} from "./look";
 
 const look = fixture as unknown as Look;
 
@@ -43,8 +43,7 @@ describe("the user's skills", () => {
     it("matches a scan's names to the count's keys", () => {
         expect(normSkill("Node.js")).toBe(normSkill("node.js"));
         expect(normSkill("CI/CD")).toBe(normSkill("ci/cd"));
-        const have = haveSet(["Python", "Go"]);
-        expect(topTenHave(look.families.backend, have)).toBeGreaterThanOrEqual(1);
+        expect(haveSet(["Node.js", "CI/CD"])).toEqual(new Set([normSkill("node.js"), normSkill("ci/cd")]));
     });
 
     it("puts required asks first and finds the rarest", () => {

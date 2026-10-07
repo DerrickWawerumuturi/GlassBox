@@ -2,7 +2,10 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
+import {useAskInView} from "@/components/cv-ask/StickyAsk";
+import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {track} from "@/lib/analytics";
+import {Ask, familyAskSkills, stickyShows, StickyContext} from "@/lib/cv-ask";
 import {adAsks, adFor, askRows, CYCLE, familyOrder, getLook, Level, LEVELS, Look} from "@/lib/landing/look";
 import {COPY, FAMILY_LABEL} from "./copy";
 import CountCard from "./CountCard";
@@ -10,8 +13,7 @@ import CvSection, {PreviewAsk} from "./CvSection";
 import GlassSection from "./GlassSection";
 import LowerSections from "./LowerSections";
 import Showcase from "./Showcase";
-import StickyCta, {StickyContext} from "./StickyCta";
-import {useCvScan} from "./useCvScan";
+import StickyCta from "./StickyCta";
 import {useHave} from "./useHave";
 import {useReducedMotion, useStepper} from "./useStepper";
 import Wall from "./Wall";
@@ -21,9 +23,10 @@ import "./landing.css";
  * The landing page, "Look around first" (docs/local/look-around-prototype.html,
  * round 3; the founder's picks in docs/changelog/2026-10-05-landing-look-around.md).
  * Today's count from the live pool, the jobs behind it, a job ad on the glass,
- * then the CV. The CV is asked for in two places only: a sticky bar from
- * the moment the hero is scrolled past, and the closing section. After a scan the page
- * lights up with what the visitor's own scan found, never a simulation.
+ * then the CV. The CV is asked as a question about what the visitor just
+ * looked at (docs/decisions/cv-ask.md): in the count card, inside, the closing
+ * section, and a sticky line while none of those is on screen. After a scan
+ * the page lights up with what the visitor's own scan found, never a simulation.
  */
 
 const H = COPY.hero;
@@ -53,7 +56,7 @@ export default function LookAround({initial}: {initial?: Look}) {
     const [extra, setExtra] = useState<string | null>(null);
     const [hover, setHover] = useState(false);
     const [glassHeld, setGlassHeld] = useState(false);
-    const stepper = useStepper({steps: Math.max(1, main.length * LEVELS.length), held: hover || glassHeld || scan.scanning, reduce});
+    const stepper = useStepper({steps: Math.max(1, main.length * LEVELS.length), held: hover || glassHeld || scan.scanning || scan.isOpen, reduce});
     const cycleFamily = main[Math.floor(stepper.step / LEVELS.length)] ?? "backend";
     const family = extra ?? cycleFamily;
     const level: Level = LEVELS[stepper.step % LEVELS.length];
@@ -70,17 +73,15 @@ export default function LookAround({initial}: {initial?: Look}) {
     }, [main, cycleFamily, stepper]);
     const setPlaying = useCallback((p: boolean) => { if (p) setExtra(null); stepper.setPlaying(p); }, [stepper]);
 
-    // The sticky ask: whenever the hero is scrolled past, until the closing CV section is in view.
-    const [seen, setSeen] = useState({hero: true, cv: false});
+    // The sticky ask: once the hero is scrolled past, while no other ask is on screen.
+    const [pastHero, setPastHero] = useState(false);
+    const askInView = useAskInView(look);
     // The last of the count and the glass the visitor looked at, for the sticky bar's question.
     const [lastSeen, setLastSeen] = useState<"look" | "glass" | null>(null);
     const heroRef = useRef<HTMLElement>(null);
     useEffect(() => {
-        const observer = new IntersectionObserver((entries) => entries.forEach((e) =>
-            setSeen((s) => ({...s, [(e.target as HTMLElement).id === "cv" ? "cv" : "hero"]: e.isIntersecting}))), {threshold: 0});
+        const observer = new IntersectionObserver(([e]) => setPastHero(!e.isIntersecting), {threshold: 0});
         if (heroRef.current) observer.observe(heroRef.current);
-        const cvEl = document.getElementById("cv");
-        if (cvEl) observer.observe(cvEl);
         const sections = new IntersectionObserver((entries) => entries.forEach((e) => {
             if (e.isIntersecting) setLastSeen((e.target as HTMLElement).id === "glass" ? "glass" : "look");
         }), {threshold: 0.4});
@@ -102,10 +103,21 @@ export default function LookAround({initial}: {initial?: Look}) {
             .map((r) => ({key: r.key, name: initial.skills[r.key] ?? r.name, n: r.n})) : []};
     });
     const onAsks = useCallback((list: PreviewAsk[], f: string) => setAsks({list, family: f}), []);
-    const cvAsk = (where: "sticky" | "closing" | "inside") => () => { track("cta_clicked", {where}); scan.open(); };
+    // What each ask is about: a job type's 10 most asked skills, or the asks in the ad on the glass.
+    const familyAsk = useCallback((f: string): Ask | null => {
+        const data = look?.families[f];
+        if (!look || !data) return null;
+        const label = FAMILY_LABEL[f] ?? f;
+        return {skills: familyAskSkills(data, look.skills), what: `skills ${label} jobs ask for most`, jobs: data.readable, subject: label};
+    }, [look]);
+    const countAsk = familyAsk(family);
+    const adAsk: Ask | null = countAsk && asks.list.length
+        ? {...countAsk, skills: asks.list.map((a) => ({key: a.key, name: a.name})), what: "asks in this ad"} : null;
+    const onAd = lastSeen === "glass" && adAsk !== null;
+    const cvAsk = (where: "sticky" | "closing" | "inside" | "count", ask: Ask | null) => () => { track("cta_clicked", {where}); scan.open(ask); };
 
-    const stickyContext: StickyContext = lastSeen === "glass" && asks.list.length ? {kind: "ad", n: asks.list.length}
-        : lastSeen === "look" && look ? {kind: "count", n: look.families[family].seniority[level]} : {kind: "default"};
+    const stickyContext: StickyContext | null = onAd ? {kind: "ad", n: asks.list.length} : countAsk ? {kind: "count", ask: countAsk} : null;
+    const stickyOn = stickyShows({past: pastHero, askInView, sheetOpen: scan.isOpen, scanning: scan.scanning, answered: have !== null});
 
     const nextFamily = stepper.step % LEVELS.length === LEVELS.length - 1 ? main[(main.indexOf(cycleFamily) + 1) % main.length] : null;
     const state = !stepper.playing ? COPY.count.stopped : glassHeld ? COPY.count.pausedAd : hover ? COPY.count.paused
@@ -136,7 +148,7 @@ export default function LookAround({initial}: {initial?: Look}) {
                                 <div>
                                     <CountCard families={main} more={more} data={look.families} family={family} level={level} date={dayLabel(look.taken_at)}
                                                onPick={pick} subscribe={stepper.subscribe} playing={stepper.playing} onPlaying={setPlaying}
-                                               state={state} reduce={reduce} have={have} />
+                                               state={state} reduce={reduce} ask={countAsk!} scanning={scan.scanning} onFind={cvAsk("count", countAsk)} />
                                 </div>
                                 <div>
                                     <Wall family={family} data={look.families[family]} level={level} reduce={reduce} />
@@ -150,15 +162,15 @@ export default function LookAround({initial}: {initial?: Look}) {
                             <GlassSection look={look} family={family} level={level} have={have} subscribe={stepper.subscribe}
                                           onHold={setGlassHeld} onAsks={onAsks} reduce={reduce} />
                         </div>
-                        <Showcase look={look} reduce={reduce} onCv={cvAsk("inside")} />
+                        <Showcase look={look} reduce={reduce} onCv={cvAsk("inside", countAsk)} />
                         <CvSection asks={asks.list} data={look.families[asks.family] ?? look.families[family]} have={have}
-                                   scanning={scan.scanning} onCv={cvAsk("closing")} />
+                                   scanning={scan.scanning} onCv={cvAsk("closing", familyAsk(asks.family) ?? countAsk)} />
                     </>
                 )}
                 <LowerSections look={look} />
             </div>
-            <StickyCta show={!seen.hero && !seen.cv && !have && !scan.scanning} context={stickyContext} onCv={cvAsk("sticky")} />
-            {scan.dialog}
+            {stickyContext && <StickyCta show={stickyOn} context={stickyContext} onFind={cvAsk("sticky", onAd ? adAsk : countAsk)} />}
+            {scan.sheet}
         </main>
     );
 }

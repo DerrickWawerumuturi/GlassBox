@@ -442,8 +442,15 @@ html {
   .anim-draw-2 { stroke-dasharray: 70; animation: draw-stroke 0.4s ease-out 0.95s both; }
   .anim-ink    { animation: fade-rise 0.5s ease-out both; }
 
+  /* A wait with no measured progress: a segment that slides, never a filling bar (the CV sheet). */
+  @keyframes slide-across {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(250%); }
+  }
+  .anim-across { animation: slide-across 1.4s ease-in-out infinite; }
+
   @media (prefers-reduced-motion: reduce) {
-    .anim-rise, .anim-bob, .anim-radar, .anim-stamp, .anim-draw, .anim-draw-2, .anim-ink {
+    .anim-rise, .anim-bob, .anim-radar, .anim-stamp, .anim-draw, .anim-draw-2, .anim-ink, .anim-across {
       animation: none;
     }
   }

@@ -4,11 +4,12 @@ import Link from "next/link";
 import BylineActions from "@/components/market-page/BylineActions";
 import CopyFact from "@/components/market-page/CopyFact";
 import LeadSquares from "@/components/market-page/LeadSquares";
-import MarketCvAsk from "@/components/market-page/MarketCvAsk";
+import MarketCvAsk, {MarketAskProvider} from "@/components/market-page/MarketCvAsk";
 import {ScanStatus} from "@/components/market-page/SkillName";
 import {Method, Rail} from "@/components/market-page/StoryEnd";
 import StorySections, {P} from "@/components/market-page/StorySections";
 import TitleBar from "@/components/market-page/TitleBar";
+import {Ask, marketAskSkills} from "@/lib/cv-ask";
 import {stamp} from "@/lib/market-page";
 import {MarketBody, MarketInfo, MarketName, absoluteMarket, marketPath} from "@/lib/market-pages";
 import {citeLine, Ctx, dek, findingText, framing, glance, has, question, skillName, thin, UNAVAILABLE} from "@/lib/market-story";
@@ -59,10 +60,12 @@ export default function MarketArticle({info, page, others}: {
         ...(has(c, "languages") ? story.languages.bars : []), ...(has(c, "contrast") ? story.contrast : []),
         ...(has(c, "categories") ? story.categories.flatMap((g) => g.skills) : []),
     ])].map((k) => ({key: k, name: skillName(c, k)})) : [];
-    return (
+    // The CV ask: the skills these jobs name most, counted from the jobs we could read.
+    const ask: Ask | null = c ? {skills: marketAskSkills(c.page), what: `skills ${info.subject} jobs name most`, jobs: c.page.readable, subject: info.subject} : null;
+    const body = (
         <div className={"pb-24"}>
             {c && <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(marketStructuredData(info, c.page, dek(c)))}} />}
-            {c && <TitleBar question={question({info})} page={info.name} />}
+            {c && <TitleBar question={question({info})} />}
             <section className={`${WRAP} pt-11`}>
                 <Head info={info} page={page} c={c} />
                 {c && (
@@ -102,7 +105,7 @@ export default function MarketArticle({info, page, others}: {
                         )}
                         <ScanStatus skills={figureSkills} />
                         <StorySections c={c} />
-                        <MarketCvAsk page={info.name} thin={!findings.length} />
+                        <MarketCvAsk />
                         <Method c={c} />
                     </article>
                     <Rail c={c} others={others} />
@@ -110,4 +113,5 @@ export default function MarketArticle({info, page, others}: {
             )}
         </div>
     );
+    return ask ? <MarketAskProvider ask={ask} page={info.name}>{body}</MarketAskProvider> : body;
 }

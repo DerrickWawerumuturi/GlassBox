@@ -13,7 +13,7 @@ const ICONS = [ScanTextIcon, ArchiveIcon, Trash2Icon];
 
 export interface PreviewAsk {key: string; name: string; n: number}
 
-/** The closing CV section: the ask, what we keep, and the current ad's asks marked once a CV is in. */
+/** The closing CV section: the ask ("Find out"), what we keep, and the current ad's asks marked once a CV is in. */
 export default function CvSection({asks, data, have, scanning, onCv}: {
     asks: PreviewAsk[]; data: LookFamily; have: Set<string> | null; scanning: boolean; onCv: () => void;
 }) {
@@ -26,7 +26,7 @@ export default function CvSection({asks, data, have, scanning, onCv}: {
     const list = [...asks.slice(0, 8)].sort((a, b) => Number(mine(b)) - Number(mine(a)));
     const haveN = list.filter(mine).length;
     return (
-        <section className={"cvhero"} id={"cv"} aria-labelledby={"cv-h"}>
+        <section className={"cvhero"} id={"cv"} data-cv-ask aria-labelledby={"cv-h"}>
             <div className={"cv-copy"}>
                 <h2 id={"cv-h"}>{V.title}</h2>
                 <p className={"line"}>{scanning ? V.reading : have ? V.done : V.line}</p>

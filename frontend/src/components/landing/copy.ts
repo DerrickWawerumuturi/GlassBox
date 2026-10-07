@@ -54,7 +54,6 @@ export const COPY = {
         pausedAd: "Paused while your ad is showing.",
         stopped: "Stopped. Press play to move on.",
         reduced: "Nothing changes on its own here. Pick a job type and a level.",
-        yourCv: (have: number, family: string) => `Your CV has ${have} of the 10 skills ${family} jobs ask for most.`,
         unavailable: "Today's count is not available right now. Try again in a minute.",
     },
     wall: {
@@ -116,18 +115,16 @@ export const COPY = {
         signUp: "Sign up",
     },
     sticky: {
-        line: (context: {kind: "default"} | {kind: "count"; n: number} | {kind: "ad"; n: number}) =>
-            context.kind === "count" ? `Where would you sit among these ${context.n.toLocaleString("en")}?`
-                : context.kind === "ad" ? `${context.n} asks in this ad. Which are yours?` : "See where you stand.",
-        small: "We keep the skills, not the file.",
-        cta: "Add your CV",
+        /** The line itself follows what the visitor last looked at: lib/cv-ask.ts stickyLine. */
+        small: "About a minute. No account.",
+        cta: "Find out",
         signUp: "Sign up",
     },
     cv: {
         title: "There's more of you in these jobs than you think.",
-        line: "Add your CV. We mark every skill today's jobs ask for that you already have.",
-        lead: "Free. One PDF. No account needed.",
-        cta: "Add your CV",
+        line: "We mark every skill today's jobs ask for that you already have.",
+        lead: "About a minute. No account.",
+        cta: "Find out",
         signUp: "Sign up",
         trust: [{title: "Read", body: TRUST[0]}, {title: "Kept", body: TRUST[1]}, {title: "Delete", body: TRUST[2]}],
         previewKick: "This ad, with your CV",

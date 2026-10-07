@@ -32,7 +32,7 @@ changed with `NEXT_PUBLIC_POSTHOG_HOST`.
 | `scan_failed` | `stage`: `upload` or `reuse` |
 | `view_opened` | `page` (overview, market, skills, opportunities, applications), `view` (a Market view) |
 | `ad_pasted` | `kind`: `text` or `url` (never the ad itself) |
-| `cta_clicked` | `where`: `sticky`, `closing` or `inside` (the landing page's CV asks; the hero has none since 5 Oct), or `product` (/product), or a market page's name (`entry-level-software`) |
+| `cta_clicked` | `where`: `count`, `inside`, `closing` or `sticky` (the landing page's CV asks; the hero has none since 5 Oct), or `product` (/product), or a market page's name (`entry-level-software`); `ask`: `card` or `sticky`, which of a market page's two asks (since 2026-10-07, `decisions/cv-ask.md`) |
 | `fact_copied` | `page`: the market page whose fact was copied (`entry-level-software`); never the sentence |
 | `signed_up` | none; sent once, on the response that created the account (see below) |
 

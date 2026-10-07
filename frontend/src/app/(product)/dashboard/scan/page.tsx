@@ -10,7 +10,8 @@ import {useCv} from "@/lib/cv-store";
 import {useOpportunities} from "@/lib/opportunities-store";
 import {PRIVACY_LINE, reuseError, useLatestCV} from "@/lib/latest-cv";
 import {PageBar} from "@/components/dashboard/bits";
-import FileUpload from "@/components/ui/FileUpload";
+import CvPicker from "@/components/cv-ask/CvPicker";
+import {checkFile} from "@/lib/cv-ask";
 import AnalysisProgress from "@/components/AnalysisProgress";
 import ReuseCvDialog from "@/components/dashboard/ReuseCvDialog";
 import {scanEvents} from "@/lib/analytics";
@@ -21,7 +22,6 @@ export default function ScanPage() {
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
     const {refresh: refreshOpportunities} = useOpportunities();
-    const [file, setFile] = useState<File | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const {latest, signedIn, forget} = useLatestCV();
     // The pop-up shows once per visit, and only when the kept CV can be reused.
@@ -30,6 +30,9 @@ export default function ScanPage() {
     const isAnalyzing = status === "analyzing";
 
     const runScan = async (upload: File) => {
+        // Choosing the file starts the scan; one that can't be read says why before anything is sent.
+        const invalid = checkFile(upload);
+        if (invalid) { setErrorMessage(invalid); return; }
         setErrorMessage(null);
         setStatus("analyzing");
         const events = scanEvents("upload");
@@ -97,7 +100,7 @@ export default function ScanPage() {
                                 one. They come from the job pool we refresh every morning.
                             </p>
                         </div>
-                        <FileUpload Cv={file} setHandleCv={setFile} onUploadComplete={runScan} />
+                        <div><CvPicker onFile={(f) => void runScan(f)} /></div>
                         {signedIn && <p className={"-mt-3 text-small text-muted-foreground"}>{PRIVACY_LINE}</p>}
                         {errorMessage && (
                             <p className={"rounded-md border border-destructive/40 bg-destructive/8 px-4 py-3 text-sm"}>

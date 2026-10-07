@@ -78,6 +78,19 @@ describe("analytics with a key", () => {
         expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "sticky"});
     });
 
+    it("the CV ask says which ask was used, by a known name only", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.track("cta_clicked", {where: "entry-level-software", ask: "card"});
+        a.track("cta_clicked", {where: "ai", ask: "sticky"});
+        a.track("cta_clicked", {where: "count"});
+        (a.track as (e: string, p: object) => void)("cta_clicked", {where: "devops", ask: "Python, Go", file_name: "cv.pdf"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "entry-level-software", ask: "card"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "ai", ask: "sticky"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "count"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "devops"});
+    });
+
     it("a scan from anywhere else says nothing about where it started", async () => {
         const a = await load();
         a.initAnalytics("phc_test");
