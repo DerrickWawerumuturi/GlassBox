@@ -64,6 +64,11 @@ export const PRODUCT_PAGE = {
     toc: "On this page",
     jump: "Jump to",
     numbers: "By the numbers",
+    /** Beside the Market section: one counted question in full, and how the count is made. */
+    marketLinks: [
+        {href: "/market/entry-level-software", label: "What entry level software jobs ask for"},
+        {href: "/method", label: "How Glassbox counts"},
+    ],
     numberLines: (total: string, types: number, skill: string, n: string, of: string, date: string) => [
         `${total} jobs open today, across ${types} job types.`,
         `${skill} is the skill backend jobs ask for most: ${n} of ${of} today.`,

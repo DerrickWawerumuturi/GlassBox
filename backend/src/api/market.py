@@ -2,6 +2,7 @@
 Public market routes: no sign-in, nothing about the visitor is read or kept.
 
     GET  /market/look   today's count per role family (src/jobpool/market_look.py)
+    GET  /market/page/{name}  one public market page's counts (src/jobpool/market_pages.py)
     POST /market/ad     a pasted ad or link -> what it asks for (src/jobpool/ad_reader.py)
 
 Kept out of main.py so its routes stay about the signed-in product. The
@@ -15,7 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from src.api import rate_limit
-from src.jobpool import ad_reader, market_look
+from src.jobpool import ad_reader, market_look, market_pages
 from src.jobpool.safe_fetch import BlockedLink, UnreadableLink
 
 router = APIRouter(prefix="/market")
@@ -33,11 +34,10 @@ async def keep_fresh():
         await asyncio.sleep(market_look.REFRESH_SECONDS)
 
 
-@router.get("/look")
-def look():
-    # Only ever reads the built count (market_look.look), so this answers in microseconds.
+def _built(read):
+    """A built body as a cached response, or 503 while the first build runs."""
     try:
-        body = market_look.look()
+        body = read()
     except market_look.NotReady as err:
         raise HTTPException(status_code=503, detail=str(err),
                             headers={"Retry-After": str(market_look.RETRY_SECONDS)}) from err
@@ -45,6 +45,21 @@ def look():
         raise HTTPException(status_code=503, detail=str(err)) from err
     # The count changes once a day; an hour in a browser or CDN costs nothing.
     return JSONResponse(body, headers={"Cache-Control": f"public, max-age={market_look.CACHE_SECONDS}"})
+
+
+@router.get("/look")
+def look():
+    # Only ever reads the built count (market_look.look), so this answers in microseconds.
+    return _built(market_look.look)
+
+
+# The name is checked against the known pages before anything is read, so a
+# stranger's path can't reach anything else.
+@router.get("/page/{name}")
+def page(name: str):
+    if len(name) > 64 or name not in market_pages.PAGES:
+        raise HTTPException(status_code=404, detail="No such page.")
+    return _built(lambda: market_look.page(name))
 
 
 # About 20 ads an hour per visitor: each one can make us fetch a page (rate_limit.py).

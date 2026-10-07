@@ -10,8 +10,8 @@ import {SITE_URL} from "@/lib/site";
  * page therefore builds its block here, from the same parts.
  */
 
-/** The pages search should list, in sitemap order. Add /market/* and /method here. */
-export const PUBLIC_PATHS = ["/", "/product", "/about", "/privacy", "/your-cv"] as const;
+/** The pages search should list, in sitemap order. Each /market page goes here too. */
+export const PUBLIC_PATHS = ["/", "/product", "/about", "/privacy", "/your-cv", "/market/entry-level-software", "/method"] as const;
 
 /** A path as an absolute address on this site ("/" is the bare origin). */
 export function absolute(path: string): string {
@@ -28,12 +28,13 @@ const SHARE: Share = {
 // app/opengraph-image.tsx draws it. Named here too, because a page's own openGraph drops the inherited one.
 const IMAGE = {url: "/opengraph-image", width: 1200, height: 630, alt: SHARE.title};
 
-const openGraph = (share: Share): Metadata["openGraph"] => ({
-    type: "website", siteName: "Glassbox", title: share.title, description: share.description, images: [IMAGE],
+// `ownImage`: the page has its own opengraph-image.tsx. Naming no image lets Next use it for both cards.
+const openGraph = (share: Share, ownImage = false): Metadata["openGraph"] => ({
+    type: "website", siteName: "Glassbox", title: share.title, description: share.description, ...(ownImage ? {} : {images: [IMAGE]}),
 });
 
-const twitter = (share: Share): Metadata["twitter"] => ({
-    card: "summary_large_image", title: share.title, description: share.description, images: [IMAGE.url],
+const twitter = (share: Share, ownImage = false): Metadata["twitter"] => ({
+    card: "summary_large_image", title: share.title, description: share.description, ...(ownImage ? {} : {images: [IMAGE.url]}),
 });
 
 /** The root layout's metadata. No canonical here: it would make every page, the 404 included, claim to be "/". */
@@ -46,17 +47,21 @@ export const rootMetadata: Metadata = {
     twitter: twitter(SHARE),
 };
 
-/** A public page's metadata: its own canonical and og:url, and the full share block. */
+/**
+ * A public page's metadata: its own canonical and og:url, and the full share
+ * block. `ownImage` for a page with its own opengraph-image.tsx (a market
+ * page's headline fact); otherwise the site's image.
+ */
 export function publicPage(path: (typeof PUBLIC_PATHS)[number] | `/${string}`, page: {
-    title: string; description: string; share?: Share;
+    title: string; description: string; share?: Share; ownImage?: boolean;
 }): Metadata {
     const share = page.share ?? SHARE;
     return {
         title: page.title,
         description: page.description,
         alternates: {canonical: path},
-        openGraph: {...openGraph(share), url: path},
-        twitter: twitter(share),
+        openGraph: {...openGraph(share, page.ownImage), url: path},
+        twitter: twitter(share, page.ownImage),
     };
 }
 

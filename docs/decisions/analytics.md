@@ -26,12 +26,14 @@ changed with `NEXT_PUBLIC_POSTHOG_HOST`.
 | Event | Properties |
 |---|---|
 | `$pageview` | the path only, e.g. `/dashboard/market` (no query string, no hash); the first of a page load also `ref_domain` and `utm_*` (see below) |
-| `scan_started`, `cv_uploaded`, `cv_reused` | none |
-| `scan_finished` | `duration_s`, `jobs` (jobs found) |
+| `scan_started` | `from`: the market page the scan started on (`entry-level-software`), else nothing |
+| `cv_uploaded`, `cv_reused` | none |
+| `scan_finished` | `duration_s`, `jobs` (jobs found), `from` as on `scan_started` |
 | `scan_failed` | `stage`: `upload` or `reuse` |
 | `view_opened` | `page` (overview, market, skills, opportunities, applications), `view` (a Market view) |
 | `ad_pasted` | `kind`: `text` or `url` (never the ad itself) |
-| `cta_clicked` | `where`: `sticky`, `closing` or `inside` (the landing page's CV asks; the hero has none since 5 Oct), or `product` (/product) |
+| `cta_clicked` | `where`: `sticky`, `closing` or `inside` (the landing page's CV asks; the hero has none since 5 Oct), or `product` (/product), or a market page's name (`entry-level-software`) |
+| `fact_copied` | `page`: the market page whose fact was copied (`entry-level-software`); never the sentence |
 | `signed_up` | none; sent once, on the response that created the account (see below) |
 
 PostHog adds its own context: browser, OS, device type, screen size,

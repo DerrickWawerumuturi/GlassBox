@@ -12,27 +12,31 @@ import posthog, {CaptureResult} from "posthog-js";
  */
 
 export type Page = "overview" | "market" | "skills" | "opportunities" | "applications";
+/** The public market pages, by name (lib/market-page.ts): where a CTA, a copied fact or a scan came from. */
+export type MarketPage = "entry-level-software";
 
 type Events = {
-    scan_started: Record<string, never>;
+    scan_started: {from?: MarketPage};
     cv_uploaded: Record<string, never>;
     cv_reused: Record<string, never>;
-    scan_finished: {duration_s: number; jobs: number};
+    scan_finished: {duration_s: number; jobs: number; from?: MarketPage};
     scan_failed: {stage: "upload" | "reuse"};
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
     ad_pasted: {kind: "text" | "url"};
-    cta_clicked: {where: "sticky" | "closing" | "inside" | "product"};
+    cta_clicked: {where: "sticky" | "closing" | "inside" | "product" | MarketPage};
+    fact_copied: {page: MarketPage};
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
-    scan_started: [], cv_uploaded: [], cv_reused: [],
-    scan_finished: ["duration_s", "jobs"],
+    scan_started: ["from"], cv_uploaded: [], cv_reused: [],
+    scan_finished: ["duration_s", "jobs", "from"],
     scan_failed: ["stage"],
     view_opened: ["page", "view"],
     signed_up: [],
     ad_pasted: ["kind"],
     cta_clicked: ["where"],
+    fact_copied: ["page"],
 };
 
 export const DEFAULT_HOST = "https://us.i.posthog.com";
@@ -189,13 +193,15 @@ export function forgetUser() {
 /**
  * A scan's events in one place: scan_started plus cv_uploaded or cv_reused
  * now, then scan_finished (seconds, jobs found) or scan_failed (which kind).
+ * `from` names the market page a scan started on, so its visits can be
+ * counted through to a finished scan.
  */
-export function scanEvents(kind: "upload" | "reuse") {
+export function scanEvents(kind: "upload" | "reuse", from?: MarketPage) {
     const start = Date.now();
-    track("scan_started");
+    track("scan_started", {from});
     if (kind === "upload") track("cv_uploaded"); else track("cv_reused");
     return {
-        finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs}),
+        finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from}),
         failed: () => track("scan_failed", {stage: kind}),
     };
 }

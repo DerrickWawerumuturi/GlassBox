@@ -127,7 +127,7 @@ def _never_build_here(monkeypatch):
 
 def test_a_warm_cache_is_served_without_building(monkeypatch):
     calls, clock = [], [1000.0]
-    monkeypatch.setattr(ml, "compute", lambda: calls.append(1) or {"n": len(calls)})
+    monkeypatch.setattr(ml, "compute", lambda: calls.append(1) or {"look": {"n": len(calls)}, "pages": {}})
     started = _never_build_here(monkeypatch)
     ml.forget()
     assert ml.refresh(now=lambda: clock[0]) and len(calls) == 1
@@ -143,7 +143,7 @@ def test_a_warm_cache_is_served_without_building(monkeypatch):
 
 def test_a_failed_refresh_keeps_the_last_good_count(monkeypatch):
     _never_build_here(monkeypatch)
-    monkeypatch.setattr(ml, "compute", lambda: {"good": True})
+    monkeypatch.setattr(ml, "compute", lambda: {"look": {"good": True}, "pages": {}})
     ml.forget()
     ml.refresh()
 
@@ -158,7 +158,7 @@ def test_a_failed_refresh_keeps_the_last_good_count(monkeypatch):
 def test_one_rebuild_at_a_time(monkeypatch):
     import threading
     gate, calls = threading.Event(), []
-    monkeypatch.setattr(ml, "compute", lambda: calls.append(1) or gate.wait(5) or {"n": 1})
+    monkeypatch.setattr(ml, "compute", lambda: calls.append(1) or gate.wait(5) or {"look": {"n": 1}, "pages": {}})
     ml.forget()
     first = threading.Thread(target=ml.refresh)
     first.start()
@@ -183,7 +183,7 @@ def test_before_the_first_build_the_route_answers_at_once(monkeypatch):
 
 
 def test_the_route_sends_cache_control_and_gzip(monkeypatch):
-    monkeypatch.setattr(ml, "compute", lambda: ml.aggregate(ROWS, TAKEN))
+    monkeypatch.setattr(ml, "compute", lambda: {"look": ml.aggregate(ROWS, TAKEN), "pages": {}})
     _never_build_here(monkeypatch)
     ml.forget()
     ml.refresh()
@@ -195,7 +195,7 @@ def test_the_route_sends_cache_control_and_gzip(monkeypatch):
 
 
 def test_the_app_builds_the_count_at_startup(monkeypatch):
-    monkeypatch.setattr(ml, "compute", lambda: ml.aggregate(ROWS, TAKEN))
+    monkeypatch.setattr(ml, "compute", lambda: {"look": ml.aggregate(ROWS, TAKEN), "pages": {}})
     monkeypatch.setattr(main, "WARM_AFTER_SECONDS", 3600)
     ml.forget()
     with TestClient(main.app) as client:                          # runs the lifespan
@@ -249,6 +249,7 @@ def test_reads_the_live_pool_from_the_database(monkeypatch):
         ml.forget()
         ml.refresh()
         before = ml.look()["families"].get("backend", {"jobs": 0, "seniority": {"junior": 0, "senior": 0}})
+        entry_before = ml.page("entry-level-software")["jobs"]
         ingestion = JobIngestionService()
         ids = list(ingestion.persist_jobs(None, jobs, observe=False, profile=False).values())
         ingestion.refresh_profiles(ids)
@@ -258,6 +259,8 @@ def test_reads_the_live_pool_from_the_database(monkeypatch):
         assert after["seniority"]["junior"] - before["seniority"]["junior"] == 1
         assert after["seniority"]["senior"] - before["seniority"]["senior"] == 1
         assert sum(after["seniority"].values()) == after["jobs"]
+        # The market page is built from the same read: the junior role once, the senior one not.
+        assert TestClient(main.app).get("/market/page/entry-level-software").json()["jobs"] - entry_before == 1
         mine = [ad for ad in after["ads"] if ad["company"] == company]
         assert all(set(ad) == AD_KEYS for ad in after["ads"]) and "We ship" not in json.dumps(after)
         assert not mine or {"c#", ".net"} <= set(mine[0]["req"]) or {"go", "kubernetes"} <= set(mine[0]["req"])

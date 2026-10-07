@@ -7,7 +7,7 @@ FastAPI service. `main.py` holds the routes; everything they call lives under
 
 ```
 main.py                              routes, auth, status codes — no business logic
-src/api/market.py                    public routes: GET /market/look, POST /market/ad
+src/api/market.py                    public routes: GET /market/look, GET /market/page/{name}, POST /market/ad
 skill_db_relax_20.json               EMSI skill names, a dictionary for discover.py only (not in the image)
 src/Agent/                           CV analysis (a scan)
   Framework/
@@ -36,6 +36,7 @@ src/jobpool/                         jobs from outside an analysis
   daily.py                           the scheduled pool refresh and profiling
   snapshot.py                        the day's market snapshot: what the live pool asks for, per family
   market_look.py                     the same count live, for the landing page (GET /market/look)
+  market_pages.py                    public market pages from the same read (GET /market/page/entry-level-software)
   ad_reader.py                       a pasted ad or link -> its asks (POST /market/ad)
   safe_fetch.py                      SSRF-guarded fetch for public routes: pinned IP, 8 s, 2 MB, 3 hops
   opportunities.py                   the pool matched to one user's CV
@@ -227,7 +228,8 @@ cached per user and CV fingerprint for ten minutes.
 
 ## Public market routes
 
-Two routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`):
+Three routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`,
+`decisions/market-pages.md`):
 
 - `GET /market/look`: today's count per technical role family, for the landing
   page. The live pool counted by the snapshot's rules (`snapshot.counted`):
@@ -237,6 +239,13 @@ Two routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`):
   in the background at startup and every 50 minutes; a request only reads it,
   stale while a rebuild runs, 503 with `Retry-After` before the first build.
   Sent gzipped with `Cache-Control: public, max-age=3600`. 503 when there is no database.
+- `GET /market/page/{name}`: one public market page, built with the count
+  above from the same read of the pool (`market_look.compute`), so the two
+  always agree; same cache, 503 and headers. Today only
+  `entry-level-software`: entry level software jobs, their top skills against
+  senior jobs, internships, remote, US vs elsewhere, employers and titles, and
+  `publishable` (false under 100 readable jobs). An unknown name is a 404
+  before anything is read.
 - `POST /market/ad`: `{"text"}` (at most 50,000 characters, else 413) or
   `{"url"}`. Read by `profile_job`; returns the title, family, level and the
   skills asked as `req` or `opt`. Nothing is stored or logged. Links go through
@@ -248,8 +257,8 @@ Two routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`):
 `X-Forwarded-For` entry when the connection comes from the platform's ingress.
 The count is in memory, which holds while the app runs one replica; with more,
 each replica keeps its own count and a restart forgets it
-(`decisions/market-look.md`). `GET /market/look` needs no limit: it only reads
-the count built in the background.
+(`decisions/market-look.md`). `GET /market/look` and `GET /market/page/{name}`
+need no limit: they only read what was built in the background.
 
 ## The skill vocabulary
 

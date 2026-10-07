@@ -4,7 +4,8 @@ import {cn} from "@/lib/utils";
 import {GlassboxWordmark} from "@/components/brand/Logo";
 
 /*
- * The site footer: Product, About, the privacy pages, contact and the copyright. "full" closes
+ * The site footer: Product, About, the privacy pages, the market pages and
+ * how we count, contact and the copyright. "full" closes
  * the landing page inside its green band; "slim" sits under the other public
  * pages. Contact shows only when NEXT_PUBLIC_CONTACT_EMAIL is set.
  */
@@ -16,6 +17,8 @@ export const FOOTER_LINKS: Array<{href: string; label: string}> = [
     {href: "/about", label: "About"},
     {href: "/privacy", label: "Privacy"},
     {href: "/your-cv", label: "What happens to your CV"},
+    {href: "/market/entry-level-software", label: "Entry level software jobs"},
+    {href: "/method", label: "How we count"},
     ...(CONTACT ? [{href: `mailto:${CONTACT}`, label: "Contact"}] : []),
 ];
 

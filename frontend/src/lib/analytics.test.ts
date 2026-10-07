@@ -17,7 +17,7 @@ describe("analytics without a key", () => {
     it("is a no-op: nothing starts, nothing is sent", async () => {
         const a = await load();
         expect(a.initAnalytics("")).toBe(false);
-        a.track("scan_started");
+        a.track("scan_started", {});
         a.trackPageview("/dashboard");
         await a.identifyUser("123");
         expect(posthog.init).not.toHaveBeenCalled();
@@ -44,6 +44,28 @@ describe("analytics with a key", () => {
         const leaky = {duration_s: 41, jobs: 58, file_name: "CV_Amara.pdf", skills: ["Python"], email: "a@b.c"};
         (a.track as (e: string, p: object) => void)("scan_finished", leaky);
         expect(posthog.capture).toHaveBeenCalledWith("scan_finished", {duration_s: 41, jobs: 58});
+    });
+
+    it("a market page's events carry only the page's name", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        (a.track as (e: string, p: object) => void)("fact_copied", {page: "entry-level-software", text: "Python appears in 68 jobs"});
+        a.track("cta_clicked", {where: "entry-level-software"});
+        const scan = a.scanEvents("upload", "entry-level-software");
+        scan.finished(58);
+        expect(posthog.capture).toHaveBeenCalledWith("fact_copied", {page: "entry-level-software"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "entry-level-software"});
+        expect(posthog.capture).toHaveBeenCalledWith("scan_started", {from: "entry-level-software"});
+        expect(posthog.capture).toHaveBeenCalledWith("scan_finished", expect.objectContaining({jobs: 58, from: "entry-level-software"}));
+        const scrubbed = a.scrub({event: "fact_copied", properties: {page: "entry-level-software", text: "x", token: "t", distinct_id: "d"}} as never);
+        expect(scrubbed?.properties).toEqual({page: "entry-level-software", token: "t", distinct_id: "d"});
+    });
+
+    it("a scan from anywhere else says nothing about where it started", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.scanEvents("reuse");
+        expect(posthog.capture).toHaveBeenCalledWith("scan_started", {});
     });
 
     it("sends pages as a path, without the query string", async () => {

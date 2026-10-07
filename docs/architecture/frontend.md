@@ -18,6 +18,10 @@ src/
     (landing)/page.tsx           landing, static with ISR (5 min), today's count fetched on the server (lib/landing/look-server.ts;
                                  a failed fetch during revalidation keeps the last good page, decisions/market-look.md):
                                  "Look around first" (components/landing), metadata from its copy, WebSite/Organization JSON-LD
+    (public)/market/entry-level-software  a public market page (ISR, 5 min, keeps the last good page): counted facts to copy,
+                                 skills table lit by the visitor's scan, entry vs senior chart, its own opengraph-image.tsx
+                                 (brand faces from app/fonts/og); lib/market-page.ts, components/market-page, decisions/market-pages.md
+    (public)/method              how Glassbox counts, written from the code (components/site/Explainer.tsx, lib/method-copy.ts)
     (public)/product, about      long explainers (components/site/Explainer.tsx, ISR); words in lib/site-copy.ts;
                                  screenshots in public/product (docs/local/render/product-shots.mjs)
     (auth)/sign-in/page.tsx      layout.tsx only gives it a title (the page is a client component)
@@ -76,6 +80,9 @@ src/
     landing/look.ts              GET /market/look and the count's helpers (squares, wall, asks);
                                  look.fixture.json for tests and renders only
     landing/ad.ts                POST /market/ad: a pasted ad or link, read on the server
+    landing/look-server.ts       builtForPage(): a built body for a server render (the count, a market page), ISR rule
+    market-page.ts               GET /market/page/entry-level-software, the page's words, facts and copy links (tested)
+    method-copy.ts               /method's words, each section naming the code it describes
     dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract
 ```

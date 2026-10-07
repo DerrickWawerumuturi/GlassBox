@@ -3,9 +3,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
 import {track} from "@/lib/analytics";
-import {useAnalysis} from "@/lib/analysis-store";
-import {useCv} from "@/lib/cv-store";
-import {adAsks, adFor, askRows, CYCLE, familyOrder, getLook, haveSet, Level, LEVELS, Look} from "@/lib/landing/look";
+import {adAsks, adFor, askRows, CYCLE, familyOrder, getLook, Level, LEVELS, Look} from "@/lib/landing/look";
 import {COPY, FAMILY_LABEL} from "./copy";
 import CountCard from "./CountCard";
 import CvSection, {PreviewAsk} from "./CvSection";
@@ -14,6 +12,7 @@ import LowerSections from "./LowerSections";
 import Showcase from "./Showcase";
 import StickyCta, {StickyContext} from "./StickyCta";
 import {useCvScan} from "./useCvScan";
+import {useHave} from "./useHave";
 import {useReducedMotion, useStepper} from "./useStepper";
 import Wall from "./Wall";
 import "./landing.css";
@@ -35,8 +34,6 @@ export default function LookAround({initial}: {initial?: Look}) {
     const [look, setLook] = useState<Look | null>(initial ?? null);
     const [failed, setFailed] = useState(false);
     const reduce = useReducedMotion();
-    const {analysis} = useAnalysis();
-    const {cv} = useCv();
     const scan = useCvScan();
 
     useEffect(() => {
@@ -47,11 +44,7 @@ export default function LookAround({initial}: {initial?: Look}) {
     }, [initial]);
 
     // The visitor's own skills, from their scan: the only thing the page lights up with.
-    const have = useMemo(() => {
-        if (!analysis?.market) return null;
-        const names = [...(analysis.market.user_skill_presence ?? []).map((s) => s.skill), ...(cv?.skills ?? []).filter((s): s is string => Boolean(s))];
-        return names.length ? haveSet(names) : null;
-    }, [analysis, cv]);
+    const have = useHave();
 
     // The main ten step on their own; the rest wait behind "More" until picked.
     const families = useMemo(() => (look ? familyOrder(look) : []), [look]);

@@ -28,12 +28,26 @@ async function numbers(): Promise<string[] | null> {
         String(n), backend.readable.toLocaleString("en"), date);
 }
 
+/** The Market section's box of today's counts, when there is one, then where to read more. */
+function MarketExtra({lines}: {lines: string[] | null}) {
+    return (
+        <>
+            {lines && <Numbers title={P.numbers} lines={lines} />}
+            <ul className={"flex flex-col gap-1.5 text-[16px]"}>
+                {P.marketLinks.map((link) => (
+                    <li key={link.href}><Link href={link.href} className={"text-primary underline-offset-4 hover:underline"}>{link.label}</Link></li>
+                ))}
+            </ul>
+        </>
+    );
+}
+
 /** A long explainer: one numbered section per part of the product, real screenshots (example CV). */
 export default async function ProductPage() {
     const lines = await numbers();
     return (
         <Explainer kicker={P.kicker} title={P.title} dek={P.dek} toc={P.toc} jump={P.jump} sections={P.sections}
-                   extra={lines ? {market: <Numbers title={P.numbers} lines={lines} />} : undefined}>
+                   extra={{market: <MarketExtra lines={lines} />}}>
             <section className={"flex flex-col gap-4 border-t border-border pt-12"}>
                 <h2 className={"max-w-xl font-heading text-2xl font-bold uppercase tracking-tight sm:text-3xl"}>{P.closing}</h2>
                 <div className={"flex flex-wrap items-center gap-x-5 gap-y-2"}>

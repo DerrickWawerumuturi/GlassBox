@@ -17,26 +17,33 @@ export function keepLastPage(env: {NODE_ENV?: string; NEXT_PHASE?: string} = pro
 }
 
 /**
- * Today's count for the server render, so the count, the cards and the wall
- * are in the first HTML. The API keeps it built (decisions/market-look.md), so
- * this is quick; when it isn't (a cold start, a 503 while it builds, a timeout)
- * a revalidation throws to keep the last good page, and a first render
- * returns nothing (keepLastPage).
+ * A body the API keeps built (/market/look, /market/page/*) for a server
+ * render. The API keeps it built (decisions/market-look.md), so this is
+ * quick; when it isn't (a cold start, a 503 while it builds, a timeout, a
+ * body that isn't what `valid` expects) a revalidation throws to keep the last
+ * good page, and a first render returns nothing (keepLastPage).
  */
-export async function lookForPage(timeoutMs = 4000, fetcher: typeof fetch = fetch, keep = keepLastPage()): Promise<Look | null> {
-    let look: Look | null = null;
+export async function builtForPage<T>(path: string, valid: (body: T) => boolean, timeoutMs = 4000,
+                                      fetcher: typeof fetch = fetch, keep = keepLastPage()): Promise<T | null> {
+    let built: T | null = null;
     try {
-        const response = await fetcher(`${API_BASE_URL}/market/look`, {
+        const response = await fetcher(`${API_BASE_URL}${path}`, {
             next: {revalidate: LOOK_REVALIDATE_SECONDS},
             signal: AbortSignal.timeout(timeoutMs),
         });
         if (response.ok) {
-            const body = await response.json() as Look;
-            if (body?.families) look = body;
+            const body = await response.json() as T;
+            if (body && valid(body)) built = body;
         }
     } catch {
-        look = null;
+        built = null;
     }
-    if (!look && keep) throw new Error("Today's count is unavailable; keeping the last good page.");
-    return look;
+    if (!built && keep) throw new Error(`${path} is unavailable; keeping the last good page.`);
+    return built;
+}
+
+/** Today's count for the server render, so the count, the cards and the wall are in the first HTML. */
+export function lookForPage(timeoutMs = 4000, fetcher: typeof fetch = fetch, keep = keepLastPage()): Promise<Look | null> {
+    // A count with no job types (an API on a new profiler version, before the re-read) is no count at all.
+    return builtForPage<Look>("/market/look", (body) => Object.keys(body.families ?? {}).length > 0, timeoutMs, fetcher, keep);
 }

@@ -98,6 +98,15 @@ the API stopped and the fetch cache cleared, `/` kept its count after the
 revalidate window (`x-nextjs-cache: STALE`, then `HIT`, the error in the log;
 after a failure Next retries within 30 s). Tests: `look-server.test.ts`.
 
+### Market pages from the same build (2026-10-07)
+
+`compute()` now reads the pool once and builds both this count and every
+public market page (`market_pages.py`, `GET /market/page/{name}`), cached
+together as `{"look", "pages"}`. `look()` and `page(name)` read that one
+cache, so a page and the landing count always share `taken_at` and rules.
+The definitions and the 100 job rule: `market-pages.md`. On the frontend,
+`builtForPage` in `look-server.ts` is the one ISR fetch for both.
+
 ## POST /market/ad
 
 `{"text": "..."}` or `{"url": "..."}`, exactly one. Returns

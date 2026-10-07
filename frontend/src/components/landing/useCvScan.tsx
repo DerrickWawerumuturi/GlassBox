@@ -6,7 +6,7 @@ import {toast} from "sonner";
 import FileUpload from "@/components/ui/FileUpload";
 import {Dialog, DialogContent} from "@/components/ui/dialog";
 import Analyze, {ProcessCv} from "@/lib/api";
-import {scanEvents} from "@/lib/analytics";
+import {MarketPage, scanEvents} from "@/lib/analytics";
 import {useAnalysis} from "@/lib/analysis-store";
 import {useCv} from "@/lib/cv-store";
 
@@ -14,9 +14,10 @@ import {useCv} from "@/lib/cv-store";
  * Adding a CV from the landing page (and /product): the same scan the dashboard
  * runs. On the landing page the visitor stays and the page lights up with what
  * their scan found; elsewhere `onDone` takes them to the results.
- * Started by the upload button only, never by closing the dialog.
+ * Started by the upload button only, never by closing the dialog. `from`
+ * names the market page the scan started on, for its analytics.
  */
-export function useCvScan({onDone}: {onDone?: () => void} = {}) {
+export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPage} = {}) {
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
     const [open, setOpen] = useState(false);
@@ -25,7 +26,7 @@ export function useCvScan({onDone}: {onDone?: () => void} = {}) {
     const run = async (upload: File) => {
         setOpen(false);
         setStatus("analyzing");
-        const events = scanEvents("upload");
+        const events = scanEvents("upload", from);
         try {
             const analysis = Analyze(upload);
             ProcessCv(upload).then(saveCv).catch((e) => console.error("CV breakdown error:", e));

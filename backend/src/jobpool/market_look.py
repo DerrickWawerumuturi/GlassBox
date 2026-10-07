@@ -2,6 +2,7 @@
 Today's count for the landing page: what the live pool asks for, per role family.
 
     look()          the cached result for GET /market/look (recomputed about hourly)
+    page(name)      a public market page, built from the same read (market_pages.py)
     aggregate(rows) pool rows -> the response body; pure, so it is tested without a database
 
 Counted exactly as the daily snapshot counts (decisions/market-snapshots.md):
@@ -19,7 +20,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
 from src.database.session import connection, is_configured
-from src.jobpool import snapshot
+from src.jobpool import market_pages, snapshot
 from src.matching.requirements import PROFILER_VERSION
 from src.matching.roles import TECH_FAMILIES
 from src.matching.skills import display
@@ -140,11 +141,13 @@ def aggregate(rows: list[dict], taken_at: datetime | None = None) -> dict:
 
 
 def compute() -> dict:
+    """The landing count and every market page, from one read of the pool, so they always agree."""
     if not is_configured():
         raise NotAvailable("Today's count isn't available right now.")
     with connection() as conn:
         rows = snapshot.pool_rows(conn)
-    return aggregate(rows)
+    taken_at = datetime.now(timezone.utc)
+    return {"look": aggregate(rows, taken_at), "pages": market_pages.build(rows, taken_at)}
 
 
 # One value for the whole process: every visitor sees the same count, and the
@@ -186,8 +189,8 @@ def _refresh_in_background() -> None:
     threading.Thread(target=refresh, name="market-look-refresh", daemon=True).start()
 
 
-def look(now=time.monotonic) -> dict:
-    """Today's count as last built. Never builds it here; an old one starts a rebuild beside it."""
+def _built(now=time.monotonic) -> dict:
+    """What compute() last built. Never builds it here; an old one starts a rebuild beside it."""
     with _lock:
         cached = _cache
     if cached is None:
@@ -199,6 +202,18 @@ def look(now=time.monotonic) -> dict:
     if now() - cached[0] >= CACHE_SECONDS and not _building.locked():
         _refresh_in_background()
     return cached[1]
+
+
+def look(now=time.monotonic) -> dict:
+    """Today's count as last built."""
+    return _built(now)["look"]
+
+
+def page(name: str, now=time.monotonic) -> dict | None:
+    """A market page as last built, or None for a page that doesn't exist."""
+    if name not in market_pages.PAGES:
+        return None
+    return _built(now)["pages"].get(name)
 
 
 def forget() -> None:

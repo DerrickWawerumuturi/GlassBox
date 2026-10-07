@@ -128,8 +128,8 @@ export function Legend({items}: { items: Array<[Swatch, string]> }) {
     )
 }
 
-/** The table twin of a chart: the same rows, readable without the picture. */
-export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) {
+/** "View as table": a chart's twin, closed until asked for. */
+export function TableTwin({children}: { children: React.ReactNode }) {
     return (
         <details className={"group mt-3"}>
             <summary className={"inline-flex cursor-pointer list-none items-center gap-2 font-mono text-[12px] font-medium uppercase tracking-[0.1em] text-panel-chart-ink-faint hover:text-foreground [&::-webkit-details-marker]:hidden"}>
@@ -137,6 +137,15 @@ export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) 
                 <span aria-hidden className={"hidden font-bold group-open:inline"}>–</span>
                 View as table
             </summary>
+            {children}
+        </details>
+    )
+}
+
+/** The table twin of a chart: the same rows, readable without the picture. */
+export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) {
+    return (
+        <TableTwin>
             <table className={"mt-2.5 w-full max-w-[560px] border-collapse font-mono text-[12px] tabular-nums"}>
                 <thead>
                     <tr className={"text-left font-medium uppercase tracking-[0.06em] text-panel-chart-ink-faint"}>
@@ -157,7 +166,7 @@ export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) 
                     ))}
                 </tbody>
             </table>
-        </details>
+        </TableTwin>
     )
 }
 
@@ -165,7 +174,7 @@ export function ChartTable({marks, jobs}: { marks: SkillMark[]; jobs: number }) 
  * The panel every chart sits in. `lead` is the finding; the jobs chip
  * after the orange slash is the denominator every count is read against.
  */
-export function ChartPanel({title, lead, jobs, legend, children, notes, table, action, preview, className}: {
+export function ChartPanel({title, lead, jobs, legend, children, notes, table, twin, action, preview, className}: {
     title: string;
     lead: React.ReactNode;
     jobs: number;
@@ -174,6 +183,8 @@ export function ChartPanel({title, lead, jobs, legend, children, notes, table, a
     /** At most two short bullets. */
     notes?: string[];
     table?: { marks: SkillMark[] };
+    /** A chart's own table twin, for charts whose rows aren't skill marks. */
+    twin?: React.ReactNode;
     /** A control under the chart, like "Show all". */
     action?: React.ReactNode;
     /** The overview's compact version: a link to the full view instead of notes and the table. */
@@ -205,6 +216,7 @@ export function ChartPanel({title, lead, jobs, legend, children, notes, table, a
                 </div>
             )}
             {table && <ChartTable marks={table.marks} jobs={jobs} />}
+            {twin}
             {preview && <div className={"mt-4 flex justify-end border-t border-border pt-3"}>{preview}</div>}
         </section>
     )

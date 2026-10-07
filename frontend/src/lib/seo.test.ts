@@ -25,12 +25,20 @@ describe("share previews", () => {
         expect(JSON.stringify(meta.openGraph)).toContain("/opengraph-image");
         expect(meta.twitter).toMatchObject({card: "summary_large_image", title: "Share", images: ["/opengraph-image"]});
     });
+
+    it("name no image for a page with its own, so Next uses that one for both cards", () => {
+        const meta = publicPage("/market/entry-level-software", {title: "T", description: "D", ownImage: true});
+        expect(meta.openGraph).not.toHaveProperty("images");
+        expect(meta.twitter).not.toHaveProperty("images");
+        expect(meta.openGraph).toMatchObject({siteName: "Glassbox", url: "/market/entry-level-software"});
+    });
 });
 
 describe("sitemap", () => {
     it("lists the public pages only, with no invented dates or priorities", () => {
         const urls = sitemapEntries().map((e) => e.url);
-        expect(urls).toEqual([SITE_URL, `${SITE_URL}/product`, `${SITE_URL}/about`, `${SITE_URL}/privacy`, `${SITE_URL}/your-cv`]);
+        expect(urls).toEqual([SITE_URL, `${SITE_URL}/product`, `${SITE_URL}/about`, `${SITE_URL}/privacy`, `${SITE_URL}/your-cv`,
+            `${SITE_URL}/market/entry-level-software`, `${SITE_URL}/method`]);
         for (const entry of sitemapEntries()) expect(Object.keys(entry)).toEqual(["url"]);
     });
 });

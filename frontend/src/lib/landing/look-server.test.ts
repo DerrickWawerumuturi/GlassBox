@@ -2,11 +2,18 @@ import {describe, expect, it} from "vitest";
 
 import {keepLastPage, lookForPage} from "./look-server";
 
+const GOOD = {taken_at: "x", families: {backend: {jobs: 5}}};
 const ok = (body: unknown) => (async () => new Response(JSON.stringify(body), {status: 200})) as unknown as typeof fetch;
 
 describe("lookForPage", () => {
     it("returns today's count when the API has it", async () => {
-        expect(await lookForPage(100, ok({taken_at: "x", families: {}}))).toEqual({taken_at: "x", families: {}});
+        expect(await lookForPage(100, ok(GOOD))).toEqual(GOOD);
+    });
+
+    it("treats a count with no job types as not there, so the page never renders an empty count", async () => {
+        // An API on a new profiler version answers before the pool is re-read: valid shape, no families.
+        expect(await lookForPage(100, ok({taken_at: "x", families: {}}), false)).toBeNull();
+        await expect(lookForPage(100, ok({taken_at: "x", families: {}}), true)).rejects.toThrow();
     });
 
     it("falls back to nothing when there is no page to keep (build, dev)", async () => {
@@ -27,7 +34,7 @@ describe("lookForPage", () => {
         const down = (async () => new Response("{}", {status: 503})) as unknown as typeof fetch;
         await expect(lookForPage(100, down, true)).rejects.toThrow();
         await expect(lookForPage(100, (async () => { throw new Error("down"); }) as unknown as typeof fetch, true)).rejects.toThrow();
-        expect(await lookForPage(100, ok({taken_at: "x", families: {}}), true)).toEqual({taken_at: "x", families: {}});
+        expect(await lookForPage(100, ok(GOOD), true)).toEqual(GOOD);
     });
 });
 
