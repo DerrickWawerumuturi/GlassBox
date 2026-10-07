@@ -37,6 +37,13 @@ export const FEATURES: Feature[] = [
 export const NAV = {
     product: "Product",
     how: "How it works",
+    resources: "Resources",
+    market: "Market",
+    marketHub: "Every market page",
+    marketHubLine: "What today's tech jobs ask for, counted.",
+    method: "How Glassbox counts",
+    methodLine: "Sources, rules and limits.",
+    howLine: "From a job ad to a counted skill.",
     about: "About",
     faq: "FAQ",
     signIn: "Sign in",
@@ -66,6 +73,7 @@ export const PRODUCT_PAGE = {
     numbers: "By the numbers",
     /** Beside the Market section: one counted question in full, and how the count is made. */
     marketLinks: [
+        {href: "/market", label: "What today's tech jobs ask for"},
         {href: "/market/entry-level-software", label: "What entry level software jobs ask for"},
         {href: "/method", label: "How Glassbox counts"},
     ],

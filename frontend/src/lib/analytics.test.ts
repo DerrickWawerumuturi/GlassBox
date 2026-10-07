@@ -61,6 +61,23 @@ describe("analytics with a key", () => {
         expect(scrubbed?.properties).toEqual({page: "entry-level-software", token: "t", distinct_id: "d"});
     });
 
+    it("every market page is a known page name, and an unknown name is dropped", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        for (const page of ["software-engineering", "ai", "machine-learning", "devops"] as const) {
+            a.track("fact_copied", {page});
+            a.track("cta_clicked", {where: page});
+            a.scanEvents("upload", page);
+            expect(posthog.capture).toHaveBeenCalledWith("fact_copied", {page});
+            expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: page});
+            expect(posthog.capture).toHaveBeenCalledWith("scan_started", {from: page});
+        }
+        (a.track as (e: string, p: object) => void)("fact_copied", {page: "Python appears in 68 jobs"});
+        expect(posthog.capture).toHaveBeenCalledWith("fact_copied", {});
+        a.track("cta_clicked", {where: "sticky"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "sticky"});
+    });
+
     it("a scan from anywhere else says nothing about where it started", async () => {
         const a = await load();
         a.initAnalytics("phc_test");

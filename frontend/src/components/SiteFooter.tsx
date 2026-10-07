@@ -17,7 +17,7 @@ export const FOOTER_LINKS: Array<{href: string; label: string}> = [
     {href: "/about", label: "About"},
     {href: "/privacy", label: "Privacy"},
     {href: "/your-cv", label: "What happens to your CV"},
-    {href: "/market/entry-level-software", label: "Entry level software jobs"},
+    {href: "/market", label: "Market"},
     {href: "/method", label: "How we count"},
     ...(CONTACT ? [{href: `mailto:${CONTACT}`, label: "Contact"}] : []),
 ];

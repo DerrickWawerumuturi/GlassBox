@@ -1,6 +1,7 @@
 'use client'
 
 import React, {useEffect, useMemo, useRef, useState} from "react";
+import Link from "next/link";
 import {ChevronDownIcon, InfoIcon, PauseIcon, PlayIcon} from "lucide-react";
 
 import {Button} from "@/components/ui/button";
@@ -13,6 +14,8 @@ import {COPY, FAMILY_LABEL} from "./copy";
 
 const C = COPY.count;
 const RING = 2 * Math.PI * 15;
+// A job type with its own market page (lib/market-pages.ts), linked from the card.
+const ROLE_PAGE: Record<string, string> = {software_engineering: "software-engineering", ai: "ai", machine_learning: "machine-learning", devops: "devops"};
 const cap = (f: string) => { const l = FAMILY_LABEL[f] ?? f; return l === "QA" || l === "DevOps" ? l : l[0].toUpperCase() + l.slice(1); };
 const fmt = (n: number) => n.toLocaleString("en");
 const LEVEL_WORD: Record<Level, string> = {junior: "junior", mid: "mid level", senior: "senior or above"};
@@ -141,6 +144,11 @@ export default function CountCard({families, more, data, family, level, date, on
             <p className={"breakdown"}>
                 {part("junior", "junior")} · {part("mid", "mid level")} · {part("senior", "senior or above")} · {C.unstated(fmt(d.seniority.unstated))}
             </p>
+            {ROLE_PAGE[family] && (
+                <p className={"mt-2 text-[14px]"}>
+                    <Link href={`/market/${ROLE_PAGE[family]}`} className={"text-primary underline-offset-4 hover:underline"}>What {label} jobs ask for</Link>
+                </p>
+            )}
             {have && <p className={"cvline"}>{C.yourCv(topTenHave(d, have), label)}</p>}
             {reduce ? <p className={"sub"} style={{marginTop: 12}}>{C.reduced}</p> : (
                 <div className={"timer"}>

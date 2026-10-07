@@ -343,3 +343,33 @@ def test_a_kenyan_cv_speaks_english_and_swahili():
     candidate = Candidate.from_cv({"title": "Engineer", "skills": ["French (B2)"]},
                                   LocationPreferences(country_code="ke"), TODAY)
     assert candidate.languages == {"en", "sw", "fr"}
+
+
+# Real titles from the live pool, 2026-10-07 (editorial market pages): an intern
+# read as lead, and an internship read as asking for 10 years.
+@pytest.mark.parametrize("title, level", [
+    ("Member of Technical Staff, Intern (Spring 2027)", "intern"),
+    ("Member of Technical Staff (New Grad)", "entry"), ("Member of Technical Staff, Early Career", "entry"),
+    ("Member of Technical Staff - Lead, Machines", "lead"),            # its own "lead" still counts
+    ("Member of Technical Staff", "unknown"),                          # "staff" here is not a level
+    ("Senior Year Intern, Platform", "intern"),                        # an internship whatever else it says
+    ("Staff Software Engineer", "lead"), ("Head of Apprenticeships", "principal"),   # runs the programme
+])
+def test_early_career_titles_are_never_senior(title, level):
+    assert classify_seniority(title) == level
+
+
+def test_an_internship_reads_no_years_from_the_company_story():
+    text = ("After starting as a prepaid card, our product offering has grown a lot in the last 10 years in the UK.\n"
+            "Requirements:\n- You are studying computer science.")
+    assert extract_experience("Associate Software Engineer - Intern", text) == {"years": None, "kind": "unstated"}
+    assert extract_experience("Software Engineer", text) == {"years": None, "kind": "unstated"}
+
+
+def test_an_early_career_title_cannot_require_many_years():
+    text = "Requirements:\n- 8+ years of experience building distributed systems."
+    assert extract_experience("Software Engineering Intern", text) == {"years": None, "kind": "unstated"}
+    assert extract_experience("New Grad Software Engineer", text) == {"years": None, "kind": "unstated"}
+    assert extract_experience("Software Engineer", text) == {"years": 8, "kind": "required"}
+    assert extract_experience("Software Engineering Intern", "Requirements:\n- 1+ years of coding.")["years"] == 1
+    assert posting("Member of Technical Staff, Intern (Spring 2027)", text * 40).seniority == "intern"

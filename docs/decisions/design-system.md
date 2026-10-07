@@ -136,6 +136,39 @@ seven-step scale (56/40/28/20/16/14/12) is a guide for new work. Existing
 sizes stay as they are, by the founder's call on 2026-10-05: a sweep onto the
 scale was tried and reverted. The sidebar keeps its compact sizes.
 
+**2026-10-07: Source Serif 4 for editorial reading text.** The market pages
+read as reporting, and their long paragraphs, deks, captions and findings are
+set in Source Serif 4 (`font-read`): 19px on a desktop, 18px on a phone,
+line height 1.7. Self hosted (`app/fonts/source-serif-4.woff2`, OFL beside
+it), cut with fontTools to Latin + Latin Extended, weights 400-700, optical
+size pinned at 20 (72 KB). Loaded by `app/market/layout.tsx` only, so no other
+page pays for it. Headlines stay Space Grotesk, labels and numbers JetBrains
+Mono, and the product keeps Schibsted Grotesk.
+
+## Editorial figure grammar (market pages, 2026-10-07)
+
+The chart grammar above, as a figure in a story (`components/market-page/Figures.tsx`):
+
+- a `<figure>` on the card surface, radius 12, padding 22;
+- an uppercase Space Grotesk title, five words or fewer ("Languages they name");
+- a mono subtitle: what the share is of, the orange slash, then job chips
+  ("135 jobs"); the slash is the only orange in the figure;
+- the picture as server HTML, not a client chart: `role="img"` and an
+  `aria-label` that reads the data aloud, so it works with no script, in a
+  screenshot and to a screen reader;
+- neutral ink bars; the comparison set as a grey tick (`--chart-gap`) or a
+  faint bar (`foreground/35`); lime on one row only; hatched for "not stated"
+  or "no country";
+- a Source Serif caption that says how to read it, then a mono source line
+  ("Source: Glassbox count, 7 October 2026 · how we count");
+- a "View as table" twin where a chart has many rows.
+
+After a visitor's own scan a skill's label carries green (on the CV) or a grey
+dashed square (not yet); nothing else in the figure changes colour. A pull
+stat ("52 of 69", Space Grotesk 88px) is the one big number moment besides the
+lead visual. Sections are far apart (112px desktop, 80 phone), and the lead
+visual sits 132px (88 on a phone) under the byline.
+
 ## A bug worth remembering
 
 `--font-sans` was previously defined as `var(--font-sans)` — self-referential,

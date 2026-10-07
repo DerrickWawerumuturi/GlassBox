@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass
 from functools import lru_cache
 
 from src.jobpool.posting import html_to_text
-from src.matching.roles import classify_family, classify_seniority, track
+from src.matching.roles import classify_family, classify_seniority, title_level, track
 from src.matching.skills import find_skills, scan, tokens
 
 # Bump when any rule here or the vocabulary (skills.txt) changes: the daily run
@@ -30,7 +30,10 @@ from src.matching.skills import find_skills, scan, tokens
 # v5: physical and support "engineer" titles leave software engineering, a range
 # after "experience" no longer reads its upper end, "Unity Catalog" is not Unity
 # (2026-10-07, decisions/skill-vocabulary.md).
-PROFILER_VERSION = "requirements-v5"
+# v6: "Member of Technical Staff" is not a level, an intern or new grad title is
+# never senior, "in the last 10 years" is not a requirement, and an early career
+# title can't require more than 3 years (2026-10-07, decisions/market-pages.md).
+PROFILER_VERSION = "requirements-v6"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
@@ -157,13 +160,18 @@ _WORD_YEARS = re.compile(rf"\b({'|'.join(_NUMBER_WORDS)})\b(?:\s*\(\d{{1,2}}\))?
                          re.I)
 # A figure in a sentence with these words is prose about the company, or about
 # how long it keeps an applicant's data ("kept for up to 2 years in our candidate pool").
-_PROSE = re.compile(r"founded|years ago|in business|over the past|established|anniversary|years old|of age\b|"
+# "grown a lot in the last 10 years" is the company's story, not a requirement
+# (read as 10 required years in a Monzo internship, 2026-10-07).
+_PROSE = re.compile(r"founded|years ago|in business|(?:over|in|during) the (?:past|last)\b|established|anniversary|years old|of age\b|"
                     r"\bwe(?:'ve| have)\b|\bour (?:team|company|founders?)\b|\b(?:kept|stored|retained) for\b|"
                     r"candidate pool", re.I)
 # "No prior experience required": a stated requirement of zero, not silence.
 _NO_EXPERIENCE = re.compile(r"\bno (?:prior |previous |professional |work |industry )?(?:work )?experience "
                             r"(?:is )?(?:required|necessary|needed)\b", re.I)
 MAX_PLAUSIBLE_YEARS = 15
+# An internship or a graduate job (by its title) that seems to require more than
+# this has been misread: the figure is somewhere else in the ad. It reads as unstated.
+MAX_EARLY_CAREER_YEARS = 3
 
 
 def _figures(text: str) -> list[tuple[int, int, int, int]]:
@@ -221,6 +229,8 @@ def _experience(title: str | None, description: str | None) -> tuple[dict, int |
     middles += [middle for _, _, _, middle in title_figures]
 
     if required or general:
+        if title_level(title) in ("intern", "entry") and max(required or general) > MAX_EARLY_CAREER_YEARS:
+            return {"years": None, "kind": "unstated"}, None
         # The gate is the highest required figure; the level reads the same figures at their middles.
         return {"years": max(required or general), "kind": "required"}, max(middles)
     if _NO_EXPERIENCE.search(text):

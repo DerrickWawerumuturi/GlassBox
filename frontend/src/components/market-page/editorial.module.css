@@ -1,0 +1,28 @@
+/*
+ * The lead visual's squares, one per job. Thousands of them on a role page,
+ * so each is a bare <i> with one short class rather than a row of utilities.
+ * Size steps with the count, so 1,400 squares fit a phone (decisions/market-pages.md).
+ */
+.squares { display: grid; grid-template-columns: repeat(auto-fill, var(--sq)); gap: var(--gap); }
+.squares i { width: var(--sq); height: var(--sq); border-radius: calc(var(--sq) / 6); background: var(--foreground); }
+.squares i.lime { background: var(--accent-lime); box-shadow: inset 0 0 0 1px var(--accent-lime-edge); }
+.squares i.ring { background: transparent; box-shadow: inset 0 0 0 var(--ring) var(--foreground); }
+.squares i.lime.ring { background: transparent; box-shadow: inset 0 0 0 var(--ring) var(--lime-ring); }
+
+.s24 { --sq: 24px; --gap: 6px; --ring: 2px; }
+.s14 { --sq: 14px; --gap: 4px; --ring: 2px; }
+.s9 { --sq: 9px; --gap: 3px; --ring: 1.5px; }
+@media (max-width: 700px) {
+  .s24 { --sq: 17px; --gap: 4px; }
+  .s14 { --sq: 10px; --gap: 3px; --ring: 1.5px; }
+  .s9 { --sq: 6px; --gap: 2px; --ring: 1px; }
+}
+
+/* Lime is a fill on paper; as an outline it needs the darker edge to be seen. */
+.squares { --lime-ring: oklch(0.72 0.16 116); }
+:global(.dark) .squares { --lime-ring: var(--accent-lime); }
+
+/* The slim title bar: slides in once the lead visual has scrolled away. */
+.bar { transform: translateY(-100%); transition: transform 0.2s ease-out; }
+.bar[data-on="true"] { transform: none; }
+@media (prefers-reduced-motion: reduce) { .bar { transition: none; } }

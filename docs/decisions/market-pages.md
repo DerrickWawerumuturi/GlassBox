@@ -1,12 +1,17 @@
-# Decision: public market pages, starting with entry level software
+# Decision: public market pages
 
-**Status:** built 2026-10-07, not yet pushed.
-**Files:** `backend/src/jobpool/market_pages.py`, `market_look.py` (builds it),
-`backend/src/api/market.py` (`GET /market/page/{name}`); frontend
-`app/(public)/market/entry-level-software/` (page and share image),
-`app/(public)/method/page.tsx`, `lib/market-page.ts`, `lib/method-copy.ts`,
-`components/market-page/`. Tests: `test_market_pages.py`, `market-page.test.ts`,
-`analytics.test.ts`.
+**Status:** entry level page built 2026-10-07; the editorial template, the four
+role pages and the /market hub built 2026-10-07, not yet pushed.
+**Files:** backend `src/jobpool/market_pages.py` (the pages' counts),
+`market_story.py` (each page's `story`: what the editorial sections are written
+from), `market_look.py` (builds them), `src/api/market.py`
+(`GET /market/page/{name}`); frontend `app/market/[page]/` (page and share
+image), `app/market/page.tsx` (the hub), `app/market/layout.tsx`,
+`app/(public)/method/page.tsx`, `lib/market-pages.ts`, `lib/market-story.ts`,
+`lib/market-page.ts`, `lib/method-copy.ts`, `components/market-page/`. Tests:
+`test_market_pages.py`, `test_market_story.py`, `test_requirements.py`,
+`market-page.test.ts`, `seo.test.ts`, `analytics.test.ts`.
+Design: `docs/local/editorial-prototype.html`, `docs/local/market-pages-editorial.html`.
 
 ## Why these pages
 
@@ -52,7 +57,8 @@ the code it describes, named beside it in `lib/method-copy.ts`.
   makes it elsewhere; no country named ("Remote", "Hybrid") is counted as
   unknown, never guessed.
 - **Employers:** distinct employers by the duplicate rule's company key, so
-  "Shift" and "Shift Ltd" are one.
+  "Shift" and "Shift Ltd" are one. The largest is named as most of its jobs
+  spell it.
 
 ## The 100 rule
 
@@ -83,36 +89,187 @@ level and 4 to senior, at least 3 points apart, from the top 40 of either),
 40, `[title, company, level, required years]`, one employer at a time) and
 `names` (display names). Never a job's text.
 
-## The page
+Since the editorial template every page also returns `story`
+(`market_story.py`): `compare {jobs, readable}`, `breadth`, `skills` (the 40
+most named: category, any, required, employers, compare_any, broad),
+`headline`, `squares`, `languages {per_job, bars}`, `contrast`, `categories`,
+`years {buckets, stated, unstated}` and `sections`.
 
-`/market/entry-level-software`, server rendered and rebuilt at most every 5
-minutes (ISR), with the landing page's rule: a failed fetch during a
-revalidation throws, so the last good page stays (`builtForPage` in
-`look-server.ts`, shared by both). Sections: the question as the title, one
-sentence with the count, date and what it counts; three counted facts with a
-copy control; the skills table; the CV ask; the entry vs senior chart (chart
-grammar, table twin); who is hiring; the titles; how we counted, linking to
-`/method`. No advice anywhere.
+## The editorial template (2026-10-07)
 
-**Loop pieces** (decision page section 04):
+The founder approved the pages as reporting, not a dashboard
+(`docs/local/market-pages-editorial.html`): data, then what it shows. One
+template, `components/market-page/MarketArticle.tsx`, serves all five pages,
+server rendered at `/market/{name}` (ISR, 5 minutes; a failed fetch during a
+revalidation keeps the last good page, `builtForPage`). In reading order:
 
-- *Copy a fact:* the sentence plus the page URL with
-  `?utm_source=copy&utm_campaign=entry-level-software`. Analytics
-  `fact_copied {page}`, never the sentence.
-- *Share preview:* `opengraph-image.tsx` beside the page draws the headline
-  fact, its count and date on the desk, in the brand faces. next/og reads
-  ttf, not woff2, so `app/fonts/og/` holds static cuts of the same files
-  (made with fontTools: woff2 decompressed, instanced at one weight, Latin
-  subset; about 50 KB in all).
-- *The CTA carries the page:* `cta_clicked {where: "entry-level-software"}`,
-  and `scan_started` / `scan_finished` carry `from: "entry-level-software"`,
-  so visits can be followed to finished scans. The visitor stays on the page
-  after the scan and the skills table lights up: green for a skill on their
-  CV, a grey dashed mark for one not on it yet (the landing page's rule:
-  only their own scan, `useHave`).
+1. **Kicker** "Market / {page}" (the breadcrumb), the **question** as the H1
+   ("What are AI jobs actually asking for?"), a **dek** built from the data
+   (count, employers, the skill named most, and on the entry level page where
+   it differs most from senior jobs).
+2. **Byline**: Counted by Glassbox, `<time>` updated, counted again every day;
+   share, copy link and cite buttons.
+3. **Lead visual**: the job count and one square per job. Lime = names the
+   headline skill (the one highlight), outlined = internship. Squares shrink
+   with the count (24, 14 or 9 px; 17, 10 or 6 on a phone). A deliberate gap
+   above it (132 px desktop, 88 phone, founder's call).
+4. **Framing**: what was counted, each job once.
+5. **At a glance**: three findings, each one full sentence with its count, an
+   anchor (`#finding-…`) and a copy control (the sentence plus a tagged link to
+   the finding). Skill, then the contrast, then years; levels or languages fill
+   in on pages without them.
+6. **Finding sections**, each only when its data clears the thresholds below.
+   Heading = the finding, a sentence before, one `<figure>` (title, mono
+   subtitle with the orange slash and a job chip, the picture as server HTML
+   with `role="img"` and a data `aria-label`, a caption and a source line), a
+   table twin where a chart has many rows, a sentence after.
+   - *Languages*: the broad languages, bars with the comparison as a grey tick.
+   - *Contrast*: broad skills leaning to the page, then to its comparison set,
+     two sided rows.
+   - *Beyond the languages*: up to 4 skill categories (`skills.txt`'s category
+     column), 3 bars each.
+   - *Years*: a pull stat ("52 of 69") and the years asked as one split bar.
+   - *Levels* (role pages): junior, mid, senior, not stated.
+   - *Who is hiring, and where*: employers, the largest one, US / elsewhere /
+     no country (hatched), internships, remote.
+7. **See where you stand**: the CV ask, at the end (`MarketCvAsk`, which only
+   wires `AddCvButton`; the CV ask redesign replaces its inside). After a scan
+   every skill in the figures carries the visitor's mark, green on the CV or
+   grey dashed not yet, and a line counts them (`SkillName`, `ScanStatus`).
+8. **How we counted**, the jobs in a `<details>` fold, a cite line.
+9. **The rail**: In this count (jobs, employers, internships, remote, date) and
+   More from the count (the other pages with their job counts, the hub,
+   /method). Sticky beside the article on a desktop, under it on a phone.
+
+A slim title bar with the question and the CV button slides in once the lead
+visual has scrolled away (an instant switch under reduced motion).
+
+**Words.** Every sentence is a template over the numbers
+(`lib/market-story.ts`), so it is checked by construction and changes with the
+data. Headings state what the data shows and never tell anyone what to do.
+Templates avoid verb agreement with skill names ("58 of the 135 jobs name
+Python", not "LLMs appears").
+
+**Comparison sets.** Entry level page: senior software jobs (as before). Role
+page: the senior jobs of the same family (the founder's spec), so its contrast
+reads "Senior AI jobs name LLMs more often".
+
+### The breadth rule
+
+`market_story.broad(skill)`, the one place it lives: a skill may be
+highlighted, lead the squares, head a finding or appear in a figure only when
+jobs at **10 or more employers** (`BREADTH_EMPLOYERS`) name it. Under that, one
+company's hiring can make a pattern (Spring Boot on 7 Oct: 14 entry level jobs,
+8 at Robinhood; Ruby: 9 of 13 at Stripe). Figures show broad skills only, and
+say so in their caption.
+
+### Thresholds (named constants in `market_story.py`)
+
+| Section | Shown when |
+|---|---|
+| any section, any share | 100 readable jobs (`MIN_READABLE`, the 100 rule) |
+| Languages | 3 broad languages (`MIN_LANGUAGES`); up to 7 bars |
+| Contrast | a comparison set of 100 readable jobs, and broad skills at least 3 points apart both ways (`CONTRAST_MIN_POINTS`); up to 3 each way |
+| Beyond the languages | a category with 2 broad skills (`MIN_CATEGORY_BROAD`) named by 20 jobs (`MIN_CATEGORY_JOBS`); up to 4 |
+| Years | 30 jobs that state required years (`MIN_YEARS_STATED`); buckets 0, 1, 2, 3+ (entry) or 0-2, 3-4, 5-7, 8+ (roles) |
+| Levels | role pages, 50 jobs with a stated level (`MIN_LEVELS_STATED`) |
+| Who is hiring | always, over the 100 rule |
+
+Under the 100 rule the page keeps the question, the count, the squares
+(no highlight), the CV ask, the method and the jobs, and says in one calm
+sentence why it shows no shares.
+
+**Payload.** The squares are four counts (skill, both, internship, neither),
+not a list per job: they are drawn grouped, so the counts are the picture.
+About 11 KB a page.
+
+### Search and sharing
+
+- Title and description from the data: "What entry level software jobs ask
+  for: 136 jobs counted · Glassbox"; the description is the first finding with
+  its date.
+- Canonical via `publicPage`; `robots max-image-preview:large`; og type article.
+- Share image per page (`app/market/[page]/opengraph-image.tsx`) and the hub,
+  drawn by `components/market-page/ShareImage.tsx` (next/og reads ttf, not
+  woff2, so `app/fonts/og/` holds static cuts of the brand faces). The pages sit outside the
+  `(public)` route group because a group adds a hash to the image's address;
+  the Article markup names the plain one.
+- Article JSON-LD (headline, `datePublished` = `FIRST_PUBLISHED` 2026-10-07,
+  `dateModified` = the count's `taken_at`, author and publisher Organization
+  Glassbox, image) and a BreadcrumbList matching "Market / {page}".
+- Sitemap: the hub and five pages, `lastmod` = the day counted.
+- Links: the rail, the hub, the footer ("Market"), the header's Resources menu
+  (Market and How it works), /product, /method, and the home count card links
+  to a role page when its job type has one.
+
+### Analytics
+
+`cta_clicked {where}`, `fact_copied {page}` and `scan_started` /
+`scan_finished {from}` carry the page's name; a name that is not one of the
+five (`lib/market-names.ts`) is dropped before sending, so no free text rides
+in on it.
+
+## Two misreads fixed (requirements-v6)
+
+Found while drafting the page, fixed where they live:
+
+- **"Member of Technical Staff" read as lead** (`roles.title_level`). OpenAI,
+  xAI and Abridge use it for every level; its "staff" made all 88 in the pool
+  lead, interns and new grads included. It is now a role name, and the rest of
+  the title decides. An intern, working student, apprentice or new grad title
+  is never senior or lead ("Senior Year Intern" is an intern), unless the job
+  runs the programme (manager, director, head, coordinator, recruiter).
+- **An internship read as 10 required years** (`requirements._experience`).
+  "Grown a lot in the last 10 years" is company history: "in / over / during
+  the last / past" now marks prose (30 required figures in the pool change,
+  most of them Monzo's). And an intern or graduate title that seems to require
+  more than 3 years (`MAX_EARLY_CAREER_YEARS`) reads as unstated: the figure
+  is somewhere else in the ad.
+
+`PROFILER_VERSION` is now `requirements-v6`: the next daily run re-profiles the
+whole pool, and snapshots start a new series. Run
+`python -m src.jobpool.daily --profile-only` on production before the push, or
+the API will count nothing at v6 until the daily run.
+
+## Role pages (backend, 2026-10-07)
+
+**Status:** built and served; the editorial template above renders them.
+
+One page per job family, from the same read and the same rules as the entry
+level page (`market_pages.role(family, rows)`, `ROLES`):
+
+| Page name | Family |
+|---|---|
+| `software-engineering` | `software_engineering` (only; backend, frontend, full stack and mobile are their own families) |
+| `ai` | `ai` |
+| `machine-learning` | `machine_learning` |
+| `devops` | `devops` |
+
+`GET /market/page/{name}` serves them; `PAGES` is the one known list, so any
+other name (a family name such as `machine_learning` included) is a 404 before
+anything is read.
+
+Returned: `taken_at`, `profiler_version`, `families`, `min_readable`,
+`publishable` (100 readable jobs, as above), `jobs`, `readable`, `employers`,
+`remote`, `places {us, elsewhere, unknown}`, `largest_employer {name, jobs}`
+(the same helper as the entry level page, `_hiring`), `levels {junior, mid,
+senior, unstated}` (the landing count's buckets, `market_look.bucket`),
+`skills` (top 15 by readable jobs naming it: `any`, `required`), `together`,
+`titles` (up to 30, one employer at a time, `[title, company, level, required
+years]`) and `names`. Never a job's text.
+
+**Named together** (`together`): for each of the top 3 skills, `any` is the
+readable jobs naming it, and `with` the 5 skills those same jobs name most
+beside it, each with its job count ("Of the 490 software engineering jobs
+that name Python, 222 also name Go"). Named means required, preferred or
+mentioned; a skill is never listed beside itself.
+
+Live, 7 Oct 2026 (v5 profiles, read only): software engineering 1,379 jobs
+(1,366 readable), AI 288 (287), machine learning 194 (194), DevOps 203 (200).
+All four clear the 100 rule.
 
 ## Later
 
 A 30 day window once snapshot history allows (raises the count, smooths the
-internship season). The same template for software engineering, AI, machine
-learning and DevOps only after this page shows it converts.
+internship season). Monthly archive URLs, "what changed", a CSV with Dataset
+markup, skill pages. A share image per finding.

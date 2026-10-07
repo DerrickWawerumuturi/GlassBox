@@ -10,6 +10,8 @@
   --font-sans: var(--font-schibsted-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
   --font-hand: var(--font-caveat), "Comic Sans MS", cursive;
+  /* Editorial reading text on the market pages only (app/(public)/market/layout.tsx). */
+  --font-read: var(--font-source-serif-4), Georgia, serif;
   /* The seven-step type scale (docs/decisions/design-system.md): text-display … text-label. */
   --text-display: 3.5rem;
   --text-display--line-height: 1.02;

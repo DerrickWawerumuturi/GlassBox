@@ -1,6 +1,7 @@
 import type {Metadata, MetadataRoute} from "next";
 
 import {SITE_URL} from "@/lib/site";
+import {FIRST_PUBLISHED, MARKET_NAMES, MarketBody, MarketInfo, marketPath} from "@/lib/market-pages";
 
 /*
  * What search engines and share previews read: the site's metadata, each
@@ -11,7 +12,8 @@ import {SITE_URL} from "@/lib/site";
  */
 
 /** The pages search should list, in sitemap order. Each /market page goes here too. */
-export const PUBLIC_PATHS = ["/", "/product", "/about", "/privacy", "/your-cv", "/market/entry-level-software", "/method"] as const;
+export const PUBLIC_PATHS = ["/", "/product", "/about", "/privacy", "/your-cv", "/market", "/market/entry-level-software",
+    "/market/software-engineering", "/market/ai", "/market/machine-learning", "/market/devops", "/method"] as const;
 
 /** A path as an absolute address on this site ("/" is the bare origin). */
 export function absolute(path: string): string {
@@ -53,22 +55,57 @@ export const rootMetadata: Metadata = {
  * page's headline fact); otherwise the site's image.
  */
 export function publicPage(path: (typeof PUBLIC_PATHS)[number] | `/${string}`, page: {
-    title: string; description: string; share?: Share; ownImage?: boolean;
+    title: string; description: string; share?: Share; ownImage?: boolean; article?: boolean;
 }): Metadata {
     const share = page.share ?? SHARE;
     return {
         title: page.title,
         description: page.description,
         alternates: {canonical: path},
-        openGraph: {...openGraph(share, page.ownImage), url: path},
+        openGraph: {...openGraph(share, page.ownImage), url: path, ...(page.article ? {type: "article"} : {})},
         twitter: twitter(share, page.ownImage),
+        // A market page's share image is its finding: let search show it large (Discover reads this).
+        ...(page.article ? {robots: {index: true, follow: true, "max-image-preview": "large"}} : {}),
     };
 }
 
-/** The sitemap: public pages only, no invented dates or priorities. */
-export function sitemapEntries(paths: readonly string[] = PUBLIC_PATHS): MetadataRoute.Sitemap {
-    return paths.map((path) => ({url: absolute(path)}));
+/**
+ * The sitemap: public pages only, no invented dates or priorities. A market
+ * page's lastmod is the day its numbers were counted (`counted`), the only
+ * date we know a page changed on.
+ */
+export function sitemapEntries(paths: readonly string[] = PUBLIC_PATHS, counted: Record<string, string> = {}): MetadataRoute.Sitemap {
+    return paths.map((path) => (counted[path] ? {url: absolute(path), lastModified: counted[path].slice(0, 10)} : {url: absolute(path)}));
 }
+
+const ORG = {"@type": "Organization", name: "Glassbox", url: SITE_URL, logo: absolute("/icons/icon-512.png")};
+
+/**
+ * A market page's structured data: an Article written and published by
+ * Glassbox, changed on the day it was counted, and its breadcrumbs, matching
+ * the visible "Market / {page}".
+ */
+export function marketStructuredData(info: MarketInfo, page: MarketBody, description: string) {
+    const path = marketPath(info.name);
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Article", headline: `What are ${info.subject} jobs actually asking for?`, description,
+                datePublished: FIRST_PUBLISHED, dateModified: page.taken_at, author: ORG, publisher: ORG,
+                image: [absolute(`${path}/opengraph-image`)], mainEntityOfPage: absolute(path),
+            },
+            {
+                "@type": "BreadcrumbList", itemListElement: [
+                    {"@type": "ListItem", position: 1, name: "Market", item: absolute("/market")},
+                    {"@type": "ListItem", position: 2, name: info.label, item: absolute(path)},
+                ],
+            },
+        ],
+    };
+}
+
+export const MARKET_PATHS = MARKET_NAMES.map(marketPath);
 
 /**
  * The home page's structured data. WebSite and Organization give search a
@@ -80,7 +117,7 @@ export function homeStructuredData(description: string) {
         "@context": "https://schema.org",
         "@graph": [
             {"@type": "WebSite", name: "Glassbox", alternateName: ["See Glassbox", "seeglassbox.com"], url: SITE_URL},
-            {"@type": "Organization", name: "Glassbox", url: SITE_URL, logo: absolute("/icons/icon-512.png")},
+            ORG,
             {
                 "@type": "WebApplication", name: "Glassbox", url: SITE_URL, operatingSystem: "Web", description,
                 offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},

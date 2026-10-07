@@ -3,6 +3,8 @@ Public market pages: one question each, answered from the live pool.
 
     build(rows, taken_at)            every page's body, from one read of the pool (market_look.compute)
     entry_level_software(rows, ...)  GET /market/page/entry-level-software
+    role(family, rows, ...)          GET /market/page/{software-engineering, ai, machine-learning, devops}
+                                     (each page's `story`, the editorial sections' counts: market_story.py)
     is_entry_level(row)              the page's definition of entry level
     place(location)                  "us", "elsewhere" or "unknown" for a job's location text
 
@@ -17,10 +19,11 @@ decisions/market-pages.md
 import re
 from collections import Counter
 from datetime import datetime, timezone
+from functools import partial
 from statistics import median
 
 from src.Agent.utils.location import country_named
-from src.jobpool import snapshot
+from src.jobpool import market_story, snapshot
 from src.jobpool.opportunities import duplicate_key
 from src.matching.requirements import PROFILER_VERSION
 from src.matching.skills import display
@@ -33,6 +36,13 @@ MIN_READABLE = 100
 ENTRY_YEARS = 2
 TOP_SKILLS = 15
 TITLES = 40
+# A role page: one job family each, by page name.
+ROLES = {"software-engineering": "software_engineering", "ai": "ai",
+         "machine-learning": "machine_learning", "devops": "devops"}
+ROLE_TITLES = 30
+# "Jobs that name X also name": for the role's top few skills, the skills named beside them most.
+TOGETHER_LEADS = 3
+TOGETHER_EACH = 5
 # The contrast chart: skills where entry level and senior jobs differ most.
 CONTRAST_EACH_WAY = 4
 CONTRAST_POOL = 40
@@ -126,12 +136,28 @@ def _median(values: list[int]) -> float | None:
     return float(median(values)) if values else None
 
 
-def _titles(rows: list[dict]) -> list[list]:
+def _hiring(rows: list[dict]) -> dict:
+    """Employers, the largest one, remote and places: the counts every page's "who is hiring" shows."""
+    employers = Counter(employer(row.get("company")) for row in rows)
+    largest_key, largest_jobs = employers.most_common(1)[0] if employers else (None, 0)
+    # The employer's name as most of its jobs spell it ("OpenAI", not one board's "Openai").
+    spellings = Counter(row.get("company") or "" for row in rows if employer(row.get("company")) == largest_key)
+    largest_name = spellings.most_common(1)[0][0] if spellings else None
+    places = Counter(place(row.get("location")) for row in rows)
+    return {
+        "employers": len(employers),
+        "remote": sum(bool(row.get("remote")) for row in rows),
+        "places": {name: places[name] for name in ("us", "elsewhere", "unknown")},
+        "largest_employer": {"name": largest_name, "jobs": largest_jobs} if largest_name is not None else None,
+    }
+
+
+def _titles(rows: list[dict], limit: int = TITLES) -> list[list]:
     # One per employer first: forty titles from one company describe that company.
     # Imported here: market_look builds these pages, so it imports this module first.
     from src.jobpool.market_look import _varied
     out = []
-    for row in _varied(rows, TITLES):
+    for row in _varied(rows, limit):
         profile = row["profile"]
         years = profile.get("years") if profile.get("years_kind") == "required" else None
         level = "intern" if is_internship(row) else profile.get("seniority") or "unknown"
@@ -153,11 +179,7 @@ def entry_level_software(rows: list[dict], taken_at: datetime | None = None) -> 
     top = _ranked(entry_any)[:TOP_SKILLS]
     contrast = _contrast(entry_any, len(entry_read), senior_any, len(senior_read))
 
-    employers = Counter(employer(row.get("company")) for row in entry)
-    largest_key, largest_jobs = employers.most_common(1)[0] if employers else (None, 0)
-    largest_name = next((row.get("company") or "" for row in entry if employer(row.get("company")) == largest_key), None)
-    places = Counter(place(row.get("location")) for row in entry)
-
+    hiring = _hiring(entry)
     keys = set(top) | {c["key"] for c in contrast}
     taken_at = taken_at or datetime.now(timezone.utc)
     return {
@@ -168,22 +190,81 @@ def entry_level_software(rows: list[dict], taken_at: datetime | None = None) -> 
         "publishable": len(entry_read) >= MIN_READABLE,
         "jobs": len(entry),
         "readable": len(entry_read),
-        "employers": len(employers),
+        "employers": hiring["employers"],
         "internships": sum(is_internship(row) for row in entry),
-        "remote": sum(bool(row.get("remote")) for row in entry),
-        "places": {name: places[name] for name in ("us", "elsewhere", "unknown")},
-        "largest_employer": {"name": largest_name, "jobs": largest_jobs} if largest_name is not None else None,
+        "remote": hiring["remote"],
+        "places": hiring["places"],
+        "largest_employer": hiring["largest_employer"],
         "skills": [{"key": k, "any": entry_any[k], "required": entry_req[k],
                     "senior_any": senior_any[k], "senior_required": senior_req[k]} for k in top],
         "contrast": contrast,
         "senior": {"jobs": len(senior), "readable": len(senior_read)},
         "required_median": {"entry": _median(entry_per_job), "senior": _median(senior_per_job)},
         "titles": _titles(entry),
-        "names": {key: display(key) for key in sorted(keys)},
+        "story": (story := market_story.story(entry, senior, employer, is_internship, market_story.ENTRY_YEARS,
+                                              MIN_READABLE)),
+        "names": _names(keys, story),
     }
 
 
-PAGES = {"entry-level-software": entry_level_software}
+def _names(keys: set[str], story: dict) -> dict:
+    """Display names for every skill key the page returns."""
+    keys = keys | {s["key"] for s in story["skills"]}
+    return {key: display(key) for key in sorted(keys)}
+
+
+def _together(rows: list[dict], leads: list[str]) -> list[dict]:
+    """For each lead skill: how many readable jobs name it, and the skills those jobs name most beside it."""
+    out = []
+    for lead in leads:
+        beside, jobs = Counter(), 0
+        for row in rows:
+            named = {key for kind in snapshot.KINDS for key in row["profile"].get(kind) or ()}
+            if lead in named:
+                jobs += 1
+                beside.update(named - {lead})
+        out.append({"key": lead, "any": jobs,
+                    "with": [{"key": k, "jobs": beside[k]} for k in _ranked(beside)[:TOGETHER_EACH]]})
+    return out
+
+
+def role(family: str, rows: list[dict], taken_at: datetime | None = None) -> dict:
+    """Pool rows (newest first) -> what one job family's jobs ask for: skills, levels, places, skills named together."""
+    # Imported here, as in _titles: market_look imports this module first.
+    from src.jobpool.market_look import LEVELS, bucket
+    jobs = [row for row in snapshot.counted(rows) if row["profile"].get("family") == family]
+    senior = [row for row in jobs if row["profile"].get("seniority") in _SENIOR_LEVELS]
+    readable = [row for row in jobs if not row["profile"].get("thin")]
+    any_, required, _ = _skill_counts(readable)
+    top = _ranked(any_)[:TOP_SKILLS]
+    together = _together(readable, top[:TOGETHER_LEADS])
+    levels = Counter({name: 0 for name in (*LEVELS, "unstated")})
+    levels.update(bucket(row["profile"].get("seniority")) for row in jobs)
+
+    keys = set(top) | {w["key"] for t in together for w in t["with"]}
+    taken_at = taken_at or datetime.now(timezone.utc)
+    return {
+        "taken_at": taken_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "profiler_version": PROFILER_VERSION,
+        "families": [family],
+        "min_readable": MIN_READABLE,
+        "publishable": len(readable) >= MIN_READABLE,
+        "jobs": len(jobs),
+        "readable": len(readable),
+        **_hiring(jobs),
+        "internships": sum(is_internship(row) for row in jobs),
+        "levels": dict(levels),
+        "skills": [{"key": k, "any": any_[k], "required": required[k]} for k in top],
+        "together": together,
+        "titles": _titles(jobs, ROLE_TITLES),
+        "story": (story := market_story.story(jobs, senior, employer, is_internship, market_story.ROLE_YEARS,
+                                              MIN_READABLE, dict(levels))),
+        "names": _names(keys, story),
+    }
+
+
+PAGES = {"entry-level-software": entry_level_software,
+         **{name: partial(role, family) for name, family in ROLES.items()}}
 
 
 def build(rows: list[dict], taken_at: datetime) -> dict:

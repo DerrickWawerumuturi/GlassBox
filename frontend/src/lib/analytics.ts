@@ -1,5 +1,7 @@
 import posthog, {CaptureResult} from "posthog-js";
 
+import {MARKET_NAMES, MarketName} from "@/lib/market-names";
+
 /*
  * Product analytics (decisions/analytics.md): PostHog, US cloud. Kept small
  * on purpose: no cookies or storage (memory persistence), no autocapture,
@@ -12,8 +14,9 @@ import posthog, {CaptureResult} from "posthog-js";
  */
 
 export type Page = "overview" | "market" | "skills" | "opportunities" | "applications";
-/** The public market pages, by name (lib/market-page.ts): where a CTA, a copied fact or a scan came from. */
-export type MarketPage = "entry-level-software";
+/** The public market pages, by name (lib/market-pages.ts): where a CTA, a copied fact or a scan came from. */
+export type MarketPage = MarketName;
+const CTA_PLACES = ["sticky", "closing", "inside", "product"] as const;
 
 type Events = {
     scan_started: {from?: MarketPage};
@@ -24,7 +27,7 @@ type Events = {
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
     ad_pasted: {kind: "text" | "url"};
-    cta_clicked: {where: "sticky" | "closing" | "inside" | "product" | MarketPage};
+    cta_clicked: {where: (typeof CTA_PLACES)[number] | MarketPage};
     fact_copied: {page: MarketPage};
 };
 
@@ -43,10 +46,17 @@ export const DEFAULT_HOST = "https://us.i.posthog.com";
 /** Same-origin path that next.config.ts rewrites to the PostHog host, so blockers of *.posthog.com don't drop events. */
 export const PROXY_PATH = "/ingest";
 
-/** Only an event's allowed properties survive; anything else is dropped. */
+// Properties that name a place on the site take only known names, so no free text rides in on them.
+const NAMED: Partial<Record<keyof Events, Record<string, readonly string[]>>> = {
+    fact_copied: {page: MARKET_NAMES}, scan_started: {from: MARKET_NAMES}, scan_finished: {from: MARKET_NAMES},
+    cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES]},
+};
+
+/** Only an event's allowed properties survive, and a page name only when it is one we know; anything else is dropped. */
 export function allowedProps<E extends keyof Events>(event: E, props: Record<string, unknown> = {}): Record<string, unknown> {
-    const keep = ALLOWED[event] as readonly string[];
-    return Object.fromEntries(Object.entries(props).filter(([key, value]) => keep.includes(key) && value !== undefined));
+    const keep = ALLOWED[event] as readonly string[], named: Record<string, readonly string[]> = NAMED[event] ?? {};
+    return Object.fromEntries(Object.entries(props).filter(([key, value]) => keep.includes(key) && value !== undefined
+        && (!(key in named) || named[key].includes(value as string))));
 }
 
 /** A URL or path as a bare path: no origin, query string or hash. */

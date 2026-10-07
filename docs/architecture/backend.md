@@ -36,7 +36,8 @@ src/jobpool/                         jobs from outside an analysis
   daily.py                           the scheduled pool refresh and profiling
   snapshot.py                        the day's market snapshot: what the live pool asks for, per family
   market_look.py                     the same count live, for the landing page (GET /market/look)
-  market_pages.py                    public market pages from the same read (GET /market/page/entry-level-software)
+  market_pages.py                    public market pages from the same read (GET /market/page/{entry-level-software, software-engineering, ai, machine-learning, devops})
+  market_story.py                    each page's `story`: what its editorial sections are written from, the breadth rule, the thresholds
   ad_reader.py                       a pasted ad or link -> its asks (POST /market/ad)
   safe_fetch.py                      SSRF-guarded fetch for public routes: pinned IP, 8 s, 2 MB, 3 hops
   opportunities.py                   the pool matched to one user's CV
@@ -241,11 +242,15 @@ Three routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`,
   Sent gzipped with `Cache-Control: public, max-age=3600`. 503 when there is no database.
 - `GET /market/page/{name}`: one public market page, built with the count
   above from the same read of the pool (`market_look.compute`), so the two
-  always agree; same cache, 503 and headers. Today only
-  `entry-level-software`: entry level software jobs, their top skills against
-  senior jobs, internships, remote, US vs elsewhere, employers and titles, and
-  `publishable` (false under 100 readable jobs). An unknown name is a 404
-  before anything is read.
+  always agree; same cache, 503 and headers. Five pages:
+  `entry-level-software` (entry level software jobs against senior ones) and
+  one per job family (`software-engineering`, `ai`, `machine-learning`,
+  `devops`, against the family's senior jobs). Each has its counts, titles,
+  `publishable` (false under 100 readable jobs) and a `story`
+  (`market_story.py`): skills with their category, employers and the
+  comparison count, the headline skill, the squares, languages per job, the
+  contrast, categories, years asked, and the sections the data supports. An
+  unknown name is a 404 before anything is read.
 - `POST /market/ad`: `{"text"}` (at most 50,000 characters, else 413) or
   `{"url"}`. Read by `profile_job`; returns the title, family, level and the
   skills asked as `req` or `opt`. Nothing is stored or logged. Links go through

@@ -1,5 +1,6 @@
 """
-GET /market/page/entry-level-software: what entry level software jobs ask for.
+GET /market/page/{name}: what entry level software jobs ask for, and what one
+job family's jobs ask for (software engineering, AI, machine learning, DevOps).
 
 Pure: fixture rows, no database. The live read is covered by the local
 database test in test_market_look.py, which builds both from one read.
@@ -164,6 +165,89 @@ def test_an_empty_pool():
     assert out["required_median"] == {"entry": None, "senior": None}
 
 
+# ------------------------------------------------------------ role pages
+
+ML = [
+    row("Openai", "ML Engineer", family="machine_learning", seniority="senior",
+        required=("python", "pytorch"), preferred=("kubernetes",), remote=True),
+    row("OpenAI Inc", "ML Engineer", family="machine_learning", seniority="senior", required=("python",)),  # once
+    row("Reddit", "Machine Learning Engineer", family="machine_learning", seniority="mid",
+        required=("python", "sql"), mentioned=("pytorch",), location="Berlin, Germany"),
+    row("Reddit", "Junior ML Engineer", family="machine_learning", seniority="junior",
+        required=("pytorch",), location="Remote"),
+    row("Acme", "ML Researcher", family="machine_learning", seniority="unknown", required=("python", "statistics")),
+    row("Beta", "Applied Scientist", family="machine_learning", seniority="lead", thin=True, required=("rust",)),
+    row("Gamma", "Data Scientist", family="data_science", required=("python",)),                 # another family
+    row("Delta", "ML Engineer", family="machine_learning", provider="url", required=("python",)),  # a pasted link
+]
+
+
+def test_a_role_page_counts_one_family_the_way_the_product_counts():
+    out = mp.role("machine_learning", ML, TAKEN)
+    assert out["taken_at"] == "2026-10-07T09:00:00Z" and out["families"] == ["machine_learning"]
+    assert (out["jobs"], out["readable"], out["employers"]) == (5, 4, 4)
+    assert out["levels"] == {"junior": 1, "mid": 1, "senior": 2, "unstated": 1}   # lead is senior, unknown unstated
+    assert out["remote"] == 1 and out["places"] == {"us": 3, "elsewhere": 1, "unknown": 1}
+    assert out["largest_employer"] == {"name": "Reddit", "jobs": 2}
+    assert out["publishable"] is False and out["min_readable"] == mp.MIN_READABLE
+
+
+def test_the_largest_employer_is_named_as_most_of_its_jobs_spell_it():
+    rows = [row("Openai", "ML Engineer 1", family="machine_learning"),
+            *[row("OpenAI", f"ML Engineer {i}", family="machine_learning") for i in range(2, 4)]]
+    assert mp.role("machine_learning", rows, TAKEN)["largest_employer"] == {"name": "OpenAI", "jobs": 3}
+
+
+def test_a_role_page_counts_skills_any_and_required_over_readable_jobs():
+    skills = {s["key"]: s for s in mp.role("machine_learning", ML, TAKEN)["skills"]}
+    assert skills["python"] == {"key": "python", "any": 3, "required": 3}
+    assert skills["pytorch"] == {"key": "pytorch", "any": 3, "required": 2}     # mentioned once: named, not required
+    assert skills["kubernetes"] == {"key": "kubernetes", "any": 1, "required": 0}
+    assert "rust" not in skills                                                 # thin jobs say nothing of skills
+
+
+def test_skills_named_together_with_the_top_three():
+    out = mp.role("machine_learning", ML, TAKEN)
+    together = {t["key"]: t for t in out["together"]}
+    assert [t["key"] for t in out["together"]] == [s["key"] for s in out["skills"][:mp.TOGETHER_LEADS]]
+    assert together["python"]["any"] == 3
+    assert together["python"]["with"][0] == {"key": "pytorch", "jobs": 2}      # two of python's three jobs
+    assert all(w["key"] != "python" for w in together["python"]["with"])      # never itself
+    assert all(len(t["with"]) <= mp.TOGETHER_EACH for t in out["together"])
+    assert set(out["names"]) >= {w["key"] for t in out["together"] for w in t["with"]}
+
+
+def test_a_role_page_titles_carry_no_ad_text():
+    out = mp.role("machine_learning", ML, TAKEN)
+    assert SECRET not in json.dumps(out)
+    assert ["Junior ML Engineer", "Reddit", "junior", None] in out["titles"]
+    assert all(len(t) == 4 for t in out["titles"])
+    many = [row(f"C{i % 40}", f"Backend {i}", family="devops") for i in range(80)]
+    assert len(mp.role("devops", many, TAKEN)["titles"]) == mp.ROLE_TITLES
+
+
+def test_a_role_page_is_publishable_from_100_readable_jobs():
+    def jobs(n):
+        return [row(f"C{i}", "SRE", family="devops") for i in range(n)] + [row("T", "SRE", family="devops", thin=True)]
+    assert mp.role("devops", jobs(99), TAKEN)["publishable"] is False
+    assert mp.role("devops", jobs(100), TAKEN)["publishable"] is True
+
+
+def test_an_empty_role_page():
+    out = mp.role("ai", [], TAKEN)
+    assert (out["jobs"], out["publishable"], out["largest_employer"], out["together"]) == (0, False, None, [])
+    assert out["levels"] == {"junior": 0, "mid": 0, "senior": 0, "unstated": 0}
+
+
+def test_every_known_page_is_built_and_each_role_reads_its_own_family():
+    pages = mp.build(ML, TAKEN)
+    assert set(pages) == {"entry-level-software", "software-engineering", "ai", "machine-learning", "devops"}
+    assert pages["machine-learning"]["jobs"] == 5 and pages["ai"]["jobs"] == 0
+    assert {name: pages[name]["families"] for name in mp.ROLES} == {
+        "software-engineering": ["software_engineering"], "ai": ["ai"],
+        "machine-learning": ["machine_learning"], "devops": ["devops"]}
+
+
 # ------------------------------------------------------------ the route
 
 def _built(monkeypatch):
@@ -190,12 +274,22 @@ def test_the_page_and_the_count_come_from_one_read(monkeypatch):
     assert page["jobs"] >= software_junior                       # the product's junior level is inside the page's
 
 
+@pytest.mark.parametrize("name", ["software-engineering", "ai", "machine-learning", "devops"])
+def test_the_route_serves_each_role_page(monkeypatch, name):
+    _built(monkeypatch)
+    r = TestClient(main.app).get(f"/market/page/{name}")
+    ml.forget()
+    assert r.status_code == 200 and r.json()["families"] == [mp.ROLES[name]] and "levels" in r.json()
+
+
 def test_an_unknown_page_is_404_without_reading_anything(monkeypatch):
     def never():
         raise AssertionError("an unknown page must not read the count")
     monkeypatch.setattr(ml, "_built", never)
     client = TestClient(main.app)
     assert client.get("/market/page/nope").status_code == 404
+    assert client.get("/market/page/data-science").status_code == 404            # a family, but not a page
+    assert client.get("/market/page/machine_learning").status_code == 404         # a family name, not a page name
     assert client.get("/market/page/" + "x" * 500).status_code == 404
 
 

@@ -6,6 +6,7 @@ same thing in both places.
 
     classify_family(title, description)   frontend, machine_learning, non_tech, …
     classify_seniority(title, …)          intern … principal, or unknown
+    title_level(title)                    the level the title alone names, or None
     track(family)                         which years a family is judged on
 """
 import re
@@ -250,6 +251,17 @@ _PROVIDER_LEVELS = [
     ("senior", r"senior|expert"),
     ("entry", r"entry|graduate|junior|associate|beginner"),
 ]
+# "Member of Technical Staff" names the job, not a level: OpenAI, xAI and
+# Abridge give it to interns and to their most senior engineers alike. Its
+# "staff" read as lead for all 88 in the live pool (2026-10-07), interns and
+# new grads included; now the rest of the title decides.
+_ROLE_NAME = re.compile(r"\b(?:member of (?:the )?)?technical staff\b")
+# An internship or a new grad job is early career whatever else the title says
+# ("Member of Technical Staff, Intern", "Senior Year Intern"), unless the job
+# runs the programme ("Internship Program Manager", "Head of Apprenticeships").
+_EARLY_CAREER = re.compile(r"\b(?:intern|interns|internship|werkstudent\w*|working student|praktik\w*|apprentice\w*|"
+                           r"new grad)\b")
+_RUNS_PROGRAMME = re.compile(r"\b(?:manager|director|head|coordinator|recruit\w*|partner|lead)\b")
 _IC_MANAGER = re.compile(r"(?<!group )\b(product|program|programme|project|technical program|delivery|account|partner|"
                          r"marketing|community|content|brand|campaign|category) manager\b")
 _SENIOR_SIGNALS = ("extensive experience", "extensive professional", "proven track record",
@@ -259,13 +271,22 @@ _SENIOR_SIGNALS = ("extensive experience", "extensive professional", "proven tra
                    "line management", "seasoned")
 
 
-def classify_seniority(title: str | None, description: str | None = None, provider_level: str | None = None,
-                       years: int | None = None) -> str:
-    """Title first, then the board's own level, then the posting's language, then its years."""
+def title_level(title: str | None) -> str | None:
+    """The level the title alone gives, or None when it names none."""
+    t = _ROLE_NAME.sub(" ", normalise_title(title))
+    early = _EARLY_CAREER.search(t)
+    if early and not _RUNS_PROGRAMME.search(t):
+        return "entry" if early.group() == "new grad" else "intern"
     # "Product Manager" names a function, not a manager of people: without the
     # word "manager" a "Senior Product Manager" is senior, a plain one unknown.
     # A "Group Product Manager" does manage, so it keeps the word.
-    level = _first(_TITLE_LEVELS, _IC_MANAGER.sub(r"\1 ", normalise_title(title)))
+    return _first(_TITLE_LEVELS, _IC_MANAGER.sub(r"\1 ", t))
+
+
+def classify_seniority(title: str | None, description: str | None = None, provider_level: str | None = None,
+                       years: int | None = None) -> str:
+    """Title first, then the board's own level, then the posting's language, then its years."""
+    level = title_level(title)
     if level:
         return level
     level = _first(_PROVIDER_LEVELS, (provider_level or "").lower())

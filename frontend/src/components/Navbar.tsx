@@ -3,8 +3,8 @@
 import React, {useState} from 'react'
 import Link from "next/link";
 import {
-    ActivityIcon, ArrowRightIcon, CircleHelpIcon, ClipboardListIcon, InfoIcon, LayoutGridIcon, LogInIcon, LucideIcon, MenuIcon,
-    RadarIcon, SigmaIcon, TrendingUpIcon,
+    ActivityIcon, ArrowRightIcon, BookOpenIcon, ChartColumnIcon, CircleHelpIcon, ClipboardListIcon, InfoIcon, LayoutGridIcon, LogInIcon,
+    LucideIcon, MenuIcon, RadarIcon, SigmaIcon, TrendingUpIcon,
 } from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
@@ -18,7 +18,9 @@ import {useCvScan} from "@/components/landing/useCvScan";
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuGroup,
     DropdownMenuItem,
+    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -26,6 +28,7 @@ import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {initials} from "@/lib/utils";
 import {GlassboxWordmark} from "@/components/brand/Logo";
 import AccountMenuItems from "@/components/AccountMenuItems";
+import {MARKET_NAMES, MARKET_PAGES, marketPath} from "@/lib/market-pages";
 
 const ICONS: Record<string, LucideIcon> = {
     market: ActivityIcon, "your-skills": TrendingUpIcon, opportunities: RadarIcon, applications: ClipboardListIcon,
@@ -64,7 +67,16 @@ const Navbar = () => {
     if (pathname.startsWith("/dashboard") || pathname.startsWith("/analysis")) return null;
 
     // The dashboard needs an account, so its link shows only when signed in.
-    const siteLinks = [{href: "/#how-we-count", label: NAV.how}, {href: "/about", label: NAV.about}, {href: "/#faq", label: NAV.faq}];
+    const siteLinks = [{href: "/about", label: NAV.about}, {href: "/#faq", label: NAV.faq}];
+    const trigger = "h-auto bg-transparent px-0 py-0 font-mono text-xs font-normal uppercase tracking-[0.12em] text-muted-foreground hover:bg-transparent hover:text-foreground data-popup-open:bg-transparent data-open:bg-transparent";
+    const resourceLink = (href: string, title: string, line?: string) => (
+        <li key={href}>
+            <NavigationMenuLink render={<Link href={href} />} className={"block rounded-md px-3 py-2 transition-colors hover:bg-foreground/[0.05]"}>
+                <span className={"block text-sm font-medium text-foreground"}>{title}</span>
+                {line && <span className={"block text-[13px] leading-snug text-muted-foreground"}>{line}</span>}
+            </NavigationMenuLink>
+        </li>
+    );
     const linkClass = (href: string) => cn(
         "font-mono text-xs uppercase tracking-[0.12em] transition-colors",
         pathname === href ? "text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -93,9 +105,9 @@ const Navbar = () => {
                     <span aria-hidden className={"pointer-events-none absolute -inset-y-1.5 rounded-md bg-foreground/[0.06] transition-[left,width,opacity] duration-200 ease-out motion-reduce:transition-none"}
                           style={{left: (pill?.left ?? 0) - 10, width: (pill?.width ?? 0) + 20, opacity: pill ? 1 : 0}} />
                     <NavigationMenu>
-                        <NavigationMenuList>
+                        <NavigationMenuList className={"gap-5"}>
                             <NavigationMenuItem>
-                                <NavigationMenuTrigger onPointerEnter={pillTo} className={"h-auto bg-transparent px-0 py-0 font-mono text-xs font-normal uppercase tracking-[0.12em] text-muted-foreground hover:bg-transparent hover:text-foreground data-popup-open:bg-transparent data-open:bg-transparent"}>
+                                <NavigationMenuTrigger onPointerEnter={pillTo} className={trigger}>
                                     {NAV.product}
                                 </NavigationMenuTrigger>
                                 <NavigationMenuContent>
@@ -111,6 +123,28 @@ const Navbar = () => {
                                             ))}
                                         </ul>
                                         <div className={"mt-1 border-t border-border pt-1"}>{withCv()}</div>
+                                    </div>
+                                </NavigationMenuContent>
+                            </NavigationMenuItem>
+                            {/* Market pages and how the count is made, in one menu (founder, 2026-10-07). */}
+                            <NavigationMenuItem>
+                                <NavigationMenuTrigger onPointerEnter={pillTo} className={trigger}>{NAV.resources}</NavigationMenuTrigger>
+                                <NavigationMenuContent>
+                                    <div className={"grid w-[min(560px,calc(100vw-48px))] grid-cols-[1.3fr_1fr] gap-2 p-2"}>
+                                        <div>
+                                            <p className={"px-3 pt-2 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.market}</p>
+                                            <ul>
+                                                {resourceLink("/market", NAV.marketHub, NAV.marketHubLine)}
+                                                {MARKET_NAMES.map((n) => resourceLink(marketPath(n), `${MARKET_PAGES[n].label} jobs`))}
+                                            </ul>
+                                        </div>
+                                        <div className={"border-l border-border pl-2"}>
+                                            <p className={"px-3 pt-2 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.how}</p>
+                                            <ul>
+                                                {resourceLink("/#how-we-count", NAV.how, NAV.howLine)}
+                                                {resourceLink("/method", NAV.method, NAV.methodLine)}
+                                            </ul>
+                                        </div>
                                     </div>
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
@@ -137,7 +171,13 @@ const Navbar = () => {
                             <ArrowRightIcon className={"size-4 text-primary"} /> {NAV.withCv}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        {menuLink("/#how-we-count", <SigmaIcon className={"size-4 opacity-70"} />, NAV.how)}
+                        <DropdownMenuGroup>
+                            <DropdownMenuLabel className={"font-mono text-[11px] uppercase tracking-[0.12em]"}>{NAV.resources}</DropdownMenuLabel>
+                            {menuLink("/market", <ChartColumnIcon className={"size-4 opacity-70"} />, NAV.market)}
+                            {menuLink("/#how-we-count", <SigmaIcon className={"size-4 opacity-70"} />, NAV.how)}
+                            {menuLink("/method", <BookOpenIcon className={"size-4 opacity-70"} />, NAV.method)}
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
                         {menuLink("/about", <InfoIcon className={"size-4 opacity-70"} />, NAV.about)}
                         {menuLink("/#faq", <CircleHelpIcon className={"size-4 opacity-70"} />, NAV.faq)}
                         <DropdownMenuSeparator />

@@ -6,6 +6,13 @@ import type {ExplainerSection} from "@/lib/site-copy";
  * code does. Rules: CLAUDE.md section 2.
  */
 
+/** The job sites the daily read takes jobs from (sources.py AGGREGATORS and KENYAN_BOARDS). Arbeitnow asks for a link back. */
+export const JOB_SITES: Array<{name: string; href?: string}> = [
+    {name: "RemoteOK"}, {name: "Remotive"}, {name: "Arbeitnow", href: "https://www.arbeitnow.com"}, {name: "Jobicy"},
+    {name: "Himalayas"}, {name: "We Work Remotely"},
+    {name: "Six Kenyan job feeds: MyJobMag, Corporate Staffing, Career Point Kenya, Jobweb Kenya, Summit Recruitment and Jobs in Kenya"},
+];
+
 export const METHOD_PAGE = {
     kicker: "Method",
     title: "How Glassbox counts",
@@ -19,8 +26,8 @@ export const METHOD_PAGE = {
             id: "sources", title: "Where the jobs come from",
             paragraphs: [
                 "Every day at 05:00 UTC we read public job boards.",
-                "Many jobs come from employers' own boards: 181 companies on Greenhouse, Ashby, Lever and Workable. We chose that list by hand.",
-                "The rest come from job sites: RemoteOK, Remotive, Arbeitnow, Jobicy, Himalayas and We Work Remotely, plus six Kenyan job feeds.",
+                "Many jobs come from employers' own boards: 261 boards on Greenhouse, Ashby, Lever and Workable. We chose that list by hand.",
+                "The rest come from job sites and their feeds, listed below.",
                 "Jobs found during someone's own CV scan, and links people paste in, are never counted. They are one person's search, not the market.",
             ],
         },
@@ -88,9 +95,11 @@ export const METHOD_PAGE = {
             ],
         },
     ] as ExplainerSection[],
+    sitesTitle: "The job sites we read",
     backTitle: "Back to the count",
     back: [
         {href: "/", label: "Today's count"},
+        {href: "/market", label: "What today's tech jobs ask for"},
         {href: "/market/entry-level-software", label: "What entry level software jobs ask for"},
         {href: "/your-cv", label: "What happens to your CV"},
     ],

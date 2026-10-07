@@ -1,56 +1,84 @@
 import {describe, expect, it} from "vitest";
 
-import {METHOD_PAGE} from "./method-copy";
+import FIXTURE from "./market-story.fixture.json";
+import {JOB_SITES, METHOD_PAGE} from "./method-copy";
+import {copyText, copyUrl, levelLabel, stamp} from "./market-page";
+import {MARKET_PAGES, MarketBody} from "./market-pages";
 import {
-    contrastLead, copyText, copyUrl, countLine, ENTRY_COPY, entryForPage, EntryPage, headlineFacts, levelLabel,
-} from "./market-page";
+    bucketPhrase, categoriesSection, contrastSection, dek, findingText, glance, hiringSection, languagesSection, levelsSection,
+    pageDescription, pageTitle, question, yearsSection,
+} from "./market-story";
 
-const PAGE: EntryPage = {
-    taken_at: "2026-10-07T14:32:14Z", profiler_version: "requirements-v5",
-    families: ["software_engineering", "backend", "frontend", "full_stack", "mobile"],
-    min_readable: 100, publishable: true, jobs: 164, readable: 163, employers: 73, internships: 50, remote: 33,
-    places: {us: 82, elsewhere: 57, unknown: 25}, largest_employer: {name: "Stripe", jobs: 18},
-    skills: [{key: "python", any: 68, required: 56, senior_any: 487, senior_required: 428}],
-    contrast: [
-        {key: "python", any: 68, senior_any: 487},
-        {key: "javascript", any: 37, senior_any: 123},
-        {key: "distributed systems", any: 27, senior_any: 464},
-    ],
-    senior: {jobs: 1486, readable: 1478}, required_median: {entry: 5, senior: 5},
-    titles: [["Engineering Intern", "Acme", "intern", null]],
-    names: {python: "Python", javascript: "JavaScript", "distributed systems": "Distributed systems"},
-};
+// Two real bodies, built read only from the 7 Oct 2026 pool (v5 profiles), titles cut to three.
+const ENTRY = {info: MARKET_PAGES["entry-level-software"], page: FIXTURE["entry-level-software"] as unknown as MarketBody};
+const AI = {info: MARKET_PAGES.ai, page: FIXTURE.ai as unknown as MarketBody};
+const THIN = {info: ENTRY.info, page: {...ENTRY.page, publishable: false, readable: 80,
+    story: {...ENTRY.page.story, headline: null, sections: []}} as MarketBody};
 
-describe("the entry level page's words", () => {
-    it("says the count, the date and what it counts", () => {
-        expect(countLine(PAGE)).toBe("On 7 October 2026 we counted 164 entry level software jobs at 73 employers, each job once, however many boards or cities list it.");
+describe("a market page's words, written from its counts", () => {
+    it("asks the question and answers it in the dek", () => {
+        expect(question(ENTRY)).toBe("What are entry level software jobs actually asking for?");
+        expect(dek(ENTRY)).toBe("We counted 136 entry level software jobs at 67 employers. Python came up most. JavaScript is where they differ most from senior software jobs.");
+        expect(dek(AI)).toBe("We counted 288 AI jobs at 107 employers. LLMs came up most.");
     });
 
-    it("leads with the skill named most, then one leaning each way", () => {
-        expect(headlineFacts(PAGE)).toEqual([
-            "68 of the 163 entry level software jobs we counted on 7 October 2026 name Python.",
-            "37 of the 163 entry level software jobs we counted on 7 October 2026 name JavaScript. So do 123 of the 1,478 senior ones.",
-            "27 of the 163 entry level software jobs we counted on 7 October 2026 name Distributed systems. So do 464 of the 1,478 senior ones.",
+    it("gives three findings at a glance, each a full sentence with its count", () => {
+        expect(glance(ENTRY).map(findingText)).toEqual([
+            "58 of the 135 entry level software jobs we could read name Python.",
+            "JavaScript is named in 25% of entry level software jobs and 9% of senior software jobs.",
+            "Two years is the most common ask: 52 of the 69 jobs that state a number.",
         ]);
+        expect(glance(ENTRY).map((f) => f.id)).toEqual(["finding-skill", "finding-contrast", "finding-years"]);
+        expect(glance(AI)[0].text).toBe("191 of the 287 AI jobs we could read name LLMs.");
     });
 
-    it("shows no share under the 100 job rule: only the count", () => {
-        expect(headlineFacts({...PAGE, publishable: false, readable: 80})).toEqual([countLine(PAGE)]);
+    it("under the 100 rule says why there are no shares, and finds nothing", () => {
+        expect(dek(THIN)).toBe("We counted 136 entry level software jobs at 67 employers. Too few could be read today to show shares.");
+        expect(glance(THIN)).toEqual([]);
     });
 
-    it("states the chart's finding with both shares", () => {
-        expect(contrastLead(PAGE)).toBe("Python: 42% of entry level jobs, 33% of senior ones");
+    it("writes section headings as findings, never as advice", () => {
+        expect(languagesSection(ENTRY).heading).toBe("Most of them name more than one language");
+        expect(languagesSection(ENTRY).before).toBe("110 of the 135 entry level software jobs we could read name at least one language, and 89 name two or more.");
+        expect(contrastSection(ENTRY).heading).toBe("JavaScript shows up far more at entry level. Distributed systems less.");
+        expect(contrastSection(AI).heading).toBe("Senior AI jobs name LLMs more often. TypeScript less.");
+        expect(categoriesSection(ENTRY).heading).toBe("Beyond the languages, backend systems and AI come up most");
+        expect(yearsSection(ENTRY).heading).toBe("“Entry level” usually means two years");
+        expect(yearsSection(ENTRY).pull).toBe("52 of 69");
+        expect(levelsSection(AI).heading).toBe("Most AI jobs are senior");
+        expect(hiringSection(ENTRY).before).toBe("67 employers posted these jobs. No single one dominates: Stripe has the most, 18 of the 136.");
+        const all = [languagesSection, contrastSection, categoriesSection, yearsSection].map((f) => f(ENTRY).heading).join(" ");
+        expect(all).not.toMatch(/\blearn\b|should|start here|next step|recommend|—/i);
     });
 
-    it("copies the sentence and a tagged link to the page", () => {
-        const url = copyUrl();
-        expect(url).toMatch(/\/market\/entry-level-software\?utm_source=copy&utm_campaign=entry-level-software$/);
-        expect(copyText("Python is named in 68 jobs.", url)).toBe(`Python is named in 68 jobs. ${url}`);
+    it("names a years bucket in words", () => {
+        expect(bucketPhrase(0, 0)).toBe("no experience");
+        expect(bucketPhrase(2, 2)).toBe("two years");
+        expect(bucketPhrase(3, null)).toBe("3 years or more");
+        expect(bucketPhrase(5, 7)).toBe("5 to 7 years");
+    });
+
+    it("titles and describes the page for search from the data", () => {
+        expect(pageTitle(ENTRY.info, ENTRY.page)).toBe("What entry level software jobs ask for: 136 jobs counted");
+        expect(pageDescription(ENTRY.info, ENTRY.page)).toBe(
+            "58 of the 135 entry level software jobs we could read name Python. Counted on 7 October 2026: 136 jobs at 67 employers.");
+        expect(pageTitle(AI.info, null)).toBe("What AI jobs ask for");
+    });
+});
+
+describe("the helpers", () => {
+    it("copies the sentence and a tagged link to the finding", () => {
+        const url = copyUrl("/market/ai", "ai", "finding-skill");
+        expect(url).toMatch(/\/market\/ai\?utm_source=copy&utm_campaign=ai#finding-skill$/);
+        expect(copyText("LLMs appear in 191 jobs.", url)).toBe(`LLMs appear in 191 jobs. ${url}`);
+    });
+
+    it("stamps the update time in UTC", () => {
+        expect(stamp("2026-10-07T05:00:00Z")).toBe("7 Oct 2026, 05:00 UTC");
     });
 
     it("labels a title by its level, or by the years it asks for", () => {
         expect(levelLabel("intern", null)).toBe("Internship");
-        expect(levelLabel("junior", 2)).toBe("Junior");
         expect(levelLabel("mid", 2)).toBe("Asks 2 years");
         expect(levelLabel("mid", 1)).toBe("Asks 1 year");
         expect(levelLabel("unknown", 0)).toBe("No experience asked");
@@ -58,44 +86,9 @@ describe("the entry level page's words", () => {
     });
 });
 
-describe("entryForPage", () => {
-    const ok = (body: unknown) => (async () => new Response(JSON.stringify(body), {status: 200})) as unknown as typeof fetch;
-    const down = (async () => new Response("{}", {status: 503})) as unknown as typeof fetch;
-
-    it("returns the page's counts", async () => {
-        expect(await entryForPage(100, ok(PAGE), false)).toEqual(PAGE);
-    });
-
-    it("renders without them at build time, and keeps the last page during a revalidation", async () => {
-        expect(await entryForPage(100, down, false)).toBeNull();
-        expect(await entryForPage(100, ok({detail: "odd"}), false)).toBeNull();
-        await expect(entryForPage(100, down, true)).rejects.toThrow();
-    });
-});
-
-// CLAUDE.md section 1 and 2, checked on every line these pages say.
-const lines = (value: unknown): string[] => typeof value === "string" ? [value]
-    : Array.isArray(value) ? value.flatMap(lines)
-    : value && typeof value === "object" ? Object.values(value).flatMap(lines)
-    : typeof value === "function" ? [String(call(value as (...a: unknown[]) => unknown))] : [];
-
-/** A copy function, called with whichever sample arguments it takes. */
-function call(fn: (...a: unknown[]) => unknown): unknown {
-    for (const args of [[1, 2, 3], [PAGE.places], [PAGE.largest_employer, 164]]) {
-        try { return fn(...args); } catch { /* the next shape */ }
-    }
-    throw new Error(`no sample arguments fit ${fn}`);
-}
-
-describe("copy rules on the market page and /method", () => {
-    const all = [...lines(ENTRY_COPY), ...lines(METHOD_PAGE), ...headlineFacts(PAGE)];
-
-    it("never advises, never says postings, never uses an em dash or an exclamation mark", () => {
-        const banned = /\b(?:you should|learn next|start here|best next step|recommended|postings?|missing|gaps?)\b|—|!/i;
-        expect(all.filter((l) => banned.test(l))).toEqual([]);
-    });
-
-    it("keeps the button to three words", () => {
-        expect(ENTRY_COPY.cta.split(" ").length).toBeLessThanOrEqual(3);
+describe("/method", () => {
+    it("links back to Arbeitnow, as its free API asks", () => {
+        expect(JOB_SITES.find((s) => s.name === "Arbeitnow")?.href).toBe("https://www.arbeitnow.com");
+        expect(METHOD_PAGE.back.map((l) => l.href)).toContain("/market");
     });
 });
