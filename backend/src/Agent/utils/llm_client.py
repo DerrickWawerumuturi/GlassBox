@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from src.Agent.utils.prompts import ONBOARDING_PROMPT, SYSTEM, USER_PROMPT, build_prompt
 from src.Agent.utils.types import CVQuery, ParsedQuery
+from src.Agent.utils.versions import PARSER_VERSION  # noqa: F401  defined there so light modules skip groq
 
 load_dotenv(find_dotenv())
 
@@ -25,11 +26,6 @@ REASONING_EFFORT = os.getenv("JOBRADAR_GROQ_REASONING_EFFORT", "medium")
 MAX_COMPLETION_TOKENS = int(os.getenv("JOBRADAR_GROQ_MAX_COMPLETION_TOKENS", "4096"))
 FALLBACK_REASONING_EFFORT = "low"
 FALLBACK_MAX_COMPLETION_TOKENS = 2048
-
-# Stored with every kept CV profile (latest_cvs). Bump it when USER_PROMPT or
-# ParsedQuery changes what a parse returns: a profile from an older version is
-# then refused for reuse, and the user uploads their CV again.
-PARSER_VERSION = "query-v1"
 
 # kind -> (user prompt, its placeholder, result model)
 KINDS = {

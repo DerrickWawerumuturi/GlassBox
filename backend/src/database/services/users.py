@@ -9,7 +9,7 @@ import hashlib
 from types import SimpleNamespace
 
 from src.Agent.utils import location as loc
-from src.Agent.utils.llm_client import PARSER_VERSION
+from src.Agent.utils.versions import PARSER_VERSION
 from src.Agent.utils.types import ParsedQuery
 from src.database.repositories import user_repository
 from src.database.session import connection
