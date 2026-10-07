@@ -14,12 +14,21 @@ export function longDate(iso: string): string {
     return new Date(iso).toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric", timeZone: "UTC"});
 }
 
+/** "7 Oct 2026": the day the count was taken, short (UTC). */
+export const shortDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric", timeZone: "UTC"});
+
 /** "7 Oct 2026, 05:00 UTC": the byline's updated time. */
 export function stamp(iso: string): string {
-    const d = new Date(iso);
-    const day = d.toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric", timeZone: "UTC"});
-    return `${day}, ${d.toISOString().slice(11, 16)} UTC`;
+    return `${shortDate(iso)}, ${new Date(iso).toISOString().slice(11, 16)} UTC`;
 }
+
+/**
+ * A skill's name in a chart's narrow label column: without the examples in
+ * brackets ("AI assistants", not "AI assistants (ChatGPT, Copilot)"), and
+ * wrapped, never cut off. The full name is the label's title.
+ */
+export const chartName = (name: string) => name.replace(/\s*\([^)]*\)$/, "");
 
 const plural = (n: number, one: string, many: string) => `${fmt(n)} ${n === 1 ? one : many}`;
 

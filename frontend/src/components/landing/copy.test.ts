@@ -18,7 +18,7 @@ const S = ASK.sheet;
 const askCopy = [
     ...strings({...ASK, sub: ASK.sub(ask), line: ASK.line(ask), done: [ASK.done(1), ASK.done(9)], sheet: null, errors: ASK.errors}),
     ...strings({...S, title: [S.title(ask), S.title(null)], line: [S.line(ask), S.line(null)], steps: [S.steps(ask), S.steps(null)],
-        reuseStep: [S.reuseStep(ask), S.reuseStep(null)], result: S.result(9, 15), resultLine: S.resultLine(ask), example: S.example.line}),
+        reuseStep: [S.reuseStep(ask), S.reuseStep(null)], result: S.result(9, 15), resultLine: S.resultLine(ask), example: S.example(10).line}),
     ...[stickyLine({kind: "page", n: 15}), stickyLine({kind: "count", ask}), stickyLine({kind: "ad", n: 5})].map((l) => l.join(" ")),
 ];
 const all = [...strings(COPY), ...strings(FEATURES.map(({title, nav, body}) => ({title, nav, body}))), ...strings(NAV), ...strings(PRODUCT_PAGE), ...strings(ABOUT_PAGE), ...askCopy];
@@ -55,9 +55,7 @@ describe("landing copy", () => {
 
     it("keeps button labels short and the sticky button fixed", () => {
         for (const label of [COPY.sticky.cta, COPY.sticky.signUp, COPY.cv.cta, COPY.cv.signUp, ASK.cta, S.choosePhone, S.chooseDesk, S.reuse, S.seeThem, S.keep]) {
-            // Two labels the founder named word for word in the CV ask spec (7 Oct): the only ones over three words.
-            const named = label === S.seeThem || label === S.reuse;
-            expect(label.split(" ").length).toBeLessThanOrEqual(named ? 5 : 3);
+            expect(label.split(" ").length).toBeLessThanOrEqual(3);
         }
         expect(COPY.sticky.cta).toBe(COPY.cv.cta);
         expect(COPY.cv.cta).toBe(ASK.cta);

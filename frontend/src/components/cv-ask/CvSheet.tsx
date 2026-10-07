@@ -18,9 +18,9 @@ const S = ASK.sheet;
 const TITLE = "m-0 pr-10 font-heading text-[20px] leading-[1.2] font-bold sm:text-[28px]";
 const LINE = "mt-1 mb-4 text-[16px] leading-[1.5] text-foreground/85";
 
-/** The fixed example of a result, labelled as one. */
-function Example() {
-    const e = S.example;
+/** A made up result, labelled as one, out of the same total as the ask. */
+function Example({ask}: {ask: Ask | null}) {
+    const e = S.example(ask?.skills.length || undefined);
     return (
         <div className={"mb-4 rounded-xl border border-border bg-background p-3"}>
             <div className={"mb-2 flex justify-between font-mono text-[12px] font-medium tracking-[0.08em] text-muted-foreground uppercase"}>
@@ -120,7 +120,7 @@ export default function CvSheet({open, onOpenChange, ask, state, latest, signedI
                                 <>
                                     <D.Title className={TITLE}>{S.title(ask)}</D.Title>
                                     <D.Description className={LINE}>{S.line(ask)}</D.Description>
-                                    <Example />
+                                    <Example ask={ask} />
                                     {state.phase === "error" && state.error && (
                                         <p role={"alert"} className={"mt-0 mb-3 rounded-lg border border-border bg-foreground/[0.04] px-3 py-2.5 text-[14px]"}>{state.error}</p>
                                     )}

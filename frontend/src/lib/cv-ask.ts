@@ -45,13 +45,17 @@ export const ASK = {
             : "We read your CV for skills and compare them with today's jobs.",
         exampleKick: "You'll see",
         exampleTag: "example",
-        /** Fixed numbers, always labelled "example": never the visitor's. */
-        example: {have: 9, of: 15, line: "skills on your CV", chips: [["Python", true], ["React", true], ["Go", false], ["SQL", true], ["Kubernetes", false]] as const},
+        /**
+         * Made up numbers, always labelled "example": never the visitor's. Out of
+         * the same total as the ask that opened the sheet ("? of 10" shows "6 of 10").
+         */
+        example: (of = 15) => ({have: Math.round(of * 0.6), of, line: "skills on your CV",
+            chips: [["Python", true], ["React", true], ["Go", false], ["SQL", true], ["Kubernetes", false]] as const}),
         choosePhone: "Choose your CV",
         drop: "Drop your CV here",
         or: "or",
         chooseDesk: "Choose a file",
-        reuse: "Use your last CV",
+        reuse: "Use last CV",
         orNew: "or choose a new one",
         trust: TRUST,
         fine: "PDF, up to 10 MB",
@@ -66,7 +70,7 @@ export const ASK = {
         deleted: "The file is deleted once it's read.",
         result: (k: number, n: number) => `${k} of ${n}`,
         resultLine: (ask: Ask) => `of the ${ask.what} are on your CV.`,
-        seeThem: "See them on the page",
+        seeThem: "See them",
         keep: "Keep them",
         keepLine: " with a free account, to compare again later.",
     },
@@ -182,6 +186,7 @@ export function checkFile(file: {name: string; type: string; size: number}): str
 /** A failed scan in plain words. */
 export function scanError(error: unknown): string {
     if (error instanceof ApiError && error.status === 413) return ASK.errors.tooBig;
+    if (error instanceof ApiError && error.status === 415) return ASK.errors.notPdf;
     if (error instanceof Error && /timed out/i.test(error.message)) return ASK.errors.slow;
     return ASK.errors.unreadable;
 }

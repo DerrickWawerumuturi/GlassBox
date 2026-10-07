@@ -32,7 +32,7 @@ def test_a_scans_skills_come_from_profiles_stored_ones_reused(monkeypatch):
     assert [(p.job.title, p.skills) for p in jobs] == [
         ("Backend Engineer", ["Go", "PostgreSQL", "Docker"]),
         ("Data Engineer", ["Python", "PostgreSQL", "Docker"]),
-        ("ML Engineer", ["Machine Learning", "Python", "PyTorch"]),     # the title names one too
+        ("ML Engineer", ["Machine learning", "Python", "PyTorch"]),     # the title names one too
     ]
     # Market statistics count readable postings only; the thin one is still ranked.
     assert [p.job.title for p in readable] == ["Backend Engineer", "Data Engineer"]

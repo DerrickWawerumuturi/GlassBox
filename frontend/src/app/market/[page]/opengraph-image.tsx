@@ -1,11 +1,12 @@
 import {MARKET_NAMES, MARKET_PAGES, isMarketName, marketForPage, marketPath} from "@/lib/market-pages";
-import {shareImage, SHARE_SIZE} from "@/components/market-page/ShareImage";
-import {fmt, longDate, pct} from "@/lib/market-page";
-import {skillName} from "@/lib/market-story";
+import {findingImage, shareImage, SHARE_SIZE} from "@/components/market-page/ShareImage";
+import {fmt, longDate} from "@/lib/market-page";
+import {findingCount, findingShare, headline} from "@/lib/market-story";
 
 /*
- * Each market page's share preview: its headline finding, its count and its
- * date, so a pasted link carries the number (docs/decisions/market-pages.md).
+ * Each market page's share preview: its finding headline (the H1), the count
+ * behind it and the finding's share as squares, so a pasted link carries the
+ * finding (docs/decisions/market-pages.md).
  * Rebuilt with the page; a failed fetch during a revalidation keeps the last
  * image, like the page itself (look-server.ts).
  */
@@ -26,10 +27,7 @@ export default async function OgImage({params}: {params: Promise<{page: string}>
     const subject = info.subject.toUpperCase();
     if (!page) return shareImage({kicker: `${subject} JOBS`, big: "Counted", line: `What are ${info.subject} jobs actually asking for?`, path: marketPath(name)});
     const kicker = `${subject} JOBS · COUNTED ${longDate(page.taken_at).toUpperCase()}`;
-    const head = page.story.headline ? page.story.skills.find((s) => s.key === page.story.headline) : undefined;
-    if (!head) return shareImage({kicker, big: fmt(page.jobs), line: `${info.subject} jobs, at ${fmt(page.employers)} employers.`, path: marketPath(name)});
-    return shareImage({
-        kicker, big: `${fmt(head.any)} of ${fmt(page.readable)}`,
-        line: `${info.subject} jobs name ${skillName({info, page}, head.key)}. That's ${pct(head.any, page.readable)}%.`, path: marketPath(name),
-    });
+    const c = {info, page}, title = headline(c), lit = findingShare(c), line = findingCount(c, `${info.subject} jobs`);
+    if (!title || lit === null || !line) return shareImage({kicker, big: fmt(page.jobs), line: `${info.subject} jobs, at ${fmt(page.employers)} employers.`, path: marketPath(name)});
+    return findingImage({kicker, title, line, lit, path: marketPath(name)});
 }

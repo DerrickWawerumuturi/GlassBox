@@ -52,11 +52,13 @@ answered is pressure without a purpose.
 ## The sheet
 
 A bottom sheet on a phone, a centred panel from 640px (base-ui Dialog, styled
-as a sheet). Idle: the question, one sentence naming what we compare with, a
-fixed example labelled "example" ("9 of 15", five chips), then "Choose your CV"
+as a sheet). Idle: the question, one sentence naming what we compare with, an
+example labelled "example", out of the same total as the ask that opened the
+sheet ("9 of 15" on a market page, "6 of 10" from the landing count; five
+chips), then "Choose your CV"
 (phone) or a drop zone with "Choose a file" (wider). Choosing or dropping a file
 starts the scan. The three trust lines, "PDF, up to 10 MB", "What happens to
-your CV" (/your-cv). Signed in with a reusable kept CV: "Use your last CV" first
+your CV" (/your-cv). Signed in with a reusable kept CV: "Use last CV" first
 (the existing rescan, `POST /analyze/reuse`), the picker below it.
 
 Errors, in plain words, with the picker still there: not a PDF, over 10 MB
@@ -84,17 +86,18 @@ requests.
 ### The result
 
 "{k} of {N}" in green, "of the skills entry level software jobs name most are
-on your CV.", "See them on the page" (closes the sheet; the page has already
-lit up). Signed out: "Keep them with a free account, to compare again later."
+on your CV.", "See them" (closes the sheet; the page has already lit up). Signed out: "Keep them with a free account, to compare again later."
 True today: once signed in, the browser's CV skills go to the account (`cv-store`
 migrates them; `kept_cv` keeps the skills and derived values, never contact details) and Opportunities compares
 them with each day's jobs; a scan made signed in also keeps the profile of
-the latest CV (`latest_cvs`) for "Use your last CV".
+the latest CV (`latest_cvs`) for "Use last CV".
 
-## Words the founder named
+## Buttons
 
-"See them on the page" and "Use your last CV" are over three words. Both are the
-founder's own, from the spec; `copy.test.ts` allows exactly these two.
+Every button here is one to three words ("Find out", "Choose your CV", "Use
+last CV", "See them", "Keep them"). Until 2026-10-08 "See them on the page"
+and "Use your last CV" were allowed as exceptions; the founder shortened both
+and `copy.test.ts` no longer allows any.
 
 ## Analytics
 
@@ -110,9 +113,19 @@ place (`count`, `inside`, `closing`, `sticky`, `product`); `ask` is `card` or
 - Keeping the result in the sticky line after a scan (see above).
 - A file name, skills or the count in any event.
 
+## The server's limits (2026-10-08)
+
+`/analyze` and `/cv/parse` refuse a file over 10 MB with a 413 ("That file is
+over 10 MB.") and anything that doesn't start as a PDF (`%PDF-` in its first
+1 KB, whatever the content type claims) with a 415 ("That isn't a PDF.")
+(`backend/src/cv/upload.py`). A request whose Content-Length is past 10 MB
+plus 64 KB of form wrapping is refused by a middleware before its body is
+read; otherwise the file is read at most 10 MB + 1 byte. Both happen before
+the analysis queue. The sheet words them as its own checks do (`scanError`:
+413 is "over 10 MB", 415 is "isn't a PDF"). A chunked upload without a
+Content-Length is still spooled by the server before the handler caps it.
+
 ## Not done
 
-- `/analyze` and `/cv/parse` have no size limit on the server; 10 MB is
-  checked in the browser only.
 - The dashboard's own scan page (`/dashboard/scan`) keeps its layout and the
   "Scan again" pop up (`ReuseCvDialog`); only its picker is the new one.

@@ -33,6 +33,7 @@ from src.Agent.utils.types import (
     AnalysisPayload, AppliedDateRequest, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
     LocationPreferencesRequest, ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
 )
+from src.cv import upload
 from src.cv.current_user import current_user, optional_user
 from src.database.services import application_import
 from src.database.services.applications import (
@@ -115,6 +116,14 @@ async def unexpected_errors(request, call_next):
         return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
 
 
+@app.middleware("http")
+async def upload_limit(request, call_next):
+    """A CV upload that says it is over 10 MB is refused before its body is read (src/cv/upload.py)."""
+    if request.url.path in upload.PATHS and upload.declared_too_big(request.headers.get("content-length")):
+        return JSONResponse(status_code=413, content={"detail": str(upload.PdfTooLarge())})
+    return await call_next(request)
+
+
 # Read by the frontend (lib/api.ts) to send analytics' signed_up exactly once.
 ACCOUNT_CREATED_HEADER = "X-Account-Created"
 
@@ -173,17 +182,18 @@ app.add_middleware(
 # HTTPException, and their messages are written for users.
 for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (NoProfile, 404), (NoLatestCV, 404),
                   (UserNotFound, 401), (BookmarkNotRemovable, 409), (ApplicationExists, 409),
-                  (StaleLatestCV, 409), (InvalidJobUrl, 422), (InvalidSpreadsheet, 422), (BadAppliedDate, 422)):
+                  (StaleLatestCV, 409), (InvalidJobUrl, 422), (InvalidSpreadsheet, 422), (BadAppliedDate, 422),
+                  (upload.PdfTooLarge, 413), (upload.NotPdf, 415)):
     app.add_exception_handler(
         exc,
         lambda request, err, code=code: JSONResponse(status_code=code, content={"detail": str(err)}),
     )
 
 
-async def _pdf_text(file: UploadFile) -> str:
+async def _pdf_text(data: bytes) -> str:
     """The uploaded PDF's text. pdf_inspector reads from a path, hence the temp file."""
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        temp.write(await file.read())
+        temp.write(data)
     try:
         return await run_in_threadpool(pdf_inspector.extract_text, temp.name)
     finally:
@@ -233,12 +243,13 @@ async def _parsed_cv(cv_text: str, file_name, user):
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
+    data = await upload.pdf_bytes(file)  # too big or not a PDF fails here, before the queue
     preferences = await _location_preferences(user)
     # Both steps are synchronous and slow. Running them directly in this async
     # endpoint blocked the event loop, which made the whole API (including
     # /health) unreachable for the duration of every analysis.
     async with analysis_lock:
-        cv_text = await _pdf_text(file)
+        cv_text = await _pdf_text(data)
         query = await _parsed_cv(cv_text, file.filename, user)
         result = await run_in_threadpool(_agent().match, query, preferences)
     if user:
@@ -261,7 +272,7 @@ async def analyze_again(user=Depends(current_user)):
 
 @app.post("/cv/parse")
 async def parse_cv(file: UploadFile = File(...)):
-    cv_text = await _pdf_text(file)
+    cv_text = await _pdf_text(await upload.pdf_bytes(file))
     return await run_in_threadpool(_cv_parser().parse, cv_text)
 
 

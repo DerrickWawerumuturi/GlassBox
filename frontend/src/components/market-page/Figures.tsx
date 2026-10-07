@@ -52,7 +52,7 @@ export function BarRows({rows, label, narrow}: {rows: Bar[]; label: string; narr
             {rows.map((r) => (
                 <div key={r.key} className={cn("my-[9px] grid items-center gap-2.5 text-[14px]",
                     narrow ? "grid-cols-[124px_minmax(0,1fr)_44px]" : "grid-cols-[84px_minmax(0,1fr)_64px] sm:grid-cols-[110px_minmax(0,1fr)_80px]")}>
-                    {r.plain ? <span className={"truncate"}>{r.name}</span> : <SkillName k={r.key} name={r.name} />}
+                    {r.plain ? <span className={"min-w-0 break-words hyphens-auto leading-[1.2]"}>{r.name}</span> : <SkillName k={r.key} name={r.name} />}
                     <span className={"relative h-[18px] rounded-[3px] bg-foreground/[0.06]"}>
                         <i className={cn("absolute inset-y-0 left-0 rounded-r-[3px]", r.lime ? LIME : "bg-foreground")} style={{width: `${r.share}%`}} />
                         {r.compare !== null && <u className={"absolute -top-1 -bottom-1 w-0.5 bg-chart-gap"} style={{left: `${r.compare}%`}} />}

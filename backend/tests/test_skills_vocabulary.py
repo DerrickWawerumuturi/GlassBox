@@ -92,3 +92,15 @@ def test_unity_catalog_is_databricks_not_the_game_engine():
     assert skills.find_skills("unity-catalog permissions") == []
     assert skills.find_skills("Ship games in Unity and C#.") == ["unity", "c#"]
     assert skills.resolve_all(["Unity Catalog", "Unity"]) == ({"unity"}, ["Unity Catalog"])
+
+
+def test_an_ordinary_noun_reads_in_lower_case_mid_sentence():
+    from src.matching.skills import COMMON_NOUNS, SKILLS, display, inline
+    assert COMMON_NOUNS <= set(SKILLS)
+    assert display("machine learning") == "Machine learning"              # sentence case at the start of a label
+    assert inline("machine learning") == "machine learning"
+    assert inline("distributed systems") == "distributed systems"
+    assert inline("e2e testing") == "end-to-end testing"
+    assert inline("speech ai") == "speech AI"                              # an acronym keeps its capitals
+    assert inline("payments") == "payments integration (M-Pesa)"
+    assert inline("python") == "Python" and inline("llm") == "LLMs" and inline("ai agents") == "AI agents"

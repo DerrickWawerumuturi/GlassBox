@@ -64,11 +64,12 @@ tests/                               pytest; test_api_user_data needs DATABASE_U
 
 ## Request lifecycle
 
-`main.py::analyze` reads the upload's text, gets a parsed profile, and matches it:
+`main.py::analyze` checks the upload (`src/cv/upload.py`: a PDF of 10 MB or less, else 413 or 415, before the analysis queue), reads its text, gets a parsed profile, and matches it:
 
 ```python
+data = await upload.pdf_bytes(file)                          # 413 / 415 before the queue
 async with analysis_lock:
-    cv_text = await _pdf_text(file)
+    cv_text = await _pdf_text(data)
     query = await _parsed_cv(cv_text, file.filename, user)   # Groq, or the kept profile
     result = await run_in_threadpool(_agent().match, query, preferences)
 ```

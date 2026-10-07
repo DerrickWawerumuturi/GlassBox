@@ -87,12 +87,13 @@ Returned: `taken_at`, `profiler_version`, `families`, `min_readable`,
 level and 4 to senior, at least 3 points apart, from the top 40 of either),
 `senior {jobs, readable}`, `required_median {entry, senior}`, `titles` (up to
 40, `[title, company, level, required years]`, one employer at a time) and
-`names` (display names). Never a job's text.
+`names` (display names) and `inline_names` (the names that read differently
+mid sentence). Never a job's text.
 
 Since the editorial template every page also returns `story`
 (`market_story.py`): `compare {jobs, readable}`, `breadth`, `skills` (the 40
 most named: category, any, required, employers, compare_any, broad),
-`headline`, `squares`, `languages {per_job, bars}`, `contrast`, `categories`,
+`headline`, `finding` (the lead finding, below), `squares`, `languages {per_job, bars}`, `contrast`, `categories`,
 `years {buckets, stated, unstated}` and `sections`.
 
 ## The editorial template (2026-10-07)
@@ -103,10 +104,11 @@ template, `components/market-page/MarketArticle.tsx`, serves all five pages,
 server rendered at `/market/{name}` (ISR, 5 minutes; a failed fetch during a
 revalidation keeps the last good page, `builtForPage`). In reading order:
 
-1. **Kicker** "Market / {page}" (the breadcrumb), the **question** as the H1
-   ("What are AI jobs actually asking for?"), a **dek** built from the data
-   (count, employers, the skill named most, and on the entry level page where
-   it differs most from senior jobs).
+1. **Kicker** "Market / {page}" (the breadcrumb), the **question** above the
+   headline ("What are AI jobs actually asking for?"), the **lead finding** as
+   the H1 ("Two in three AI jobs name LLMs"; since 2026-10-08, rules below),
+   and a **dek**: "We counted {n} {page} jobs at {e} employers on {date}.",
+   then the count behind the finding ("191 of the 287 we could read name LLMs.").
 2. **Byline**: Counted by Glassbox, `<time>` updated, counted again every day;
    share, copy link and cite buttons.
 3. **Lead visual**: the job count and one square per job. Lime = names the
@@ -188,11 +190,68 @@ sentence why it shows no shares.
 not a list per job: they are drawn grouped, so the counts are the picture.
 About 11 KB a page.
 
+### Finding headlines (2026-10-08)
+
+Each page's H1 is its lead finding, chosen by `market_story.finding` (one
+place, so the page, the hub card, the share image, the Article markup, the
+cite line and "At a glance" agree) and worded by `headline` in
+`lib/market-story.ts`. The question stays in the `<title>`, the meta
+description (first) and the kicker line: that is what people search for.
+
+Which skills may lead: broad ones (the breadth rule), never the skill that
+names the job type itself (`market_pages.DEFINING`, next to `ROLES`:
+machine learning on the machine learning page, a generic "AI" on the AI page,
+"DevOps" on the DevOps page). The lead visual's lime follows the same skill.
+
+The first pattern that applies (thresholds are named constants):
+
+| Pattern | When | Words |
+|---|---|---|
+| years | one number of years is asked by 60% or more of the jobs that state years (`YEARS_USUALLY`; a range like "3 or more" never counts) | “Entry level” usually means two years |
+| share | the lead skill is named by 60% or more (`FRACTION_FROM`) | Two in three AI jobs name LLMs; a fraction from `FRACTIONS` only within 2 points (`FRACTION_POINTS`), else "63% of …" |
+| tied | the top two within 2 points (`TIED_POINTS`) | Python and distributed systems are almost tied at the top of software engineering jobs |
+| pair | the top two within 5 points, both 40% or more (`PAIR_POINTS`, `PAIR_FROM`) | … each appear in **nearly** half (both under 50%) or **about** half (both 45 to 55%) of … jobs; otherwise this pattern doesn't apply |
+| half | the lead skill at 45 to 55% (`HALF`) | Half of DevOps jobs name incident response |
+| leads | anything else | Python leads DevOps jobs, named in 79 of 199 |
+
+Why "pair" says "about" as well as "nearly": the machine learning page (8 Oct)
+has Python at 54% and LLMs at 52%. "Nearly half" would be false for 54%, and
+"Half of machine learning jobs name Python" hides the more striking fact that
+LLMs are named almost as often. "Python and LLMs each appear in about half of
+machine learning jobs" is both true and the stronger lead.
+
+Words: numbers under ten in words; skill names mid sentence from
+`inline_names` (`skills.inline`: ordinary nouns in lower case, "distributed
+systems", "incident response"; products, languages and acronyms as named).
+"Machine Learning", "Deep Learning" and "Computer Vision" are now sentence
+case in `skills.txt`, like every other generic skill. When the years lead, the
+years section's heading gives the count instead of repeating the H1.
+
+Live, 8 Oct 2026 (v6 profiles, read only): entry level software "“Entry level”
+usually means two years" (55 of 72); software engineering "Python and
+distributed systems are almost tied …" (36% and 35%); AI "Two in three AI jobs
+name LLMs" (191 of 287); machine learning "Python and LLMs each appear in about
+half …" (54% and 52%, machine learning itself skipped); DevOps "Terraform / IaC
+and Kubernetes are almost tied …" (46% and 45%).
+
+**Hub cards** (`app/market/page.tsx`): kicker "{page} · {n} jobs · {date}",
+the headline as the title (the card's one link, stretched over the card, so
+its accessible name is the headline), the question and the count behind the
+finding, "Read" with an arrow, and `FindingSquare`: 100 squares, each 1% of
+what the finding counts, the finding's share lit in lime (for the years
+finding, the share asking that number of years). 132 px wide, 88 on a phone,
+on the right at every width.
+
+**Charts:** a skill's name in a figure is never cut off with an ellipsis. It
+wraps (two lines at most for today's names) and drops the examples in
+brackets (`chartName`: "AI assistants", the full name as the label's title).
+
 ### Search and sharing
 
-- Title and description from the data: "What entry level software jobs ask
-  for: 136 jobs counted · Glassbox"; the description is the first finding with
-  its date.
+- Title from the data: "What entry level software jobs ask for: 136 jobs
+  counted · Glassbox". The description: the question, the finding, the count
+  and its date. The share image shows the finding headline, the count behind
+  it and the squares.
 - Canonical via `publicPage`; `robots max-image-preview:large`; og type article.
 - Share image per page (`app/market/[page]/opengraph-image.tsx`) and the hub,
   drawn by `components/market-page/ShareImage.tsx` (next/og reads ttf, not

@@ -141,8 +141,8 @@ heroku | Heroku | cloud | heroku, render.com, fly.io |
 cloudflare | Cloudflare | cloud | cloudflare, cloudflare workers |
 
 # -------------------------------------------------------------- data, ML
-machine learning | Machine Learning | ml | machine learning, ml, predictive modeling, predictive modelling, statistical learning, unsupervised learning, supervised learning | deep learning=0.5, scikit-learn=0.6
-deep learning | Deep Learning | ml | deep learning, neural networks, neural network, cnn, cnns, rnn, lstm, transformer models, transformer architecture | machine learning=0.8, pytorch=0.5, tensorflow=0.5
+machine learning | Machine learning | ml | machine learning, ml, predictive modeling, predictive modelling, statistical learning, unsupervised learning, supervised learning | deep learning=0.5, scikit-learn=0.6
+deep learning | Deep learning | ml | deep learning, neural networks, neural network, cnn, cnns, rnn, lstm, transformer models, transformer architecture | machine learning=0.8, pytorch=0.5, tensorflow=0.5
 pytorch | PyTorch | ml | pytorch, torch | tensorflow=0.7, deep learning=0.8
 tensorflow | TensorFlow | ml | tensorflow, tensor flow, keras | pytorch=0.7, deep learning=0.8
 scikit-learn | scikit-learn | ml | scikit learn, sklearn, scikit | xgboost=0.6, machine learning=0.8
@@ -151,7 +151,7 @@ pandas | pandas | data | pandas | numpy=0.5, data analysis=0.6
 numpy | NumPy | data | numpy | pandas=0.5
 scipy | SciPy | data | scipy | numpy=0.5
 nlp | NLP | ml | nlp, natural language processing, text mining, text classification, spacy, nltk, named entity recognition, information retrieval | llm=0.6
-computer vision | Computer Vision | ml | computer vision, opencv, image processing, object detection, image recognition, image classification | deep learning=0.5
+computer vision | Computer vision | ml | computer vision, opencv, image processing, object detection, image recognition, image classification | deep learning=0.5
 llm | LLMs | ml | llm, llms, large language model, large language models, language model, generative ai, genai, gen ai, openai api, gpt 4, gpt, prompt engineering, fine tuning llms, conversational ai | nlp=0.6, rag=0.7
 rag | RAG | ml | rag, retrieval augmented generation, semantic search, vector search, embeddings, text embeddings, embedding models | llm=0.8, vector databases=0.6
 langchain | LangChain | ml | langchain, llamaindex, llama index, langgraph, crewai, autogen, langsmith, langfuse | llm=0.8, rag=0.7

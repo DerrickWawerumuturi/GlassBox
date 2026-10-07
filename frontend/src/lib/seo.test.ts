@@ -54,15 +54,20 @@ describe("sitemap", () => {
 
 describe("market page structured data", () => {
     const page = FIXTURE.ai as unknown as MarketBody;
-    const graph = marketStructuredData(MARKET_PAGES.ai, page, "D")["@graph"] as Array<Record<string, unknown>>;
+    const graph = marketStructuredData(MARKET_PAGES.ai, page, "D", "Two in three AI jobs name LLMs")["@graph"] as Array<Record<string, unknown>>;
 
     it("is an Article by Glassbox, changed on the day it was counted", () => {
         const article = graph.find((n) => n["@type"] === "Article")!;
         expect(article).toMatchObject({
-            headline: "What are AI jobs actually asking for?", datePublished: FIRST_PUBLISHED, dateModified: page.taken_at,
+            headline: "Two in three AI jobs name LLMs", datePublished: FIRST_PUBLISHED, dateModified: page.taken_at,
             author: {"@type": "Organization", name: "Glassbox"}, publisher: {"@type": "Organization", name: "Glassbox"},
             image: [`${SITE_URL}/market/ai/opengraph-image`], mainEntityOfPage: `${SITE_URL}/market/ai`,
         });
+    });
+
+    it("falls back to the question when the page has no finding", () => {
+        const article = (marketStructuredData(MARKET_PAGES.ai, page, "D", null)["@graph"] as Array<Record<string, unknown>>)[0];
+        expect(article.headline).toBe("What are AI jobs actually asking for?");
     });
 
     it("has breadcrumbs that match the visible Market / AI", () => {

@@ -26,7 +26,7 @@ from src.Agent.utils.location import country_named
 from src.jobpool import market_story, snapshot
 from src.jobpool.opportunities import duplicate_key
 from src.matching.requirements import PROFILER_VERSION
-from src.matching.skills import display
+from src.matching.skills import display, inline
 
 # "Software, broadly": the families where software engineers are filed.
 SOFTWARE = ("software_engineering", "backend", "frontend", "full_stack", "mobile")
@@ -39,6 +39,9 @@ TITLES = 40
 # A role page: one job family each, by page name.
 ROLES = {"software-engineering": "software_engineering", "ai": "ai",
          "machine-learning": "machine_learning", "devops": "devops"}
+# The skills that name a page's job type: true of nearly every job there, so they never lead it
+# (market_story.finding). Keys that aren't in the vocabulary today stay listed in case they arrive.
+DEFINING = {"ai": ("ai", "artificial intelligence"), "machine-learning": ("machine learning",), "devops": ("devops",)}
 ROLE_TITLES = 30
 # "Jobs that name X also name": for the role's top few skills, the skills named beside them most.
 TOGETHER_LEADS = 3
@@ -203,7 +206,8 @@ def entry_level_software(rows: list[dict], taken_at: datetime | None = None) -> 
         "titles": _titles(entry),
         "story": (story := market_story.story(entry, senior, employer, is_internship, market_story.ENTRY_YEARS,
                                               MIN_READABLE)),
-        "names": _names(keys, story),
+        "names": (names := _names(keys, story)),
+        "inline_names": _inline(names),
     }
 
 
@@ -211,6 +215,11 @@ def _names(keys: set[str], story: dict) -> dict:
     """Display names for every skill key the page returns."""
     keys = keys | {s["key"] for s in story["skills"]}
     return {key: display(key) for key in sorted(keys)}
+
+
+def _inline(names: dict) -> dict:
+    """The names that read differently mid sentence ("distributed systems"), for the sentences built from the page."""
+    return {key: inline(key) for key in names if inline(key) != names[key]}
 
 
 def _together(rows: list[dict], leads: list[str]) -> list[dict]:
@@ -228,7 +237,7 @@ def _together(rows: list[dict], leads: list[str]) -> list[dict]:
     return out
 
 
-def role(family: str, rows: list[dict], taken_at: datetime | None = None) -> dict:
+def role(family: str, rows: list[dict], taken_at: datetime | None = None, defining: tuple[str, ...] = ()) -> dict:
     """Pool rows (newest first) -> what one job family's jobs ask for: skills, levels, places, skills named together."""
     # Imported here, as in _titles: market_look imports this module first.
     from src.jobpool.market_look import LEVELS, bucket
@@ -258,13 +267,14 @@ def role(family: str, rows: list[dict], taken_at: datetime | None = None) -> dic
         "together": together,
         "titles": _titles(jobs, ROLE_TITLES),
         "story": (story := market_story.story(jobs, senior, employer, is_internship, market_story.ROLE_YEARS,
-                                              MIN_READABLE, dict(levels))),
-        "names": _names(keys, story),
+                                              MIN_READABLE, dict(levels), defining)),
+        "names": (names := _names(keys, story)),
+        "inline_names": _inline(names),
     }
 
 
 PAGES = {"entry-level-software": entry_level_software,
-         **{name: partial(role, family) for name, family in ROLES.items()}}
+         **{name: partial(role, family, defining=DEFINING.get(name, ())) for name, family in ROLES.items()}}
 
 
 def build(rows: list[dict], taken_at: datetime) -> dict:

@@ -5,12 +5,14 @@ import React from "react";
 import {cn} from "@/lib/utils";
 import {useHave} from "@/components/landing/useHave";
 import {normSkill} from "@/lib/landing/look";
+import {chartName} from "@/lib/market-page";
 
 export const HAVE = "On your CV";
 export const NOT_YET = "Not on your CV yet";
 
 /**
- * A skill's name in a figure. After the visitor's own scan it carries a mark:
+ * A skill's name in a figure, short and wrapping in a narrow column (chartName).
+ * After the visitor's own scan it carries a mark:
  * green for a skill on their CV, a grey dashed square for one not on it yet
  * (the landing page's rule: only their own scan, useHave). Before a scan, and
  * in the server HTML, it is the name alone.
@@ -19,10 +21,10 @@ export default function SkillName({k, name}: {k: string; name: string}) {
     const have = useHave();
     const mine = have ? have.has(normSkill(k)) || have.has(normSkill(name)) : null;
     return (
-        <span className={"inline-flex min-w-0 items-center gap-1.5"}>
+        <span title={name} className={"inline-flex min-w-0 items-center gap-1.5"}>
             {mine !== null && <i aria-hidden className={cn("inline-block size-2.5 shrink-0 rounded-[3px]",
                 mine ? "bg-chart-have" : "border border-dashed border-chart-gap")} />}
-            <span className={"truncate"}>{name}</span>
+            <span className={"min-w-0 break-words hyphens-auto leading-[1.2]"}>{chartName(name)}</span>
             {mine !== null && <span className={"sr-only"}>{`, ${mine ? HAVE : NOT_YET}`}</span>}
         </span>
     );

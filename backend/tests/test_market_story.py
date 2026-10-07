@@ -122,3 +122,88 @@ def test_every_page_carries_its_story_and_names_its_skills():
     assert pages["machine-learning"]["internships"] == 0
     for page in pages.values():
         assert {s["key"] for s in page["story"]["skills"]} <= set(page["names"])
+
+
+# ------------------------------------------------------------ the lead finding (the page's H1)
+
+def lead(*shares, readable=100):
+    """Skills that may lead, most named first, each named by `share` of `readable` jobs."""
+    return [{"key": f"s{i}", "any": share, "employers": ms.BREADTH_EMPLOYERS} for i, share in enumerate(shares)]
+
+
+NO_YEARS = {"buckets": [], "stated": 0, "unstated": 0}
+
+
+def years(*counts):
+    """Entry level buckets 0, 1, 2, 3+ with these job counts."""
+    edges = ms.ENTRY_YEARS
+    buckets = [{"from": e, "to": (edges[i + 1] - 1 if i + 1 < len(edges) else None), "jobs": n}
+               for i, (e, n) in enumerate(zip(edges, counts))]
+    return {"buckets": buckets, "stated": sum(counts), "unstated": 0}
+
+
+def test_a_fraction_only_where_it_is_honest():
+    assert ms.fraction(66.6) == [2, 3] and ms.fraction(60.0) == [3, 5] and ms.fraction(91.0) == [9, 10]
+    assert ms.fraction(65.0) == [2, 3]                       # 1.7 points under two in three
+    assert ms.fraction(63.0) is None                         # between three in five and two in three: say 63%
+    assert ms.fraction(85.0) is None
+
+
+def test_years_lead_when_one_number_is_most_of_the_jobs_that_state_one():
+    assert ms.finding(lead(70), 100, years(7, 10, 55, 0)) == {"kind": "years", "years": 2, "jobs": 55, "of": 72}
+    # 60% exactly still leads; just under it, the skills do.
+    assert ms.finding(lead(70), 100, years(10, 10, 30, 0))["kind"] == "years"
+    assert ms.finding(lead(70), 100, years(11, 10, 29, 0))["kind"] == "share"
+    # "3 or more" is a range, not one number; and too few stating years is no section, so no lead.
+    assert ms.finding(lead(70), 100, years(0, 0, 0, 40))["kind"] == "share"
+    assert ms.finding(lead(70), 100, years(0, 0, ms.MIN_YEARS_STATED - 1, 0))["kind"] == "share"
+
+
+def test_a_share_from_60_percent_leads_as_a_fraction_or_a_percentage():
+    assert ms.finding(lead(67, 45), 100, NO_YEARS) == {"kind": "share", "skills": ["s0"], "jobs": [67], "of": 100,
+                                                       "fraction": [2, 3]}
+    assert ms.finding(lead(63, 45), 100, NO_YEARS)["fraction"] is None
+    assert ms.finding(lead(59, 30), 100, NO_YEARS)["kind"] == "leads"
+
+
+def test_two_skills_within_two_points_are_almost_tied():
+    assert ms.finding(lead(36, 34), 100, NO_YEARS) == {"kind": "tied", "skills": ["s0", "s1"], "jobs": [36, 34], "of": 100}
+    assert ms.finding(lead(36, 33), 100, NO_YEARS)["kind"] == "leads"
+
+
+def test_two_close_skills_near_half_each_appear_in_nearly_or_about_half():
+    assert ms.finding(lead(48, 44), 100, NO_YEARS)["approx"] == "nearly"      # both under half
+    assert ms.finding(lead(54, 51), 100, NO_YEARS)["approx"] == "about"       # 54% is never "nearly half"
+    assert ms.finding(lead(46, 39), 100, NO_YEARS)["kind"] == "half"          # 39% is not near half
+    assert ms.finding(lead(58, 54), 100, NO_YEARS)["kind"] == "leads"         # 58% is not about half
+
+
+def test_half_from_45_to_55_percent_else_the_lead_with_its_count():
+    assert ms.finding(lead(55, 20), 100, NO_YEARS)["kind"] == "half"
+    assert ms.finding(lead(45, 20), 100, NO_YEARS)["kind"] == "half"
+    assert ms.finding(lead(44, 20), 100, NO_YEARS) == {"kind": "leads", "skills": ["s0"], "jobs": [44], "of": 100}
+    assert ms.finding(lead(56), 100, NO_YEARS)["kind"] == "leads"
+
+
+def test_no_skill_that_may_lead_is_no_finding():
+    assert ms.finding([], 100, NO_YEARS) is None
+
+
+def test_the_skill_that_defines_the_job_type_and_a_narrow_skill_never_lead():
+    jobs = ([row(f"C{i}", required=("machine learning", "python")) for i in range(10)]
+            + [row(f"D{i}", required=("machine learning",)) for i in range(5)]
+            + [row("Stripe", f"Junior Dev {i}", required=("ruby",)) for i in range(15)])
+    out = ms.story(jobs, [], mp.employer, mp.is_internship, ms.ROLE_YEARS, 1, defining=("machine learning",))
+    assert out["headline"] == "python"                                    # not machine learning, not Ruby (one employer)
+    assert out["finding"]["skills"] == ["python"]
+    assert story(jobs)["headline"] == "machine learning"                   # on a page it doesn't define, it leads
+    assert story(jobs, min_readable=100)["finding"] is None                # under the 100 rule: no finding
+
+
+def test_the_machine_learning_ai_and_devops_pages_skip_their_own_skill():
+    assert mp.DEFINING["machine-learning"] == ("machine learning",)
+    rows = [row(f"M{i}", "ML Engineer", family="machine_learning", seniority="mid", required=("machine learning", "pytorch"))
+            for i in range(mp.MIN_READABLE)]
+    page = mp.build(rows, TAKEN)["machine-learning"]
+    assert page["story"]["headline"] == "pytorch"
+    assert page["inline_names"] == {"machine learning": "machine learning"}   # mid sentence, lower case

@@ -70,12 +70,26 @@ export interface StorySkill {
 
 export type SectionName = "hiring" | "languages" | "contrast" | "categories" | "years" | "levels";
 
+/**
+ * The page's lead finding, its H1 (market_story.finding): the pattern, the
+ * skills that lead (one or two), the jobs naming each, and what they are out
+ * of. "years": `jobs` of the `of` jobs that state years ask for `years`.
+ */
+export type LeadFinding =
+    | {kind: "years"; years: number; jobs: number; of: number}
+    | {kind: "share"; skills: [string]; jobs: [number]; of: number; fraction: [number, number] | null}
+    | {kind: "tied"; skills: [string, string]; jobs: [number, number]; of: number}
+    | {kind: "pair"; skills: [string, string]; jobs: [number, number]; of: number; approx: "nearly" | "about"}
+    | {kind: "half" | "leads"; skills: [string]; jobs: [number]; of: number};
+
 export interface Story {
     compare: {jobs: number; readable: number};
     breadth: number;
     skills: StorySkill[];
-    /** The skill the lead visual marks: the most named broad skill. Null under the 100 rule. */
+    /** The skill the lead visual marks: the most named broad skill that isn't the job type itself. Null under the 100 rule. */
     headline: string | null;
+    /** The lead finding, the page's H1. Null under the 100 rule, or from an API before finding headlines. */
+    finding?: LeadFinding | null;
     /** The lead visual, one square per job: names the headline skill, is an internship, both, neither. */
     squares: {skill: number; both: number; internship: number; neither: number};
     languages: {per_job: number[]; bars: string[]};
@@ -104,6 +118,8 @@ export interface MarketBody {
     /** [title, company, level, required years] */
     titles: Array<[string, string, string, number | null]>;
     names: Record<string, string>;
+    /** Names that read differently mid sentence ("distributed systems"); the rest read as `names`. */
+    inline_names?: Record<string, string>;
     story: Story;
 }
 

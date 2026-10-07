@@ -1,5 +1,5 @@
 import {fmt, longDate, pct} from "@/lib/market-page";
-import {MARKET_PAGES, MarketBody, MarketInfo, MarketName, SectionName, StorySkill} from "@/lib/market-pages";
+import {LeadFinding, MARKET_PAGES, MarketBody, MarketInfo, MarketName, SectionName, StorySkill} from "@/lib/market-pages";
 
 /*
  * Every sentence on a market page, written by fixed templates over the counts
@@ -17,6 +17,8 @@ const plural = (n: number, one: string, many: string) => `${fmt(n)} ${n === 1 ? 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export const skillName = ({page}: Ctx, key: string) => page.names[key] ?? key;
+/** A skill's name mid sentence: "distributed systems", but "Python" and "LLMs" (skills.py, inline). */
+export const inlineName = (c: Ctx, key: string) => c.page.inline_names?.[key] ?? skillName(c, key);
 export const skill = ({page}: Ctx, key: string): StorySkill | undefined => page.story.skills.find((s) => s.key === key);
 export const has = ({page}: Ctx, section: SectionName) => page.story.sections.includes(section);
 /** Share of the page's readable jobs, and of the comparison set's. */
@@ -29,17 +31,61 @@ export function question({info}: Ctx | {info: MarketInfo}): string {
     return `What are ${info.subject} jobs actually asking for?`;
 }
 
-/** The one or two sentences under the headline: the count, the skill named most, and where the page differs most. */
+// ------------------------------------------------------------------ the lead finding (the H1)
+
+const WORDS = ["none", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+/** A number in a headline: under ten in words. */
+export const say = (n: number) => (n < 10 ? WORDS[n] : fmt(n));
+
+/** "Two in three", for a fraction the backend found honest (market_story.fraction). */
+export const fractionPhrase = ([a, b]: [number, number]) => `${cap(WORDS[a] ?? fmt(a))} in ${WORDS[b] ?? fmt(b)}`;
+
+export const finding = ({page}: Ctx): LeadFinding | null => (page.publishable ? page.story.finding ?? null : null);
+
+/**
+ * The page's H1: its lead finding in words, one pattern each
+ * (decisions/market-pages.md, "Finding headlines"). Null when there is none:
+ * then the question is the H1.
+ */
+export function headline(c: Ctx): string | null {
+    const f = finding(c), s = c.info.subject;
+    if (!f) return null;
+    if (f.kind === "years") {
+        const asked = bucketPhrase(f.years, f.years);
+        return c.info.kind === "entry" ? `“Entry level” usually means ${asked}` : `Most ${s} jobs that state years ask for ${asked}`;
+    }
+    const [a, b] = f.skills.map((k) => inlineName(c, k));
+    const lead = skillName(c, f.skills[0]);
+    switch (f.kind) {
+        case "share": return f.fraction ? `${fractionPhrase(f.fraction)} ${s} jobs name ${a}` : `${pct(f.jobs[0], f.of)}% of ${s} jobs name ${a}`;
+        case "tied": return `${lead} and ${b} are almost tied at the top of ${s} jobs`;
+        case "pair": return `${lead} and ${b} each appear in ${f.approx} half of ${s} jobs`;
+        case "half": return `Half of ${s} jobs name ${a}`;
+        case "leads": return `${lead} leads ${s} jobs, named in ${say(f.jobs[0])} of ${say(f.of)}`;
+    }
+}
+
+/** The counted sentence behind the finding: "191 of the 287 we could read name LLMs." `jobs` names the jobs ("AI jobs"). */
+export function findingCount(c: Ctx, jobs = ""): string | null {
+    const f = finding(c), of = jobs ? ` ${jobs}` : "";
+    if (!f) return null;
+    if (f.kind === "years") return `${fmt(f.jobs)} of the ${fmt(f.of)}${of} that state a number of years ask for ${bucketPhrase(f.years, f.years)}.`;
+    const named = `${fmt(f.jobs[0])} of the ${fmt(f.of)}${of} we could read name ${inlineName(c, f.skills[0])}`;
+    return f.kind === "tied" || f.kind === "pair" ? `${named}, and ${fmt(f.jobs[1])} name ${inlineName(c, f.skills[1])}.` : `${named}.`;
+}
+
+/** The share of the finding's jobs the hub's square lights, out of 100. */
+export function findingShare(c: Ctx): number | null {
+    const f = finding(c);
+    return f ? pct(f.kind === "years" ? f.jobs : f.jobs[0], f.of) : null;
+}
+
+/** The sentences under the headline: what was counted and when, then the count behind the finding. */
 export function dek(c: Ctx): string {
     const {info, page} = c;
-    const counted = `We counted ${plural(page.jobs, `${info.subject} job`, `${info.subject} jobs`)} at ${plural(page.employers, "employer", "employers")}.`;
-    if (!page.story.headline) return `${counted} Too few could be read today to show shares.`;
-    const lead = `${skillName(c, page.story.headline)} came up most.`;
-    const [toward] = page.story.contrast;
-    if (!has(c, "contrast") || !toward) return `${counted} ${lead}`;
-    return info.kind === "entry"
-        ? `${counted} ${lead} ${skillName(c, toward)} is where they differ most from ${info.compare} jobs.`
-        : `${counted} ${lead}`;
+    const counted = `We counted ${plural(page.jobs, `${info.subject} job`, `${info.subject} jobs`)} at ${plural(page.employers, "employer", "employers")} on ${longDate(page.taken_at)}.`;
+    const behind = findingCount(c);
+    return behind ? `${counted} ${behind}` : `${counted} Too few could be read today to show shares.`;
 }
 
 /** Under the 100 rule: what the page shows instead of shares, and why. */
@@ -58,7 +104,7 @@ export const framing = ({info}: Ctx) => [
 export function squaresLegend(c: Ctx) {
     const {page} = c, sq = page.story.squares;
     const named = sq.skill + sq.both, interns = sq.both + sq.internship;
-    return {skill: page.story.headline ? skillName(c, page.story.headline) : null, named, without: page.jobs - named, interns};
+    return {skill: page.story.headline ? inlineName(c, page.story.headline) : null, named, without: page.jobs - named, interns};
 }
 
 export function squaresLabel(c: Ctx): string {
@@ -90,25 +136,26 @@ export function topBucket({page}: Ctx) {
     return buckets.reduce((best, b) => (b.jobs > best.jobs ? b : best), buckets[0]);
 }
 
-/** Three findings, each a full sentence with its count, for "At a glance" (and the first for the hub). */
+/** Three findings, each a full sentence with its count, for "At a glance". The first is the headline's. */
 export function glance(c: Ctx): Finding[] {
-    const {info, page} = c, story = page.story;
-    if (!story.headline) return [];
-    const head = skill(c, story.headline)!;
-    const out: Finding[] = [{
-        id: "finding-skill", bold: skillName(c, head.key),
-        text: `${fmt(head.any)} of the ${fmt(page.readable)} ${info.subject} jobs we could read name ${skillName(c, head.key)}.`,
-    }];
+    const {info, page} = c, story = page.story, lead = finding(c);
+    if (!story.headline || !lead) return [];
+    const subject = `${info.subject} jobs`;
+    const years: Finding | null = has(c, "years") ? (() => {
+        const b = topBucket(c);
+        return {id: "finding-years", bold: cap(bucketPhrase(b.from, b.to)),
+            text: `${cap(bucketPhrase(b.from, b.to))} is the most common ask: ${fmt(b.jobs)} of the ${fmt(story.years.stated)} jobs that state a number.`};
+    })() : null;
+    const skillFinding: Finding = lead.kind === "years"
+        ? {id: "finding-skill", bold: inlineName(c, story.headline), text: `${fmt(skill(c, story.headline)!.any)} of the ${fmt(page.readable)} ${subject} we could read name ${inlineName(c, story.headline)}.`}
+        : {id: "finding-skill", bold: inlineName(c, lead.skills[0]), text: findingCount(c, subject)!};
+    const out: Finding[] = lead.kind === "years" && years ? [years, skillFinding] : [skillFinding];
     const toward = has(c, "contrast") ? skill(c, story.contrast[0]) : undefined;
     if (toward) out.push({
         id: "finding-contrast", bold: skillName(c, toward.key),
         text: `${skillName(c, toward.key)} is named in ${share(c, toward)}% of ${info.subject} jobs and ${compareShare(c, toward)}% of ${info.compare} jobs.`,
     });
-    if (has(c, "years")) {
-        const b = topBucket(c);
-        out.push({id: "finding-years", bold: cap(bucketPhrase(b.from, b.to)),
-            text: `${cap(bucketPhrase(b.from, b.to))} is the most common ask: ${fmt(b.jobs)} of the ${fmt(story.years.stated)} jobs that state a number.`});
-    }
+    if (years && lead.kind !== "years") out.push(years);
     if (out.length < 3 && has(c, "levels") && page.levels) out.push({
         id: "finding-levels", bold: fmt(page.levels.senior),
         text: `${fmt(page.levels.senior)} of the ${fmt(page.jobs)} ${info.subject} jobs are senior, lead or principal.`,
@@ -198,7 +245,9 @@ export function yearsSection(c: Ctx) {
     const {info, page} = c, y = page.story.years, b = topBucket(c);
     const most = b.jobs * 2 > y.stated;
     return {
-        heading: info.kind === "entry"
+        // When the years are the page's headline, the section says the count instead of repeating it.
+        heading: finding(c)?.kind === "years" ? `${fmt(b.jobs)} of the ${fmt(y.stated)} jobs that state years ask for ${bucketPhrase(b.from, b.to)}`
+            : info.kind === "entry"
             ? `“Entry level” ${most ? "usually" : "most often"} means ${bucketPhrase(b.from, b.to)}`
             : most ? `Most ${info.subject} jobs that state years ask for ${bucketPhrase(b.from, b.to)}` : `${cap(bucketPhrase(b.from, b.to))} is the most common ask`,
         pull: `${fmt(b.jobs)} of ${fmt(y.stated)}`,
@@ -232,7 +281,7 @@ export function hiringSection(c: Ctx) {
 }
 
 export const citeLine = (c: Ctx, host: string) =>
-    `Glassbox. "${question(c)}" Counted ${longDate(c.page.taken_at)}. ${host}/market/${c.info.name}`;
+    `Glassbox. "${headline(c) ?? question(c)}" Counted ${longDate(c.page.taken_at)}. ${host}/market/${c.info.name}`;
 
 // ------------------------------------------------------------------ search and share
 
@@ -242,10 +291,16 @@ export function pageTitle(info: MarketInfo, page: MarketBody | null): string {
     return page ? `${base}: ${fmt(page.jobs)} jobs counted` : base;
 }
 
-/** The search snippet: the first finding with its date, or the count when there is no finding. */
+/** The search snippet: the question (what people search), the finding, and the count with its date. */
 export function pageDescription(info: MarketInfo, page: MarketBody | null): string {
     if (!page) return `The skills ${info.subject} jobs name, counted from today's live jobs.`;
-    const c = {info, page}, [first] = glance(c);
+    const c = {info, page}, lead = headline(c);
     const counted = `Counted on ${longDate(page.taken_at)}: ${plural(page.jobs, "job", "jobs")} at ${plural(page.employers, "employer", "employers")}.`;
-    return first ? `${findingText(first)} ${counted}` : `${dek(c)} ${counted}`;
+    return `${question(c)} ${lead ? `${lead}.` : "Too few could be read today to show shares."} ${counted}`;
+}
+
+/** A hub card's line under the headline: the question, then the count behind the finding. */
+export function cardLine(c: Ctx): string {
+    const behind = findingCount(c);
+    return behind ? `${question(c)} ${behind}` : `${question(c)} ${thin(c)}`;
 }

@@ -93,6 +93,46 @@ def display(key: str) -> str:
     return skill.name if skill else key
 
 
+# Skills whose names are ordinary nouns, not products or languages: mid sentence
+# they read in lower case ("Half of DevOps jobs name incident response"), where
+# Python, Terraform or LLMs keep their capitals. Display names stay sentence
+# case for the start of a label or a row.
+COMMON_NOUNS = frozenset({
+    "accessibility", "anomaly detection", "api testing", "application security", "art direction",
+    "blockchain", "brand design", "business analysis", "business intelligence", "causal inference",
+    "chaos engineering", "change management", "cloud security", "compilers", "computer vision",
+    "configuration management", "cryptography", "cybersecurity", "data analysis", "data governance",
+    "data quality", "data visualization", "data warehousing", "ddos mitigation", "deep learning",
+    "design systems", "device management", "digital forensics", "disaster recovery", "distributed systems",
+    "e2e testing", "embedded systems", "endpoint security", "feature engineering", "forecasting",
+    "graphic design", "hardware protocols", "help desk tools", "hpc", "identity and access management",
+    "illustration", "incident response", "information architecture", "interaction design",
+    "internationalization", "knowledge graphs", "load balancing", "load testing", "machine learning",
+    "message queues", "microservices", "model optimization", "motion design", "network security", "networking",
+    "observability", "operations research", "payments", "product design", "product requirements",
+    "project management", "prototyping", "recommender systems", "reinforcement learning", "release management",
+    "reverse engineering", "robotics", "root cause analysis", "serverless", "speech ai", "statistics",
+    "supply chain security", "system administration", "system design", "system hardening", "technical writing",
+    "threat detection", "typography", "unit testing", "user research", "vector databases", "video editing",
+    "virtualization", "visual design", "vulnerability management", "web design", "webhooks",
+    "workflow automation tools",
+})
+# A capital that only starts the word ("Machine", "End-to-end"), not an acronym or a name ("AI", "(M-Pesa)").
+_PLAIN_WORD = re.compile(r"[A-Z][^A-Z\s]*")
+
+
+def inline(key: str) -> str:
+    """
+    A skill's name as it reads mid sentence: an ordinary noun in lower case
+    ("distributed systems", "speech AI"), a product, language or acronym as
+    named ("Python", "LLMs", "AI agents").
+    """
+    name = display(key)
+    if key not in COMMON_NOUNS:
+        return name
+    return " ".join(word.lower() if _PLAIN_WORD.fullmatch(word) else word for word in name.split(" "))
+
+
 def category(key: str) -> str | None:
     skill = SKILLS.get(key)
     return skill.category if skill else None

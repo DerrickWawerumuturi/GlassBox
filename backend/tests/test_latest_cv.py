@@ -57,8 +57,8 @@ def world(monkeypatch):
 
     monkeypatch.setattr(main, "_agent", lambda: SimpleNamespace(parse=interpreter.parse, match=match))
 
-    async def text(file):
-        return (await file.read()).decode()
+    async def text(data):
+        return data.decode().removeprefix(PDF)
     monkeypatch.setattr(main, "_pdf_text", text)
 
     monkeypatch.setattr(users, "connection", lambda: nullcontext(None))
@@ -78,8 +78,11 @@ def world(monkeypatch):
     return SimpleNamespace(client=client, groq=groq, rows=rows, matched=matched)
 
 
+PDF = "%PDF-1.4\n"   # the server reads only what starts as a PDF (src/cv/upload.py)
+
+
 def upload(client, text, name="cv.pdf", **kwargs):
-    return client.post("/analyze", files={"file": (name, text.encode(), "application/pdf")}, **kwargs)
+    return client.post("/analyze", files={"file": (name, (PDF + text).encode(), "application/pdf")}, **kwargs)
 
 
 def test_a_fresh_upload_is_parsed_once_and_kept_without_the_text(world):

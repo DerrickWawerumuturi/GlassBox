@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 
 import {ApiError} from "@/lib/api";
-import {Ask, askCount, checkFile, familyAskSkills, IDLE, MAX_BYTES, marketAskSkills, readingSteps, runUpload, scanError, ScanEvent, scanStep, ScanState, stickyShows} from "@/lib/cv-ask";
+import {Ask, ASK, askCount, checkFile, familyAskSkills, IDLE, MAX_BYTES, marketAskSkills, readingSteps, runUpload, scanError, ScanEvent, scanStep, ScanState, stickyShows} from "@/lib/cv-ask";
 import {haveSet, Look} from "@/lib/landing/look";
 import fixture from "@/lib/landing/look.fixture.json";
 import {MarketBody} from "@/lib/market-pages";
@@ -134,6 +134,7 @@ describe("a chosen file", () => {
     it("a failed scan is said in plain words", () => {
         expect(scanError(new ApiError("pdf_inspector exploded", 500))).toBe("We couldn't read this PDF. Try exporting it again.");
         expect(scanError(new ApiError("too big", 413))).toMatch(/over 10 MB/);
+        expect(scanError(new ApiError("That isn't a PDF.", 415))).toBe(ASK.errors.notPdf);   // the server's own check
         expect(scanError(new Error("Analysis timed out. The API may be starting up, try again."))).toBe("That took too long. Try again in a minute.");
     });
 });
@@ -173,5 +174,13 @@ describe("one upload scan, with a mocked API", () => {
         expect(parse).not.toHaveBeenCalled();
         expect(d.onStart).not.toHaveBeenCalled();
         expect(events).toEqual([{type: "failed", error: "That file isn't a PDF. Choose the PDF of your CV."}]);
+    });
+});
+
+describe("the sheet's example", () => {
+    it("counts out of the same total as the ask that opened it", () => {
+        expect(ASK.sheet.example(10)).toMatchObject({have: 6, of: 10});
+        expect(ASK.sheet.example(15)).toMatchObject({have: 9, of: 15});
+        expect(ASK.sheet.example()).toMatchObject({have: 9, of: 15});     // no ask: the sheet opened from the header
     });
 });
