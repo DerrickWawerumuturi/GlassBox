@@ -4,7 +4,8 @@
 `signed_up` added 2026-10-07. **Files:** `frontend/src/lib/analytics.ts`,
 `components/AnalyticsProvider.tsx`, `lib/api.ts` (`signed_up`), `next.config.ts`
 (the `/ingest` proxy), `.env.example` (`NEXT_PUBLIC_POSTHOG_KEY`,
-`NEXT_PUBLIC_POSTHOG_HOST`); backend `main.py` (`X-Account-Created`).
+`NEXT_PUBLIC_POSTHOG_HOST`); backend `main.py` (`X-Account-Created`). Server side
+daily counts since 2026-10-08: `src/api/daily_counts.py`.
 
 ## Why
 
@@ -102,6 +103,52 @@ A request that creates the account and then fails sends no header (its
 transaction may have rolled back), so in that rare case `signed_up` is missed
 rather than sent twice. Deleting the account and coming back counts as a new
 sign up.
+
+## Server side counts (2026-10-08)
+
+PostHog misses whoever blocks it: an ad blocker, Do Not Track. The API counts
+the few things that matter itself, as daily totals in `daily_counts`
+(migration 020): one row per UTC day, five counters, nothing else. No user id,
+no address, no file name, no CV content, no row per person.
+
+| Counter | Adds one when |
+|---|---|
+| `scans_started` | a `POST /analyze` or `POST /analyze/reuse` reaches its route |
+| `scans_finished` | that request returns a result |
+| `scans_failed` | that request raises: not a PDF, nothing kept to reuse, any error |
+| `cv_reused` | a `POST /analyze/reuse` reaches its route (also in `scans_started`) |
+| `accounts_created` | a response carries `X-Account-Created` (a first write that worked; see `signed_up`) |
+
+**What a scan is.** An upload scan is two requests sent at once: `/cv/parse`
+finds the skills, `/analyze` compares them with the jobs, and `/analyze` alone
+decides whether the scan worked (`lib/cv-ask.ts`, `runUpload`). So a scan is
+one `/analyze` or `/analyze/reuse` request, and `/cv/parse` is not counted.
+A body that says it is over 10 MB is refused by a middleware before any route
+and is not counted; a file that reaches `/analyze` and isn't a PDF is started
+and failed. `scans_started - scans_finished - scans_failed` is scans cut off
+by a restart. These match PostHog's `scan_started`, `scan_finished`,
+`scan_failed`, `cv_reused` and `signed_up`, so the gap between them is what
+PostHog misses.
+
+**Never at the request's cost.** `daily_counts.count()` hands the write to one
+background thread and returns; the request never waits on the database. A
+write that fails is printed (`daily count not kept (...)`) and dropped. One
+thread keeps the counts in order and holds at most one pooled connection.
+Without `DATABASE_URL` nothing is counted. The write is one
+`insert ... on conflict (day) do update set x = x + 1`, so two requests
+counting at once both land, even the first two of a day.
+
+**Reading them** (a select only, safe on production):
+
+```
+cd backend && python -m src.api.daily_counts --days 14
+```
+
+prints one line a UTC day (a day with no row as zeros) and the total of the
+last 7 days.
+
+The privacy page says it: "Our own server also counts scans and new accounts
+each day, as totals. Never who." (`decisions/privacy-pages.md`).
 
 ## Follow-ups
 

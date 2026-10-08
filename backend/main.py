@@ -10,6 +10,7 @@ authentication, request models and status codes live here; the work does not.
     .../extract                 pasted job links (src/jobpool)
     .../import                  a spreadsheet of past applications (services/application_import.py)
     /market/look, /market/ad    public: today's count, a pasted ad's asks (src/api/market.py)
+    a scan, a new account       counted as daily totals (src/api/daily_counts.py)
 """
 import asyncio
 import json
@@ -28,7 +29,7 @@ from fastapi.responses import JSONResponse
 from pdf_inspector import pdf_inspector
 
 from src.Agent.utils.location import LocationPreferences
-from src.api import market
+from src.api import daily_counts, market
 from src.Agent.utils.types import (
     AnalysisPayload, AppliedDateRequest, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
     LocationPreferencesRequest, ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
@@ -140,6 +141,7 @@ async def account_created_header(request, call_next):
     response = await call_next(request)
     if news and response.status_code < 400:
         response.headers[ACCOUNT_CREATED_HEADER] = "1"
+        daily_counts.count("accounts_created")
     return response
 
 
@@ -242,6 +244,7 @@ async def _parsed_cv(cv_text: str, file_name, user):
 
 
 @app.post("/analyze")
+@daily_counts.scan()
 async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
     data = await upload.pdf_bytes(file)  # too big or not a PDF fails here, before the queue
     preferences = await _location_preferences(user)
@@ -260,6 +263,7 @@ async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
 
 
 @app.post("/analyze/reuse")
+@daily_counts.scan("cv_reused")
 async def analyze_again(user=Depends(current_user)):
     """A rescan from the kept profile of the latest CV: no upload, no LLM call. Same shape as /analyze."""
     query = await run_in_threadpool(user_service.latest_profile, user)

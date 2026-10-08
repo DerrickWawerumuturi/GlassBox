@@ -8,6 +8,7 @@ FastAPI service. `main.py` holds the routes; everything they call lives under
 ```
 main.py                              routes, auth, status codes — no business logic
 src/api/market.py                    public routes: GET /market/look, GET /market/page/{name}, POST /market/ad
+src/api/daily_counts.py              daily totals: scans started, finished, failed, reused; accounts created
 skill_db_relax_20.json               EMSI skill names, a dictionary for discover.py only (not in the image)
 src/Agent/                           CV analysis (a scan)
   Framework/
@@ -97,6 +98,12 @@ an unknown user creates them; that response carries `X-Account-Created: 1`
 (a middleware, exposed through CORS) for analytics' `signed_up`. Unhandled
 errors become a generic 500 from a middleware registered inside CORS, so the
 browser gets a readable error and never the raw exception text.
+
+`/analyze` and `/analyze/reuse` are each counted as one scan (`@daily_counts.scan`):
+started on the way in, then finished or failed. The same middleware counts
+`accounts_created` when it sends the header. The writes run on one background
+thread into `daily_counts`, one row per UTC day; a failed write is logged and
+dropped, and the request never waits (`decisions/analytics.md`, "Server side counts").
 
 ## Pipeline stages
 
@@ -310,6 +317,7 @@ job_skills, skills (SkillNer's output until 2026-10-01; nothing reads or writes 
 market_snapshots   (taken_on, profiler_version, family): daily counts, no job ids
 market_publications  one row per weekly publication or rejected candidate: gates, /market bodies
 source_runs        one row per collector source per run: ok, jobs listed, whole, closed, retired
+daily_counts       one row per UTC day: scans started, finished, failed, reused, accounts created; no ids
 ```
 
 and each user's data: `users` (with `location_preferences`) ─1─n─ `cvs`,

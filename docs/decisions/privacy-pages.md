@@ -20,6 +20,7 @@ Change a page when the code it cites changes.
 | Google sign-in: name, email address and profile picture | NextAuth Google provider, default scope `openid email profile` (`app/auth.ts`) |
 | PostHog (US): pages and a few steps; no cookies or recordings; Do Not Track; never the CV, file name or skills | `lib/analytics.ts` and `decisions/analytics.md` |
 | First page: the referring site's name and the link's campaign tags, never the full link | `visitSource` and `scrub` in `lib/analytics.ts` (since 2026-10-07) |
+| Our own server counts scans and new accounts each day, as totals; never who | `daily_counts` (migration 020): one row per UTC day, counters only; `src/api/daily_counts.py` (since 2026-10-08, `decisions/analytics.md`) |
 | Our own fonts, no requests to Google Fonts | `app/fonts` with `next/font/local` |
 
 ## Corrections to the brief (2026-10-05, first draft)
