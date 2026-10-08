@@ -3,8 +3,8 @@
 import React, {useState} from 'react'
 import Link from "next/link";
 import {
-    ActivityIcon, ArrowRightIcon, BookOpenIcon, ChartColumnIcon, CircleHelpIcon, ClipboardListIcon, InfoIcon, LayoutGridIcon, LogInIcon,
-    LucideIcon, MenuIcon, RadarIcon, SigmaIcon, TrendingUpIcon,
+    ActivityIcon, BookOpenIcon, ChartColumnIcon, ClipboardListIcon, CornerDownLeftIcon, LayoutGridIcon,
+    LucideIcon, MenuIcon, RadarIcon, TrendingUpIcon,
 } from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
@@ -28,7 +28,6 @@ import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {initials} from "@/lib/utils";
 import {GlassboxWordmark} from "@/components/brand/Logo";
 import AccountMenuItems from "@/components/AccountMenuItems";
-import {MARKET_NAMES, MARKET_PAGES, marketPath} from "@/lib/market-pages";
 
 const ICONS: Record<string, LucideIcon> = {
     market: ActivityIcon, "your-skills": TrendingUpIcon, opportunities: RadarIcon, applications: ClipboardListIcon,
@@ -88,8 +87,8 @@ const Navbar = () => {
     );
     const withCv = (close?: () => void) => (
         <Button variant={"ghost"} onClick={() => { close?.(); scan.open(); }}
-                className={"group h-auto w-full justify-between px-3 py-2.5 text-sm font-normal"}>
-            <span>{NAV.withCv}</span><ArrowRightIcon className={"size-3.5 text-primary transition-transform group-hover:translate-x-0.5"} />
+                className={"m-1 h-auto w-fit justify-start gap-2 rounded-md border border-primary/45 px-3 py-2 font-mono text-xs font-normal uppercase tracking-[0.12em] text-primary hover:border-primary hover:bg-primary/[0.06] hover:text-primary"}>
+            <span>{NAV.withCv}</span><CornerDownLeftIcon className={"size-4"} />
         </Button>
     );
 
@@ -112,11 +111,10 @@ const Navbar = () => {
                                 </NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <div className={"w-[min(600px,calc(100vw-48px))] p-2"}>
-                                        <p className={"px-3 pt-2 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.product}</p>
-                                        <ul className={"grid grid-cols-2 gap-1"}>
+                                        <ul className={"grid grid-cols-2 gap-2"}>
                                             {FEATURES.map((f) => (
                                                 <li key={f.id}>
-                                                    <NavigationMenuLink render={<Link href={`/product#${f.id}`} />} className={"spotlight block rounded-lg border border-transparent p-3 transition-colors hover:border-border"}>
+                                                    <NavigationMenuLink render={<Link href={`/product#${f.id}`} />} className={"spotlight block h-full rounded-lg border border-border p-3 transition-colors hover:border-foreground/25"}>
                                                         <FeatureItem id={f.id} />
                                                     </NavigationMenuLink>
                                                 </li>
@@ -130,22 +128,12 @@ const Navbar = () => {
                             <NavigationMenuItem>
                                 <NavigationMenuTrigger onPointerEnter={pillTo} className={trigger}>{NAV.resources}</NavigationMenuTrigger>
                                 <NavigationMenuContent>
-                                    <div className={"grid w-[min(560px,calc(100vw-48px))] grid-cols-[1.3fr_1fr] gap-2 p-2"}>
-                                        <div>
-                                            <p className={"px-3 pt-2 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.market}</p>
-                                            <ul>
-                                                {resourceLink("/market", NAV.marketHub, NAV.marketHubLine)}
-                                                {MARKET_NAMES.map((n) => resourceLink(marketPath(n), `${MARKET_PAGES[n].label} jobs`))}
-                                            </ul>
-                                        </div>
-                                        <div className={"border-l border-border pl-2"}>
-                                            <p className={"px-3 pt-2 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"}>{NAV.how}</p>
-                                            <ul>
-                                                {resourceLink("/#how-we-count", NAV.how, NAV.howLine)}
-                                                {resourceLink("/method", NAV.method, NAV.methodLine)}
-                                            </ul>
-                                        </div>
-                                    </div>
+                                    {/* Two links (founder, 2026-10-08): the hub lists every market page. */}
+                                    <ul className={"w-[min(340px,calc(100vw-48px))] p-2"}>
+                                        {resourceLink("/market", NAV.market, NAV.marketHubLine)}
+                                        <li aria-hidden className={"mx-3 my-1 border-t border-border"} />
+                                        {resourceLink("/method", NAV.method, NAV.methodLine)}
+                                    </ul>
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
                         </NavigationMenuList>
@@ -162,28 +150,22 @@ const Navbar = () => {
                     <DropdownMenuTrigger render={<Button variant={"ghost"} size={"icon-sm"} aria-label={NAV.menu} className={"text-muted-foreground md:hidden"} />}>
                         <MenuIcon className={"size-5"} />
                     </DropdownMenuTrigger>
+                    {/* Two groups only (founder, 2026-10-08): the product and the market pages. Sign in is the
+                        button beside the menu; About and FAQ stay on the desktop bar and the home page. */}
                     <DropdownMenuContent align={"end"} className={"w-56"}>
-                        {FEATURES.map((f) => {
-                            const Icon = ICONS[f.id];
-                            return menuLink(`/product#${f.id}`, <Icon className={"size-4 opacity-70"} />, f.title);
-                        })}
-                        <DropdownMenuItem onClick={() => scan.open()} className={"cursor-pointer"}>
-                            <ArrowRightIcon className={"size-4 text-primary"} /> {NAV.withCv}
+                        {/* Dashboard first when signed in, then the one action (founder, 2026-10-08). */}
+                        {session?.user && menuLink("/dashboard", <LayoutGridIcon className={"size-4 opacity-70"} />, NAV.dashboard)}
+                        {/* Try it out: orange capitals in a thin orange outline, so it reads as a button, with a return key mark. */}
+                        <DropdownMenuItem onClick={() => scan.open()}
+                                          className={"m-1 w-fit cursor-pointer gap-2 rounded-md border border-primary/45 px-3 py-2 font-mono text-xs uppercase tracking-[0.12em] text-primary focus:border-primary focus:bg-primary/[0.06] focus:text-primary"}>
+                            {NAV.withCv}<CornerDownLeftIcon className={"size-4 text-primary"} />
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
                             <DropdownMenuLabel className={"font-mono text-[11px] uppercase tracking-[0.12em]"}>{NAV.resources}</DropdownMenuLabel>
                             {menuLink("/market", <ChartColumnIcon className={"size-4 opacity-70"} />, NAV.market)}
-                            {menuLink("/#how-we-count", <SigmaIcon className={"size-4 opacity-70"} />, NAV.how)}
                             {menuLink("/method", <BookOpenIcon className={"size-4 opacity-70"} />, NAV.method)}
                         </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        {menuLink("/about", <InfoIcon className={"size-4 opacity-70"} />, NAV.about)}
-                        {menuLink("/#faq", <CircleHelpIcon className={"size-4 opacity-70"} />, NAV.faq)}
-                        <DropdownMenuSeparator />
-                        {session?.user
-                            ? menuLink("/dashboard", <LayoutGridIcon className={"size-4 opacity-70"} />, NAV.dashboard)
-                            : menuLink("/sign-in", <LogInIcon className={"size-4 opacity-70"} />, NAV.signIn)}
                     </DropdownMenuContent>
                 </DropdownMenu>
 

@@ -36,19 +36,16 @@ export const FEATURES: Feature[] = [
 
 export const NAV = {
     product: "Product",
-    how: "How it works",
     resources: "Resources",
     market: "Market",
-    marketHub: "Every market page",
-    marketHubLine: "What today's tech jobs ask for, counted.",
+    marketHubLine: "What thousands of job ads agree on.",
     method: "How Glassbox counts",
-    methodLine: "Sources, rules and limits.",
-    howLine: "From a job ad to a counted skill.",
+    methodLine: "Open the box: how every number is made.",
     about: "About",
     faq: "FAQ",
     signIn: "Sign in",
     dashboard: "Dashboard",
-    withCv: "See it with your CV",
+    withCv: "Try it out",
     menu: "Menu",
 };
 
