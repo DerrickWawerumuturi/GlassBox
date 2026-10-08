@@ -64,20 +64,20 @@ export interface ExplainerSection {
 export const PRODUCT_PAGE = {
     kicker: "Product",
     title: "What Glassbox shows you",
-    dek: "Today's jobs, counted. Then where you stand, once your CV is in. Five parts, one page each.",
+    dek: "This week's jobs, counted. Then where you stand, once your CV is in. Five parts, one page each.",
     toc: "On this page",
     jump: "Jump to",
     numbers: "By the numbers",
     /** Beside the Market section: one counted question in full, and how the count is made. */
     marketLinks: [
-        {href: "/market", label: "What today's tech jobs ask for"},
+        {href: "/market", label: "What this week's tech jobs ask for"},
         {href: "/market/entry-level-software", label: "What entry level software jobs ask for"},
         {href: "/method", label: "How Glassbox counts"},
     ],
     numberLines: (total: string, types: number, skill: string, n: string, of: string, date: string) => [
-        `${total} jobs open today, across ${types} job types.`,
-        `${skill} is the skill backend jobs ask for most: ${n} of ${of} today.`,
-        `Counted on ${date}.`,
+        `${total} jobs counted this week, across ${types} job types.`,
+        `${skill} is the skill backend jobs ask for most: ${n} of ${of} this week.`,
+        `Counted in the week of ${date}.`,
     ],
     sections: [
         {
@@ -139,7 +139,7 @@ export const PRODUCT_PAGE = {
 export const ABOUT_PAGE = {
     kicker: "About",
     title: "Why Glassbox",
-    dek: "Job ads list everything. We count what today's jobs really ask for, and show you where you stand.",
+    dek: "Job ads list everything. We count what this week's jobs really ask for, and show you where you stand.",
     toc: "On this page",
     jump: "Jump to",
     sections: [
@@ -195,7 +195,7 @@ export const ABOUT_PAGE = {
             ],
         },
     ] as ExplainerSection[],
-    numbersTitle: "Two numbers as we write them, counted today",
+    numbersTitle: "Two numbers as we write them, counted this week",
     valuesTitle: "What we hold to",
     values: [
         {title: "Show the evidence", body: "Every number says what it counts and when."},

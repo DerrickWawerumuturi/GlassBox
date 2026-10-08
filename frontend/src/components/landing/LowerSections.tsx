@@ -5,13 +5,14 @@ import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/co
 import ProductShot, {ShotName} from "@/components/site/ProductShot";
 import {Look} from "@/lib/landing/look";
 import {showcaseFamily} from "@/lib/landing/showcase";
+import {weekDay} from "@/lib/market-page";
 import {FEATURES} from "@/lib/site-copy";
 import {COPY, FAMILY_LABEL} from "./copy";
 
 const L = COPY.lower;
 const H = L.how;
 
-/** Step 1: a few of today's real job titles, the shortest ones, so they read whole. */
+/** Step 1: a few of this week's real job titles, the shortest ones, so they read whole. */
 function ReadVisual({look, family}: {look: Look | null; family: string}) {
     const titles = look ? [...(look.families[family]?.titles ?? [])].sort((a, b) => a[0].length - b[0].length).slice(0, 3) : [];
     return (
@@ -57,10 +58,10 @@ function MatchVisual({look, family}: {look: Look | null; family: string}) {
     );
 }
 
-/** Step 4: today's count for one job type, with its date. */
+/** Step 4: this week's count for one job type, with its week. */
 function CountVisual({look, family}: {look: Look | null; family: string}) {
     const data = look?.families[family];
-    const date = look ? new Date(look.taken_at).toLocaleDateString("en-GB", {weekday: "short", day: "numeric", month: "short", timeZone: "UTC"}).replace(",", "") : "";
+    const date = look ? `week of ${weekDay(look)}` : "";
     return (
         <div className={"bv-count"}>
             <b>{data ? data.jobs.toLocaleString("en") : " "}</b>

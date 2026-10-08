@@ -17,7 +17,7 @@ export const METHOD_PAGE = {
     kicker: "Method",
     title: "How Glassbox counts",
     description: "Where our jobs come from, how each one is counted once, how skills, levels and years are read, and what we can't see.",
-    dek: "Every number on this site comes from one count of live jobs. This is how it's made, and what it leaves out.",
+    dek: "Every market number on this site comes from one weekly count of live jobs. This is how it's made, and what it leaves out.",
     toc: "On this page",
     jump: "Jump to",
     sections: [
@@ -25,8 +25,8 @@ export const METHOD_PAGE = {
             // backend/src/jobpool/sources.py, companies.txt, .github/workflows/job-pool.yml
             id: "sources", title: "Where the jobs come from",
             paragraphs: [
-                "Every day at 05:00 UTC we read public job boards.",
-                "Many jobs come from employers' own boards: 261 boards on Greenhouse, Ashby, Lever and Workable. We chose that list by hand.",
+                "Every six hours we read public job boards.",
+                "Many jobs come from employers' own boards: 255 boards on Greenhouse, Ashby, Lever and Workable. We chose that list by hand.",
                 "The rest come from job sites and their feeds, listed below.",
                 "Jobs found during someone's own CV scan, and links people paste in, are never counted. They are one person's search, not the market.",
             ],
@@ -41,10 +41,11 @@ export const METHOD_PAGE = {
             ],
         },
         {
-            // snapshot.counted, opportunities.duplicate_key, sources.POOL_WINDOWS
+            // snapshot.counted, opportunities.duplicate_key, sources.POOL_WINDOWS and FULL_BOARDS, source_repository
             id: "once", title: "One job, counted once",
             paragraphs: [
-                "A job counts while it is live. A company board or job site must have listed it in the last 3 days. A feed, in the last 30 days. Nothing posted more than 90 days ago counts.",
+                "A job counts while it is live. An employer's board lists every open job, so a job closes when two full reads of its board in a row don't list it. A read that fails, or brings back less than half the usual jobs, closes nothing.",
+                "Job sites and feeds list only their newest jobs, so a job missing from one says nothing. Their jobs count until 30 days after we last saw them. Nothing posted more than 90 days ago counts.",
                 "The same title at the same employer counts once, however many boards or cities list it. Two separate openings with the same title at one employer also count once.",
             ],
         },
@@ -79,11 +80,12 @@ export const METHOD_PAGE = {
             ],
         },
         {
-            // market_look.REFRESH_SECONDS, look-server.LOOK_REVALIDATE_SECONDS
+            // job-pool.yml (every 6 hours), publish.py (GATES), market_look (serves the latest publication)
             id: "refresh", title: "How fresh it is",
             paragraphs: [
-                "Jobs are read once a day. The counts are rebuilt from them about every hour, and pages show the new count within five minutes.",
-                "Every count says the day it was taken.",
+                "Jobs are read every six hours. The market count is published once a week, on Monday, from the jobs read that day.",
+                "Before it goes up, a new week is checked. Enough jobs, read in the last day. Sources that answered. No jump from last week too large to trust. If a check fails, last week's count stays up and we try again six hours later.",
+                "Every count says the week it was taken. Your CV scan and Opportunities use the jobs read most recently, not the weekly count.",
             ],
         },
         {
@@ -98,8 +100,8 @@ export const METHOD_PAGE = {
     sitesTitle: "The job sites we read",
     backTitle: "Back to the count",
     back: [
-        {href: "/", label: "Today's count"},
-        {href: "/market", label: "What today's tech jobs ask for"},
+        {href: "/", label: "This week's count"},
+        {href: "/market", label: "What this week's tech jobs ask for"},
         {href: "/market/entry-level-software", label: "What entry level software jobs ask for"},
         {href: "/your-cv", label: "What happens to your CV"},
     ],

@@ -1,8 +1,9 @@
 import os
+import time
 
 from dotenv import find_dotenv, load_dotenv
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
+from psycopg_pool import ConnectionPool, PoolTimeout
 
 load_dotenv(find_dotenv())
 
@@ -10,6 +11,10 @@ load_dotenv(find_dotenv())
 # idle database costs one slow request, and an unreachable one must fail fast
 # enough that persistence stays optional rather than stalling an analysis.
 CONNECT_TIMEOUT = 10
+# The collector can wait where a request can't: one more try after a pause.
+# A cold Neon compute took longer than CONNECT_TIMEOUT on 25 and 27 Sep 2026,
+# and with no retry both runs stored nothing.
+WAKE_BACKOFF_SECONDS = 15
 
 _pool: ConnectionPool | None = None
 
@@ -58,3 +63,21 @@ def get_pool() -> ConnectionPool:
 def connection():
     """Pooled connection; the transaction commits on clean exit."""
     return get_pool().connection()
+
+
+def wake(retries: int = 1, backoff: float = WAKE_BACKOFF_SECONDS, sleep=time.sleep) -> None:
+    """
+    Make sure the database answers before a batch job writes: one retry, after
+    a pause, when the first connection times out. Raises the last PoolTimeout.
+    Requests never call this; they stay fail fast.
+    """
+    for attempt in range(retries + 1):
+        try:
+            with connection() as conn, conn.cursor() as cur:
+                cur.execute("select 1")
+            return
+        except PoolTimeout:
+            if attempt == retries:
+                raise
+            print(f"database did not answer in {CONNECT_TIMEOUT}s; trying again in {backoff:.0f}s")
+            sleep(backoff)

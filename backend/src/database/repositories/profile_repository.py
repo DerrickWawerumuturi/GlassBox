@@ -30,18 +30,21 @@ on conflict (job_id) do update set
 """
 
 # The live pool, with profiles, for the role families a candidate points at.
-# Liveness mirrors PoolProvider: a board the daily fetch reads in full must have
-# been seen in the last few days; anything else gets a plain age limit, because
-# a missed sighting says nothing about a posting only found by searching.
+# Liveness mirrors PoolProvider (sources.POOL_WINDOWS): not closed, posted in
+# the last `age` days and seen in the last `unverified`. A complete board closes
+# its jobs on evidence (jobs.closed_at); its rows from before migration 018
+# that the collector hasn't placed yet (source is NULL) keep the old rule: seen
+# in the last `live` days.
 _LIVE = """
 from jobs j
 join job_profiles p on p.job_id = j.id and p.profiler_version = %(version)s
 where j.archived_at is null
+  and j.closed_at is null
   and p.family = any(%(families)s::text[])
   and p.seniority <> all(%(too_senior)s::text[])
   and coalesce(j.posted_at, j.first_seen_at) > now() - make_interval(days => %(age)s)
   and (j.last_seen_at > now() - make_interval(days => %(live)s)
-       or (j.provider <> all(%(refreshed)s::text[])
+       or ((j.source is not null or j.provider <> all(%(refreshed)s::text[]))
            and j.last_seen_at > now() - make_interval(days => %(unverified)s)))
 order by coalesce(j.posted_at, j.first_seen_at) desc
 limit %(limit)s

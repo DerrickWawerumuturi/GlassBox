@@ -5,8 +5,9 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useAskInView} from "@/components/cv-ask/StickyAsk";
 import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {track} from "@/lib/analytics";
+import {weekDay} from "@/lib/market-page";
 import {Ask, familyAskSkills, stickyShows, StickyContext} from "@/lib/cv-ask";
-import {adAsks, adFor, askRows, CYCLE, familyOrder, getLook, Level, LEVELS, Look} from "@/lib/landing/look";
+import {adAsks, adFor, askRows, CYCLE, familyOrder, getLook, Level, LEVELS, Look, lookJobs} from "@/lib/landing/look";
 import {COPY, FAMILY_LABEL} from "./copy";
 import CountCard from "./CountCard";
 import CvSection, {PreviewAsk} from "./CvSection";
@@ -22,7 +23,7 @@ import "./landing.css";
 /*
  * The landing page, "Look around first" (docs/local/look-around-prototype.html,
  * round 3; the founder's picks in docs/changelog/2026-10-05-landing-look-around.md).
- * Today's count from the live pool, the jobs behind it, a job ad on the glass,
+ * This week's published count, the jobs behind it, a job ad on the glass,
  * then the CV. The CV is asked as a question about what the visitor just
  * looked at (docs/decisions/cv-ask.md): in the count card, inside, the closing
  * section, and a sticky line while none of those is on screen. After a scan
@@ -31,7 +32,6 @@ import "./landing.css";
 
 const H = COPY.hero;
 const cap = (f: string) => { const l = FAMILY_LABEL[f] ?? f; return l === "QA" || l === "DevOps" ? l : l[0].toUpperCase() + l.slice(1); };
-const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", {weekday: "short", day: "numeric", month: "short", timeZone: "UTC"}).replace(",", "");
 
 export default function LookAround({initial}: {initial?: Look}) {
     const [look, setLook] = useState<Look | null>(initial ?? null);
@@ -127,7 +127,7 @@ export default function LookAround({initial}: {initial?: Look}) {
         <main className={`la desk ${have ? "cv-on" : ""}`}>
             <div className={"wrap"}>
                 <header className={"hero"} ref={heroRef}>
-                    <div className={"kick"}>{H.eyebrow(look ? Object.values(look.families).reduce((n, f) => n + f.jobs, 0).toLocaleString("en") : null)}</div>
+                    <div className={"kick"}>{H.eyebrow(look ? lookJobs(look).toLocaleString("en") : null)}</div>
                     <h1>{H.title}</h1>
                     <p className={"lede"}>{H.lede}</p>
                 </header>
@@ -138,7 +138,7 @@ export default function LookAround({initial}: {initial?: Look}) {
                         <p className={"sec-line"}>{COPY.hiring.line}</p>
                     </div>
                     {!look ? (
-                        // Only when the server render couldn't get today's count: the shape, never blank space.
+                        // Only when the server render couldn't get this week's count: the shape, never blank space.
                         <div className={"look"} aria-busy={!failed}>
                             <div className={"card skel"} style={{height: 560}}>{failed && <p className={"sub"}>{COPY.count.unavailable}</p>}</div>
                             <div className={"card skel"} style={{height: 560}} />
@@ -146,7 +146,7 @@ export default function LookAround({initial}: {initial?: Look}) {
                     ) : (
                             <div className={"look"}>
                                 <div>
-                                    <CountCard families={main} more={more} data={look.families} family={family} level={level} date={dayLabel(look.taken_at)}
+                                    <CountCard families={main} more={more} data={look.families} family={family} level={level} date={weekDay(look)}
                                                onPick={pick} subscribe={stepper.subscribe} playing={stepper.playing} onPlaying={setPlaying}
                                                state={state} reduce={reduce} ask={countAsk!} scanning={scan.scanning} onFind={cvAsk("count", countAsk)} />
                                 </div>

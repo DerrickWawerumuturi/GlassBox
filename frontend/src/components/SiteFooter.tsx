@@ -41,7 +41,7 @@ export default function SiteFooter({variant = "slim", className}: {variant?: "fu
                 <GlassboxWordmark className={"h-[11px] w-auto"} />
                 <span className={"flex flex-col items-end gap-0.5 text-right"}>
                     <span className={"font-heading text-sm font-bold uppercase tracking-tight"}>We show. You decide.</span>
-                    <span className={"font-mono text-[11px] text-panel-green-ink-muted"}>Counted from public job boards, every day. Mostly tech jobs in the US and Europe.</span>
+                    <span className={"font-mono text-[11px] text-panel-green-ink-muted"}>Read from public job boards every day. Counted every week. Mostly tech jobs in the US and Europe.</span>
                 </span>
             </div>
             <div className={"flex flex-wrap items-center justify-between gap-3"}>{links}{copyright}</div>

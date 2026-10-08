@@ -75,15 +75,25 @@ describe("landing copy", () => {
         expect(S.resultLine(ask)).toBe("of the skills entry level software jobs name most are on your CV.");
     });
 
-    it("shows the live count, or no number at all", () => {
-        expect(COPY.hero.eyebrow("3,035")).toBe("3,035 jobs open today");
-        expect(COPY.hero.eyebrow(null)).toBe("Jobs open today");
+    it("shows this week's published count, or no number at all", () => {
+        expect(COPY.hero.eyebrow("4,768")).toBe("4,768 tech jobs counted this week");
+        expect(COPY.hero.eyebrow(null)).toBe("Tech jobs counted this week");
+        expect(COPY.count.kicker("5 Oct")).toBe("Counted in the week of 5 Oct");
     });
 
     it("names the level in the count sentence", () => {
-        expect(COPY.count.say(6, "114", "backend", "junior")).toBe("6 of the 114 backend jobs open today are junior roles.");
-        expect(COPY.count.say(1, "114", "backend", "mid")).toBe("1 of the 114 backend jobs open today is mid level.");
-        expect(COPY.count.say(0, "114", "backend", "senior")).toBe("None of the 114 backend jobs open today are senior or above.");
+        expect(COPY.count.say(6, "114", "backend", "junior")).toBe("6 of the 114 backend jobs counted this week are junior roles.");
+        expect(COPY.count.say(1, "114", "backend", "mid")).toBe("1 of the 114 backend jobs counted this week is mid level.");
+        expect(COPY.count.say(0, "114", "backend", "senior")).toBe("None of the 114 backend jobs counted this week are senior or above.");
+    });
+
+    it("never calls the weekly count today's", () => {
+        // The CV scan and Opportunities read the live pool and keep "today's jobs"; the count the page shows is weekly.
+        const market = [COPY.meta, COPY.hero, COPY.hiring, COPY.count, COPY.wall, COPY.inside, COPY.lower.how, COPY.footer];
+        const text = JSON.stringify(market) + [COPY.hero.eyebrow("1"), COPY.count.kicker("x"), COPY.count.say(1, "2", "b", "junior"),
+            COPY.wall.allLit("1", "a", "b"), COPY.wall.more("1", "b"), COPY.glass.oneOfToday("a", "b"), COPY.glass.readToday("1"),
+            COPY.glass.rarest("a", 1, "2", "b"), COPY.inside.market("1", "b")].join(" ");
+        expect(text).not.toMatch(/\btoday|open today/i);
     });
 });
 

@@ -1,7 +1,7 @@
 import React from "react";
 
 import {BarRows, Figure, PairRows, Stacked, TableTwin} from "@/components/market-page/Figures";
-import {fmt, longDate, pct} from "@/lib/market-page";
+import {fmt, pct, weekDate} from "@/lib/market-page";
 import {
     bucketPhrase, categoriesSection, comparable, compareShare, contrastSection, Ctx, has, hiringSection, languagesSection,
     levelsSection, share, skillName, yearsSection,
@@ -28,14 +28,14 @@ export const P = ({children, first}: {children: React.ReactNode; first?: boolean
 );
 
 function Languages({c}: {c: Ctx}) {
-    const s = languagesSection(c), date = longDate(c.page.taken_at);
+    const s = languagesSection(c), date = `week of ${weekDate(c.page)}`;
     const rows = s.bars.map((b, i) => ({key: b.key, name: skillName(c, b.key), share: share(c, b), compare: comparable(c) ? compareShare(c, b) : null,
         count: b.any, lime: i === 0}));
     return (
         <section aria-labelledby={"languages"}>
             <H2 id={"languages"}>{s.heading}</H2>
             <P>{s.before}</P>
-            <Figure title={"Languages they name"} sub={`share of ${c.info.subject} jobs`} chips={[`${fmt(c.page.readable)} jobs`]} caption={s.caption} date={date}>
+            <Figure title={"Languages they name"} sub={s.sub} chips={[`${fmt(c.page.readable)} jobs`]} caption={s.caption} date={date}>
                 <BarRows rows={rows} label={`Share of ${fmt(c.page.readable)} ${c.info.subject} jobs naming each language: ${rows.map((r) => `${r.name} ${r.share}%`).join(", ")}.`} />
                 <TableTwin head={["Language", "Jobs", "Share", "Employers", ...(comparable(c) ? [`${c.info.compare}`] : [])]}
                            rows={s.bars.map((b) => [skillName(c, b.key), `${fmt(b.any)}/${fmt(c.page.readable)}`, `${share(c, b)}%`, fmt(b.employers),
@@ -47,13 +47,13 @@ function Languages({c}: {c: Ctx}) {
 }
 
 function Contrast({c}: {c: Ctx}) {
-    const s = contrastSection(c), date = longDate(c.page.taken_at);
+    const s = contrastSection(c), date = `week of ${weekDate(c.page)}`;
     const rows = s.rows.map((r, i) => ({key: r.key, name: skillName(c, r.key), left: share(c, r), right: compareShare(c, r), lime: i === 0}));
     return (
         <section aria-labelledby={"contrast"}>
             <H2 id={"contrast"}>{s.heading}</H2>
             <P>{s.before}</P>
-            <Figure title={c.info.kind === "entry" ? "Entry level vs senior" : "All jobs vs senior"} sub={"share of jobs naming each skill"}
+            <Figure title={c.info.kind === "entry" ? "Entry level vs senior" : "All jobs vs senior"} sub={s.sub}
                     chips={[`${fmt(c.page.readable)} ${c.info.subject}`, `${fmt(c.page.story.compare.readable)} ${c.info.compare}`]} caption={s.caption} date={date}>
                 <PairRows rows={rows} left={s.legend.left} right={s.legend.right}
                           label={`Share of ${c.info.subject} jobs and of ${c.info.compare} jobs naming each skill: ${rows.map((r) => `${r.name} ${r.left}% and ${r.right}%`).join(", ")}.`} />
@@ -67,12 +67,12 @@ function Contrast({c}: {c: Ctx}) {
 }
 
 function Categories({c}: {c: Ctx}) {
-    const s = categoriesSection(c), date = longDate(c.page.taken_at);
+    const s = categoriesSection(c), date = `week of ${weekDate(c.page)}`;
     return (
         <section aria-labelledby={"categories"}>
             <H2 id={"categories"}>{s.heading}</H2>
             <P>{s.before}</P>
-            <Figure title={"Beyond the languages"} sub={"share of jobs naming each"} chips={[`${fmt(c.page.readable)} jobs`]} caption={s.caption} date={date}>
+            <Figure title={"Beyond the languages"} sub={s.sub} chips={[`${fmt(c.page.readable)} jobs`]} caption={s.caption} date={date}>
                 <div className={"grid gap-x-[22px] gap-y-4 sm:grid-cols-2"}>
                     {s.groups.map((g, gi) => (
                         <div key={g.category} className={"min-w-0"}>
@@ -124,7 +124,7 @@ function Levels({c}: {c: Ctx}) {
 }
 
 function Hiring({c}: {c: Ctx}) {
-    const s = hiringSection(c), {page} = c, date = longDate(page.taken_at);
+    const s = hiringSection(c), {page} = c, date = `week of ${weekDate(page)}`;
     const tile = (title: string, n: number) => (
         <div className={"min-w-0"}>
             <h3 className={"mb-1 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-muted-foreground"}>{title}</h3>
@@ -136,7 +136,7 @@ function Hiring({c}: {c: Ctx}) {
         <section aria-labelledby={"hiring"}>
             <H2 id={"hiring"}>{s.heading}</H2>
             <P>{s.before}</P>
-            <Figure title={`Where the ${fmt(page.jobs)} jobs are`} sub={"by the place each job names"} chips={[`${fmt(page.jobs)} jobs`]} caption={s.caption} date={date}>
+            <Figure title={`Where the ${fmt(page.jobs)} jobs are`} sub={s.sub} chips={[`${fmt(page.jobs)} jobs`]} caption={s.caption} date={date}>
                 <Stacked label={s.places} parts={[
                     {label: "US", value: page.places.us, tone: "ink"}, {label: "Elsewhere", value: page.places.elsewhere, tone: "soft"},
                     {label: "?", value: page.places.unknown, tone: "hatch"},

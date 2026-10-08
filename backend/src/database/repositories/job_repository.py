@@ -8,7 +8,7 @@ COLUMNS = (
     "employment_type", "experience_level",
     "salary_min", "salary_max", "salary_currency", "salary_period",
     "url", "posted_at", "posted_at_raw", "remote_eligibility",
-    "raw_payload", "payload_hash",
+    "raw_payload", "payload_hash", "source",
 )
 
 # A later response is never allowed to null out a value we already hold, and
@@ -17,6 +17,9 @@ COLUMNS = (
 #   first_seen_at  when JobRadar first fetched the posting (its "fetched at")
 #   last_seen_at   the latest sighting — every daily run moves it
 #   updated_at     the last time what we store actually changed
+# A sighting by the collector (source set) also reopens a closed job and clears
+# its missed fetches; a user's scan or link never does: it says nothing about
+# whether the board still lists the job.
 UPSERT = f"""
 insert into jobs ({", ".join(COLUMNS)})
 values {{rows}}
@@ -51,7 +54,10 @@ on conflict (provider, external_id) do update set
     posted_at_raw    = coalesce(excluded.posted_at_raw, jobs.posted_at_raw),
     fingerprint      = excluded.fingerprint,
     raw_payload      = excluded.raw_payload,
-    payload_hash     = excluded.payload_hash
+    payload_hash     = excluded.payload_hash,
+    source           = coalesce(excluded.source, jobs.source),
+    closed_at        = case when excluded.source is null then jobs.closed_at end,
+    missed_fetches   = case when excluded.source is null then jobs.missed_fetches else 0 end
 returning id, provider, external_id, (xmax = 0) as inserted
 """
 
@@ -111,6 +117,7 @@ def _values(record: JobRecord) -> list:
         record.posted_at, record.posted_at_raw, record.remote_eligibility,
         Jsonb(record.raw_payload),
         record.payload_hash,
+        record.source,
     ]
 
 
@@ -157,8 +164,9 @@ where exists (
     where to_tsvector('english', coalesce(title, '')) @@ plainto_tsquery('english', r.role)
 )
   and archived_at is null
+  and closed_at is null
   and (last_seen_at > now() - make_interval(days => %(live)s)
-       or (provider <> all(%(refreshed)s::text[])
+       or ((source is not null or provider <> all(%(refreshed)s::text[]))
            and last_seen_at > now() - make_interval(days => %(unverified)s)))
   and coalesce(posted_at, first_seen_at) > now() - make_interval(days => %(age)s)
   and (%(remote)s::boolean is null or remote = %(remote)s::boolean)

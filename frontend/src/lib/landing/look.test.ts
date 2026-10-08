@@ -56,12 +56,21 @@ describe("the user's skills", () => {
 
 describe("getLook", () => {
     it("waits while the count is being built, then returns it", async () => {
-        const answers = [new Response("{}", {status: 503, headers: {"Retry-After": "2"}}), new Response(JSON.stringify({taken_at: "x"}), {status: 200})];
+        const answers = [new Response("{}", {status: 503, headers: {"Retry-After": "2"}}),
+            new Response(JSON.stringify({taken_at: "x", families: {backend: {jobs: 5}}}), {status: 200})];
         const waits: number[] = [];
         vi.stubGlobal("fetch", vi.fn(async () => answers.shift()!));
         const look = await getLook(undefined, async (ms) => { waits.push(ms); });
         expect(look.taken_at).toBe("x");
         expect(waits).toEqual([2000]);
+        vi.unstubAllGlobals();
+    });
+
+    it("refuses a count with no jobs, never drawing an empty market", async () => {
+        for (const body of [{taken_at: "x", families: {}}, {taken_at: "x", families: {backend: {jobs: 0}}}]) {
+            vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body), {status: 200})));
+            await expect(getLook(undefined, async () => {})).rejects.toThrow("no jobs");
+        }
         vi.unstubAllGlobals();
     });
 

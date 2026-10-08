@@ -4,18 +4,19 @@ import AddCvButton from "@/components/AddCvButton";
 import {Explainer, Numbers} from "@/components/site/Explainer";
 import {Button} from "@/components/ui/button";
 import {lookForPage} from "@/lib/landing/look-server";
+import {weekDate} from "@/lib/market-page";
 import {PRODUCT_PAGE as P} from "@/lib/site-copy";
 import {publicPage} from "@/lib/seo";
 
 export const metadata = publicPage("/product", {
     title: "Product",
-    description: "Today's jobs, counted. Then where you stand, once your CV is in.",
+    description: "This week's jobs, counted. Then where you stand, once your CV is in.",
 });
 
-// Static, with today's counts for the numbers box (ISR, like the home page).
+// Static, with this week's counts for the numbers box (ISR, like the home page).
 export const revalidate = 300;
 
-/** Today's real counts for the Market section, or nothing when the count isn't available. */
+/** This week's real counts for the Market section, or nothing when the count isn't available. */
 async function numbers(): Promise<string[] | null> {
     const look = await lookForPage();
     const backend = look?.families.backend;
@@ -23,12 +24,12 @@ async function numbers(): Promise<string[] | null> {
     const [key, n] = Object.entries(backend.skills).sort((a, b) => b[1] - a[1])[0] ?? [];
     if (!key) return null;
     const total = Object.values(look.families).reduce((s, f) => s + f.jobs, 0);
-    const date = new Date(look.taken_at).toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric", timeZone: "UTC"});
+    const date = weekDate(look);
     return P.numberLines(total.toLocaleString("en"), Object.keys(look.families).length, look.skills[key] ?? key,
         String(n), backend.readable.toLocaleString("en"), date);
 }
 
-/** The Market section's box of today's counts, when there is one, then where to read more. */
+/** The Market section's box of this week's counts, when there is one, then where to read more. */
 function MarketExtra({lines}: {lines: string[] | null}) {
     return (
         <>

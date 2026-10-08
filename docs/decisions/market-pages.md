@@ -13,6 +13,20 @@ image), `app/market/page.tsx` (the hub), `app/market/layout.tsx`,
 `market-page.test.ts`, `seo.test.ts`, `analytics.test.ts`.
 Design: `docs/local/editorial-prototype.html`, `docs/local/market-pages-editorial.html`.
 
+## Published weekly (2026-10-08)
+
+The pages serve the latest weekly publication (`market-publication.md`), so
+they are dated by its week: "Counted in the week of 5 October 2026 · Updated
+every Monday" in the byline, "in the week of" in the dek, the squares, the
+figures' source lines, the citation and the rail. A body with 0 jobs is no
+count and never renders. Lines that were questions are statements: above the
+finding, what the page counts ("The skills AI jobs name, counted"); a chart's
+subtitle, what its share is of ("Share of the AI jobs we could read, by
+language", then the job chip); a hub card, the count behind its finding. The
+hub cards show only the week, the finding, that count and "Read more" (the 100
+squares didn't fit at phone width); a page with no count has no card. A level
+no job has is left out of the levels sentence instead of written as 0.
+
 ## Why these pages
 
 The first pages decision (`docs/local/first-pages-decision.html`, 7 Oct)

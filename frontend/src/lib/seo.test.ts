@@ -65,9 +65,9 @@ describe("market page structured data", () => {
         });
     });
 
-    it("falls back to the question when the page has no finding", () => {
+    it("falls back to what the page counts, never a question, when the page has no finding", () => {
         const article = (marketStructuredData(MARKET_PAGES.ai, page, "D", null)["@graph"] as Array<Record<string, unknown>>)[0];
-        expect(article.headline).toBe("What are AI jobs actually asking for?");
+        expect(article.headline).toBe("The skills AI jobs name, counted");
     });
 
     it("has breadcrumbs that match the visible Market / AI", () => {

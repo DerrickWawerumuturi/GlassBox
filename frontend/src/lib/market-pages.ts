@@ -1,4 +1,4 @@
-import {builtForPage} from "@/lib/landing/look-server";
+import {builtForPage, hasJobs} from "@/lib/landing/look-server";
 import {MARKET_NAMES, MarketName} from "@/lib/market-names";
 import {SITE_URL} from "@/lib/site";
 
@@ -102,7 +102,10 @@ export interface Story {
 }
 
 export interface MarketBody {
+    /** When the jobs were collected (the publication's as_of). */
     taken_at: string;
+    /** The Monday of the week the count was published for, "2026-10-05"; absent from an API before publications. */
+    week?: string;
     profiler_version: string;
     families: string[];
     min_readable: number;
@@ -124,10 +127,11 @@ export interface MarketBody {
 }
 
 /** A page's counts for the server render; throws during a revalidation to keep the last good page (look-server.ts). */
-export function marketForPage(name: MarketName, keep?: boolean, timeoutMs = 4000, fetcher: typeof fetch = fetch): Promise<MarketBody | null> {
-    // A body with no story is an API from before the editorial pages: no count to write from.
-    return builtForPage<MarketBody>(`/market/page/${name}`, (body) => typeof body.jobs === "number" && Boolean(body.story?.squares),
-        timeoutMs, fetcher, keep);
+export function marketForPage(name: MarketName, keep?: boolean, timeoutMs = 4000, fetcher: typeof fetch = fetch,
+                              wait?: number): Promise<MarketBody | null> {
+    // No jobs is no count, never an empty page. A body with no story is an API from before the editorial pages.
+    return builtForPage<MarketBody>(`/market/page/${name}`, (body) => hasJobs(body.jobs) && Boolean(body.story?.squares),
+        timeoutMs, fetcher, keep, wait);
 }
 
 /** Every page's counts, for the hub and the rail. A page that can't be had is null; it never blocks the page asking. */

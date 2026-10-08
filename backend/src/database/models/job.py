@@ -34,6 +34,8 @@ class JobRecord:
     remote_eligibility: str | None = None
     posted_at: datetime | None = None
     posted_at_raw: str | None = None
+    # The collector source that listed it ("greenhouse:stripe"); None from a user's scan or link.
+    source: str | None = None
 
     @property
     def identity(self) -> JobIdentity:

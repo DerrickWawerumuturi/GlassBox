@@ -118,6 +118,12 @@ def test_skills_stop_at_the_top_150():
     assert len(skills) == ml.SKILLS_PER_FAMILY and next(iter(skills)) in ("skill1", "skill2")
 
 
+@pytest.fixture(autouse=True)
+def _nothing_published(monkeypatch):
+    """These tests are about the live count, the fallback before the first publication: none is published."""
+    monkeypatch.setattr(ml, "published", lambda known=None: None)
+
+
 def _never_build_here(monkeypatch):
     """Background rebuilds run inline, and are counted, so a test can see when one starts."""
     started = []
@@ -211,7 +217,7 @@ def test_without_a_database_the_route_says_so(monkeypatch):
     monkeypatch.setattr(ml, "is_configured", lambda: False)
     ml.forget()
     r = TestClient(main.app).get("/market/look")
-    assert r.status_code == 503 and r.json()["detail"] == "Today's count isn't available right now."
+    assert r.status_code == 503 and r.json()["detail"] == "The count isn't available right now."
 
 
 # ------------------------------------------------------------ local database

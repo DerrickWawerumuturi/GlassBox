@@ -21,14 +21,14 @@ from datetime import datetime, timezone
 from src.database.repositories import profile_repository, snapshot_repository
 from src.database.session import connection, is_configured
 from src.jobpool.opportunities import duplicate_key
-from src.jobpool.sources import FULL_BOARDS, KENYAN_BOARDS, POOL_WINDOWS
+from src.jobpool.sources import DAILY_PROVIDERS, FULL_BOARDS, POOL_WINDOWS
 from src.matching.requirements import PROFILER_VERSION
 from src.matching.roles import TECH_FAMILIES
 
 ALL_FAMILIES = sorted(TECH_FAMILIES | {"ai_data", "non_tech", "other"})
 # Every provider the daily fetch reads (sources.fetch_all). Anything else came
 # from a user: a scan's providers or a pasted link ("url").
-DAILY_SOURCES = frozenset(FULL_BOARDS) | frozenset(KENYAN_BOARDS)
+DAILY_SOURCES = frozenset(DAILY_PROVIDERS)
 # Far above the pool's size (~16k), so nothing live is cut off.
 POOL_LIMIT = 200_000
 KINDS = ("required", "preferred", "mentioned")

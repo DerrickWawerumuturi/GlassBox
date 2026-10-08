@@ -85,14 +85,14 @@ const ORG = {"@type": "Organization", name: "Glassbox", url: SITE_URL, logo: abs
  * Glassbox, changed on the day it was counted, and its breadcrumbs, matching
  * the visible "Market / {page}".
  */
-/** `headline` is the page's H1, its lead finding; the question stands in when there is none. */
+/** `headline` is the page's H1, its lead finding; what the page counts stands in when there is none. */
 export function marketStructuredData(info: MarketInfo, page: MarketBody, description: string, headline?: string | null) {
     const path = marketPath(info.name);
     return {
         "@context": "https://schema.org",
         "@graph": [
             {
-                "@type": "Article", headline: headline ?? `What are ${info.subject} jobs actually asking for?`, description,
+                "@type": "Article", headline: headline ?? `The skills ${info.subject} jobs name, counted`, description,
                 datePublished: FIRST_PUBLISHED, dateModified: page.taken_at, author: ORG, publisher: ORG,
                 image: [absolute(`${path}/opengraph-image`)], mainEntityOfPage: absolute(path),
             },

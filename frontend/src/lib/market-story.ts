@@ -1,4 +1,4 @@
-import {fmt, longDate, pct} from "@/lib/market-page";
+import {fmt, pct, weekDate} from "@/lib/market-page";
 import {LeadFinding, MARKET_PAGES, MarketBody, MarketInfo, MarketName, SectionName, StorySkill} from "@/lib/market-pages";
 
 /*
@@ -7,6 +7,9 @@ import {LeadFinding, MARKET_PAGES, MarketBody, MarketInfo, MarketName, SectionNa
  * backend decides what may be said (market_story.py: the breadth rule, the
  * thresholds, the sections); these only say it. Each number names what it
  * counts, and no sentence tells anyone what to do (CLAUDE.md sections 1, 2).
+ * Nothing here is a question: a line says what was found or what a chart
+ * counts. Counts are published weekly, so they are dated by their week
+ * (weekDate), never "today".
  */
 
 export type Ctx = {info: MarketInfo; page: MarketBody};
@@ -27,8 +30,9 @@ export const compareShare = ({page}: Ctx, s: StorySkill) => pct(s.compare_any, p
 /** The comparison set is shown only when it is big enough to be a share (the 100 rule). */
 export const comparable = ({page}: Ctx) => page.story.compare.readable >= page.min_readable;
 
-export function question({info}: Ctx | {info: MarketInfo}): string {
-    return `What are ${info.subject} jobs actually asking for?`;
+/** What a page counts, as a statement: the line above its finding, its title when there is no finding, and its link. */
+export function topic({info}: Ctx | {info: MarketInfo}): string {
+    return `The skills ${info.subject} jobs name, counted`;
 }
 
 // ------------------------------------------------------------------ the lead finding (the H1)
@@ -45,7 +49,7 @@ export const finding = ({page}: Ctx): LeadFinding | null => (page.publishable ? 
 /**
  * The page's H1: its lead finding in words, one pattern each
  * (decisions/market-pages.md, "Finding headlines"). Null when there is none:
- * then the question is the H1.
+ * then the topic is the H1.
  */
 export function headline(c: Ctx): string | null {
     const f = finding(c), s = c.info.subject;
@@ -83,20 +87,20 @@ export function findingShare(c: Ctx): number | null {
 /** The sentences under the headline: what was counted and when, then the count behind the finding. */
 export function dek(c: Ctx): string {
     const {info, page} = c;
-    const counted = `We counted ${plural(page.jobs, `${info.subject} job`, `${info.subject} jobs`)} at ${plural(page.employers, "employer", "employers")} on ${longDate(page.taken_at)}.`;
+    const counted = `We counted ${plural(page.jobs, `${info.subject} job`, `${info.subject} jobs`)} at ${plural(page.employers, "employer", "employers")} in the week of ${weekDate(page)}.`;
     const behind = findingCount(c);
-    return behind ? `${counted} ${behind}` : `${counted} Too few could be read today to show shares.`;
+    return behind ? `${counted} ${behind}` : `${counted} Too few could be read this week to show shares.`;
 }
 
 /** Under the 100 rule: what the page shows instead of shares, and why. */
 export const thin = ({page}: Ctx) =>
-    `We could read ${fmt(page.readable)} of these jobs today. Below ${page.min_readable}, a share describes a few employers more than the market, so this page shows counts only.`;
+    `We could read ${fmt(page.readable)} of these jobs this week. Below ${page.min_readable}, a share describes a few employers more than the market, so this page shows counts only.`;
 
-export const UNAVAILABLE = "Today's count isn't ready yet. It's made from the live jobs every hour, so try again in a minute.";
+export const UNAVAILABLE = "This week's count isn't here yet. Try again in a minute.";
 
 export const framing = ({info}: Ctx) => [
-    `Every morning Glassbox reads the jobs open on public job boards and counts the skills each one names. ${info.counts}`,
-    "Each job counts once, however many boards or cities list it.",
+    `Glassbox reads the jobs open on public job boards every six hours and counts the skills each one names. ${info.counts}`,
+    "Each job counts once, however many boards or cities list it. The count is published every Monday, and this page shows the latest week.",
 ];
 
 // ------------------------------------------------------------------ the lead visual
@@ -109,14 +113,14 @@ export function squaresLegend(c: Ctx) {
 
 export function squaresLabel(c: Ctx): string {
     const {info, page} = c, l = squaresLegend(c);
-    const parts = [`${fmt(page.jobs)} squares, one per ${info.subject} job open on ${longDate(page.taken_at)}.`];
+    const parts = [`${fmt(page.jobs)} squares, one per ${info.subject} job counted in the week of ${weekDate(page)}.`];
     if (l.skill) parts.push(`${fmt(l.named)} name ${l.skill}.`);
     if (l.interns) parts.push(`${fmt(l.interns)} are internships.`);
     return parts.join(" ");
 }
 
 export const squaresCaption = ({info, page}: Ctx) =>
-    `${info.subject.charAt(0).toUpperCase()}${info.subject.slice(1)} jobs open on ${longDate(page.taken_at)}. Each square is one job.`;
+    `${cap(info.subject)} jobs counted in the week of ${weekDate(page)}. Each square is one job.`;
 
 // ------------------------------------------------------------------ findings
 
@@ -183,6 +187,7 @@ export function languagesSection(c: Ctx) {
     const more = bars.filter((s) => share(c, s) > compareShare(c, s)).length;
     return {
         heading,
+        sub: `Share of the ${info.subject} jobs we could read, by language`,
         before: `${fmt(any)} of the ${fmt(page.readable)} ${info.subject} jobs we could read name at least one language, and ${fmt(many)} name two or more.`,
         bars,
         caption: [
@@ -209,6 +214,7 @@ export function contrastSection(c: Ctx) {
         heading: info.kind === "entry"
             ? `${t} shows up ${far(ts, tc)}more at entry level. ${a} ${far(ac, as)}less.`
             : `Senior ${info.subject} jobs name ${a} ${far(ac, as)}more often. ${t} ${far(ts, tc)}less.`,
+        sub: `Share of the ${info.subject} and ${info.compare} jobs we could read naming each skill`,
         before: `Put the same skills side by side, and two groups appear. The top rows lean to ${info.subject} jobs. The bottom rows lean to ${info.compare} jobs.`,
         rows,
         legend: {left: cap(info.subject), right: cap(info.compare)},
@@ -232,6 +238,7 @@ export function categoriesSection(c: Ctx) {
     return {
         heading: second ? `Beyond the languages, ${categoryName(first.category, true)} and ${categoryName(second.category, true)} come up most`
             : `Beyond the languages, ${categoryName(first.category, true)} comes up most`,
+        sub: `Share of the ${info.subject} jobs we could read naming each skill`,
         before: `${fmt(first.jobs)} of the ${fmt(page.readable)} ${info.subject} jobs we could read name a skill in ${categoryName(first.category, true)}.`
             + (second ? ` ${fmt(second.jobs)} name one in ${categoryName(second.category, true)}.` : ""),
         groups: cats.map((g) => ({...g, title: categoryName(g.category), rows: g.skills.map((k) => skill(c, k)!).filter(Boolean)})),
@@ -258,12 +265,21 @@ export function yearsSection(c: Ctx) {
     };
 }
 
+/** "a", "a and b", "a, b and c". */
+const list = (parts: string[]) => parts.length < 2 ? parts.join("") : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+
 export function levelsSection(c: Ctx) {
     const {info, page} = c, l = page.levels!;
+    // A level no job has is left out, not written as zero.
+    const read = ([[l.junior, "intern, entry level or junior"], [l.mid, "mid level"]] as Array<[number, string]>)
+        .filter(([n]) => n > 0).map(([n, what], i) => `${fmt(n)} ${i === 0 ? "read as" : "as"} ${what}`);
+    const others = [...read, ...(l.unstated > 0 ? [`${fmt(l.unstated)} don't say`] : [])];
+    const counted = ([[l.junior, "junior"], [l.mid, "mid level"], [l.senior, "senior"], [l.unstated, "not stated"]] as Array<[number, string]>)
+        .filter(([n]) => n > 0).map(([n, what]) => `${fmt(n)} ${what}`);
     return {
         heading: l.senior * 2 > page.jobs ? `Most ${info.subject} jobs are senior` : `${fmt(l.senior)} of the ${fmt(page.jobs)} ${info.subject} jobs are senior`,
-        before: `Senior here means a senior, lead or principal level. ${fmt(l.junior)} of the ${fmt(page.jobs)} jobs read as intern, entry level or junior, ${fmt(l.mid)} as mid level, and ${fmt(l.unstated)} don't say.`,
-        label: `Of ${fmt(page.jobs)} ${info.subject} jobs: ${fmt(l.junior)} junior, ${fmt(l.mid)} mid level, ${fmt(l.senior)} senior, ${fmt(l.unstated)} not stated.`,
+        before: "Senior here means a senior, lead or principal level." + (others.length ? ` Of the ${fmt(page.jobs)} jobs, ${list(others)}.` : ""),
+        label: `Of ${fmt(page.jobs)} ${info.subject} jobs: ${counted.join(", ")}.`,
     };
 }
 
@@ -272,6 +288,7 @@ export function hiringSection(c: Ctx) {
     const dominates = big && big.jobs * 5 >= page.jobs;
     return {
         heading: "Who is hiring, and where",
+        sub: `The ${c.info.subject} jobs, by the place each one names`,
         before: `${fmt(page.employers)} employers posted these jobs.` + (big ? (dominates
             ? ` ${big.name} has the most, ${fmt(big.jobs)} of the ${fmt(page.jobs)}.`
             : ` No single one dominates: ${big.name} has the most, ${fmt(big.jobs)} of the ${fmt(page.jobs)}.`) : ""),
@@ -281,7 +298,7 @@ export function hiringSection(c: Ctx) {
 }
 
 export const citeLine = (c: Ctx, host: string) =>
-    `Glassbox. "${headline(c) ?? question(c)}" Counted ${longDate(c.page.taken_at)}. ${host}/market/${c.info.name}`;
+    `Glassbox. "${headline(c) ?? topic(c)}" Counted in the week of ${weekDate(c.page)}. ${host}/market/${c.info.name}`;
 
 // ------------------------------------------------------------------ search and share
 
@@ -291,16 +308,15 @@ export function pageTitle(info: MarketInfo, page: MarketBody | null): string {
     return page ? `${base}: ${fmt(page.jobs)} jobs counted` : base;
 }
 
-/** The search snippet: the question (what people search), the finding, and the count with its date. */
+/** The search snippet: the finding, and the count with its week. */
 export function pageDescription(info: MarketInfo, page: MarketBody | null): string {
-    if (!page) return `The skills ${info.subject} jobs name, counted from today's live jobs.`;
+    if (!page) return `The skills ${info.subject} jobs name, counted from live jobs every week.`;
     const c = {info, page}, lead = headline(c);
-    const counted = `Counted on ${longDate(page.taken_at)}: ${plural(page.jobs, "job", "jobs")} at ${plural(page.employers, "employer", "employers")}.`;
-    return `${question(c)} ${lead ? `${lead}.` : "Too few could be read today to show shares."} ${counted}`;
+    const counted = `Counted in the week of ${weekDate(page)}: ${plural(page.jobs, "job", "jobs")} at ${plural(page.employers, "employer", "employers")}.`;
+    return `${lead ? `${lead}.` : `${topic(c)}.`} ${counted}`;
 }
 
-/** A hub card's line under the headline: the question, then the count behind the finding. */
+/** A hub card's line under the headline: the count behind the finding, or why there are no shares. */
 export function cardLine(c: Ctx): string {
-    const behind = findingCount(c);
-    return behind ? `${question(c)} ${behind}` : `${question(c)} ${thin(c)}`;
+    return findingCount(c, `${c.info.subject} jobs`) ?? thin(c);
 }

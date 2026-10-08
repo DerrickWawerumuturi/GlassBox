@@ -1,8 +1,9 @@
 """
 Public market routes: no sign-in, nothing about the visitor is read or kept.
 
-    GET  /market/look   today's count per role family (src/jobpool/market_look.py)
+    GET  /market/look   the published count per role family (src/jobpool/market_look.py)
     GET  /market/page/{name}  one public market page's counts (src/jobpool/market_pages.py)
+                        Both serve the latest weekly publication (src/jobpool/publish.py).
     POST /market/ad     a pasted ad or link -> what it asks for (src/jobpool/ad_reader.py)
 
 Kept out of main.py so its routes stay about the signed-in product. The
@@ -28,14 +29,14 @@ class AdRequest(BaseModel):
 
 
 async def keep_fresh():
-    """Started with the app: builds today's count now and again every REFRESH_SECONDS, off the event loop."""
+    """Started with the app: loads the latest publication now, then checks for a newer one every REFRESH_SECONDS, off the event loop."""
     while True:
         await run_in_threadpool(market_look.refresh)
         await asyncio.sleep(market_look.REFRESH_SECONDS)
 
 
 def _built(read):
-    """A built body as a cached response, or 503 while the first build runs."""
+    """A published body as a cached response, or 503 while the first load runs."""
     try:
         body = read()
     except market_look.NotReady as err:
@@ -43,13 +44,13 @@ def _built(read):
                             headers={"Retry-After": str(market_look.RETRY_SECONDS)}) from err
     except market_look.NotAvailable as err:
         raise HTTPException(status_code=503, detail=str(err)) from err
-    # The count changes once a day; an hour in a browser or CDN costs nothing.
+    # The count changes once a week; an hour in a browser or CDN costs nothing.
     return JSONResponse(body, headers={"Cache-Control": f"public, max-age={market_look.CACHE_SECONDS}"})
 
 
 @router.get("/look")
 def look():
-    # Only ever reads the built count (market_look.look), so this answers in microseconds.
+    # Only ever reads the loaded publication (market_look.look), so this answers in microseconds.
     return _built(market_look.look)
 
 

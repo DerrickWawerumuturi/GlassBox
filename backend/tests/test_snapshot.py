@@ -51,36 +51,43 @@ def test_every_family_the_profiler_can_assign_is_counted():
     assert set(snapshot.ALL_FAMILIES) == {name for name, _ in _FAMILIES} | {"other"}
 
 
+class Ingestion:
+    enabled = True
+
+    def __init__(self, calls=None):
+        self.calls = calls if calls is not None else []
+
+    def persist_source(self, run_at, source, listed, recent, error=None, closes=False):
+        return {"ok": listed is not None, "stored": len(recent), "whole": False, "closed": 0}
+
+    def refresh_profiles(self, ids=None):
+        self.calls.append("profile")
+        return 1
+
+
+def _quiet(monkeypatch):
+    """No database: the wake up, the retired check and the publication are stubbed."""
+    monkeypatch.setattr(daily, "wake", lambda: None)
+    monkeypatch.setattr(daily, "retire", lambda run_at: None)
+    monkeypatch.setattr(daily.publish, "run", lambda: None)
+
+
 def test_daily_run_takes_the_snapshot_after_profiling(monkeypatch):
     calls = []
-
-    class Ingestion:
-        def persist_jobs(self, *a, **k):
-            return {1: 1}
-
-        def refresh_profiles(self, ids=None):
-            calls.append("profile")
-            return 1
-
-    monkeypatch.setattr(daily, "fetch_all", lambda: ([_job()], [("a", 1, None)]))
-    monkeypatch.setattr(daily, "JobIngestionService", Ingestion)
+    _quiet(monkeypatch)
+    monkeypatch.setattr(daily, "fetch_all", lambda: [("a", [_job()], None)])
+    monkeypatch.setattr(daily, "JobIngestionService", lambda: Ingestion(calls))
     monkeypatch.setattr(daily.snapshot, "take", lambda: calls.append("snapshot") or 3)
     assert daily.main() == 0
     assert calls == ["profile", "snapshot"]
 
 
 def test_a_failed_snapshot_does_not_fail_the_refresh(monkeypatch):
-    class Ingestion:
-        def persist_jobs(self, *a, **k):
-            return {1: 1}
-
-        def refresh_profiles(self, ids=None):
-            return 1
-
     def broken():
         raise RuntimeError("database went away")
 
-    monkeypatch.setattr(daily, "fetch_all", lambda: ([_job()], [("a", 1, None)]))
+    _quiet(monkeypatch)
+    monkeypatch.setattr(daily, "fetch_all", lambda: [("a", [_job()], None)])
     monkeypatch.setattr(daily, "JobIngestionService", Ingestion)
     monkeypatch.setattr(daily.snapshot, "take", broken)
     assert daily.main() == 0

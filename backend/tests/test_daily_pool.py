@@ -20,40 +20,115 @@ def test_window_keeps_live_requisitions_up_to_90_days():
     assert not daily.is_recent(Job(provider="t", title="x"), NOW)
 
 
+class Ingestion:
+    """Records each source's save; `broken` sources raise as a database error would."""
+    enabled = True
+
+    def __init__(self, broken=()):
+        self.saved, self.broken, self.profiled = [], set(broken), False
+
+    def persist_source(self, run_at, source, listed, recent, error=None, closes=False):
+        if source in self.broken and listed is not None:
+            raise RuntimeError("connection lost")
+        self.saved.append({"source": source, "listed": None if listed is None else len(listed),
+                           "recent": len(recent), "error": error, "closes": closes})
+        return {"ok": listed is not None, "stored": len(recent), "whole": closes, "closed": 0}
+
+    def refresh_profiles(self, ids=None):
+        self.profiled = ids is None
+        return 1
+
+
+def _offline(monkeypatch, results, ingestion):
+    monkeypatch.setattr(daily, "fetch_all", lambda: results)
+    monkeypatch.setattr(daily, "JobIngestionService", lambda: ingestion)
+    monkeypatch.setattr(daily, "wake", lambda: None)
+    monkeypatch.setattr(daily, "retire", lambda run_at: None)
+    monkeypatch.setattr(daily.snapshot, "take", lambda: None)
+    monkeypatch.setattr(daily.publish, "run", lambda: None)
+
+
 def test_mostly_dead_sources_fail_the_run(monkeypatch):
-    monkeypatch.setattr(daily, "fetch_all", lambda: ([job(1)], [("a", 1, None)] + [(f"s{i}", 0, "URLError") for i in range(5)]))
+    results = [("a", [job(1)], None)] + [(f"s{i}", None, "URLError") for i in range(5)]
+    monkeypatch.setattr(daily, "fetch_all", lambda: results)
     monkeypatch.setattr(daily, "JobIngestionService", lambda: pytest_fail("stored a failed run"))
     assert daily.main() == 1
 
 
-def test_one_dead_source_does_not(monkeypatch):
-    stored = {}
-
-    class Ingestion:
-        def persist_jobs(self, search_id, jobs, observe=True, profile=True):
-            stored.update(search_id=search_id, n=len(jobs), observe=observe, profile=profile)
-            return {i: i for i in range(len(jobs))}
-
-        def refresh_profiles(self, ids=None):
-            stored.update(profiled_all=ids is None)
-            return 1
-
-    monkeypatch.setattr(daily, "fetch_all", lambda: ([job(1, 1), job(120, 2)], [("a", 2, None), ("b", 0, "TimeoutError")]))
-    monkeypatch.setattr(daily, "JobIngestionService", Ingestion)
-    monkeypatch.setattr(daily.snapshot, "take", lambda: None)
+def test_each_source_is_saved_on_its_own(monkeypatch):
+    ingestion = Ingestion()
+    _offline(monkeypatch, [("greenhouse:acme", [job(1, 1), job(120, 2)], None), ("remoteok", [job(1, 3)], None),
+                           ("greenhouse:gone", None, "HTTPError")], ingestion)
     assert daily.main() == 0
-    # Stored without observations, then profiled in one pass over everything stale.
-    assert stored == {"search_id": None, "n": 1, "observe": False, "profile": False, "profiled_all": True}
+    by = {s["source"]: s for s in ingestion.saved}
+    # Old jobs aren't stored, but the count the closing rule compares is everything listed.
+    assert by["greenhouse:acme"] == {"source": "greenhouse:acme", "listed": 2, "recent": 1, "error": None, "closes": True}
+    assert by["remoteok"]["closes"] is False                      # a window feed closes nothing by absence
+    assert by["greenhouse:gone"] == {"source": "greenhouse:gone", "listed": None, "recent": 0,
+                                     "error": "HTTPError", "closes": True}   # recorded, touches no job
+    assert ingestion.profiled                                     # then one pass over everything stale
 
 
-def test_nothing_stored_fails_the_run(monkeypatch):
-    class Ingestion:
-        def persist_jobs(self, *a, **k):
-            return {}
+def test_one_source_failing_to_save_never_stops_the_others(monkeypatch, capsys):
+    ingestion = Ingestion(broken={"ashby:b"})
+    _offline(monkeypatch, [(name, [job(1, i)], None) for i, name in enumerate(("ashby:a", "ashby:b", "ashby:c"))],
+             ingestion)
+    assert daily.main() == 0
+    saved = [(s["source"], s["listed"], s["error"]) for s in ingestion.saved]
+    assert ("ashby:a", 1, None) in saved and ("ashby:c", 1, None) in saved
+    assert ("ashby:b", None, "save: RuntimeError") in saved        # recorded as a failed fetch
+    assert "::warning title=Sources not saved::ashby:b (RuntimeError)" in capsys.readouterr().out
 
-    monkeypatch.setattr(daily, "fetch_all", lambda: ([job(1)], [("a", 1, None)]))
-    monkeypatch.setattr(daily, "JobIngestionService", Ingestion)
+
+def test_a_partial_read_closes_nothing(monkeypatch):
+    ingestion = Ingestion()
+    _offline(monkeypatch, [("arbeitnow", sources.Partial([job(1)]), None), ("ashby:a", [job(1, 2)], None)], ingestion)
+    assert daily.main() == 0
+    assert {s["source"]: s["closes"] for s in ingestion.saved} == {"arbeitnow": False, "ashby:a": True}
+
+
+def test_nothing_saved_fails_the_run(monkeypatch):
+    ingestion = Ingestion(broken={"a"})
+    _offline(monkeypatch, [("a", [job(1)], None)], ingestion)
     assert daily.main() == 1
+
+
+def test_an_unreachable_database_fails_the_run(monkeypatch, capsys):
+    from psycopg_pool import PoolTimeout
+
+    def cold():
+        raise PoolTimeout("couldn't get a connection after 10.00 sec")
+    _offline(monkeypatch, [("a", [job(1)], None)], Ingestion())
+    monkeypatch.setattr(daily, "wake", cold)
+    assert daily.main() == 1
+    assert "::error title=Database unreachable::PoolTimeout" in capsys.readouterr().out
+
+
+def test_a_held_back_publication_warns_and_keeps_the_run_green(monkeypatch, capsys):
+    _offline(monkeypatch, [("a", [job(1)], None)], Ingestion())
+    held = {"status": "rejected", "week": None, "jobs": 10, "gates": [
+        {"gate": "jobs", "ok": False, "detail": "10 jobs counted (at least 5,000)"}, {"gate": "fresh", "ok": True, "detail": "x"}]}
+    monkeypatch.setattr(daily.publish, "run", lambda: held)
+    assert daily.main() == 0
+    assert "::warning title=Market held back::jobs: 10 jobs counted (at least 5,000)" in capsys.readouterr().out
+
+
+def test_which_sources_close_by_absence():
+    assert all(sources.closes_by_absence(s) for s in ("greenhouse:stripe", "ashby:a", "lever:b", "workable:c", "arbeitnow"))
+    assert not any(sources.closes_by_absence(s) for s in
+                   ("remoteok", "remotive", "jobicy", "himalayas", "himalayas_regional", "weworkremotely", "ke:myjobmag"))
+
+
+def test_fetch_all_names_each_source_and_reports_failures(monkeypatch):
+    def remoteok():
+        return [job(1)]
+    monkeypatch.setattr(sources, "AGGREGATORS", [remoteok])
+    monkeypatch.setattr(sources, "KENYAN_BOARDS", {"myjobmag": "x"})
+    monkeypatch.setattr(sources, "load_boards", lambda: [("greenhouse", "acme")])
+    monkeypatch.setattr(sources, "kenyan_board", lambda name: (_ for _ in ()).throw(TimeoutError()))
+    monkeypatch.setitem(sources.ATS, "greenhouse", lambda slug: [job(1), job(2, 2)])
+    out = {name: (len(jobs) if jobs is not None else None, err) for name, jobs, err in sources.fetch_all(2)}
+    assert out == {"greenhouse:acme": (2, None), "remoteok": (1, None), "ke:myjobmag": (None, "TimeoutError")}
 
 
 def test_a_failed_snapshot_warns_on_the_run_and_keeps_it_green(monkeypatch, capsys):
@@ -132,7 +207,12 @@ def test_arbeitnow_pages_are_capped_by_the_setting(monkeypatch):
 def test_arbeitnow_keeps_the_pages_read_before_a_later_one_fails(monkeypatch):
     fetch, _ = arbeitnow_feed(10, fail_at=4)
     monkeypatch.setattr(sources, "_json", fetch)
-    assert len(sources.arbeitnow()) == 3
+    read = sources.arbeitnow()
+    # Kept, but marked: a feed read halfway closes none of the jobs it didn't reach.
+    assert len(read) == 3 and isinstance(read, sources.Partial)
+    fetch, _ = arbeitnow_feed(3)
+    monkeypatch.setattr(sources, "_json", fetch)
+    assert not isinstance(sources.arbeitnow(), sources.Partial)
     fetch, _ = arbeitnow_feed(10, fail_at=1)
     monkeypatch.setattr(sources, "_json", fetch)
     with pytest.raises(TimeoutError):

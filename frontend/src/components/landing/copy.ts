@@ -20,30 +20,30 @@ const LEVEL_ONE: Record<Level, string> = {junior: "is a junior role", mid: "is m
 
 export const COPY = {
     meta: {
-        title: "What skills do jobs ask for? Counted today",
-        description: "We read thousands of tech jobs every day and count the skills they ask for. Look around free. Add your CV to see which you already have.",
+        title: "What skills do jobs ask for? Counted every week",
+        description: "We read thousands of tech jobs and count the skills they ask for, every week. Look around free. Add your CV to see which you already have.",
         ogTitle: "Glassbox · The list is shorter than it looks",
-        ogDescription: "Job ads seem to ask for everything. We count what today's tech jobs really ask for, and show which skills you already have.",
+        ogDescription: "Job ads seem to ask for everything. We count what this week's tech jobs really ask for, and show which skills you already have.",
     },
     hero: {
-        eyebrow: (total: string | null) => (total ? `${total} jobs open today` : "Jobs open today"),
+        eyebrow: (total: string | null) => (total ? `${total} tech jobs counted this week` : "Tech jobs counted this week"),
         title: "The list is shorter than it looks.",
-        lede: "Job ads list everything. We count what today's jobs really ask for, and show you where you stand.",
+        lede: "Job ads list everything. We count what this week's jobs really ask for, and show you where you stand.",
     },
     hiring: {
         title: "Who they're hiring.",
-        line: "Every square is one job open today. Pick a job type.",
+        line: "Every square is one job counted this week. Pick a job type.",
     },
     count: {
-        chapter: "Today's count",
-        kicker: (date: string) => `Today's count · ${date}`,
-        howWeCount: "Each square is one job open today. Junior counts intern, entry and junior. Senior counts senior, staff, lead and principal. A job listed on two boards counts once.",
+        chapter: "This week's count",
+        kicker: (date: string) => `Counted in the week of ${date}`,
+        howWeCount: "Each square is one job counted this week. Junior counts intern, entry and junior. Senior counts senior, staff, lead and principal. A job listed on two boards counts once.",
         levels: ["Junior", "Mid level", "Senior +"],
         more: "More",
         moreCount: (n: number) => `${n} more job types`,
         say: (n: number, of: string, family: string, level: Level) => n === 0
-            ? `None of the ${of} ${family} jobs open today ${LEVEL_PLURAL[level]}.`
-            : `${n.toLocaleString("en")} of the ${of} ${family} jobs open today ${n === 1 ? LEVEL_ONE[level] : LEVEL_PLURAL[level]}.`,
+            ? `None of the ${of} ${family} jobs counted this week ${LEVEL_PLURAL[level]}.`
+            : `${n.toLocaleString("en")} of the ${of} ${family} jobs counted this week ${n === 1 ? LEVEL_ONE[level] : LEVEL_PLURAL[level]}.`,
         share: (pct: string, family: string) => `${pct} of ${family} jobs`,
         legendOne: (perSquare: number) => (perSquare === 1 ? "one job at this level" : `${perSquare} jobs at this level`),
         legendOther: "other levels",
@@ -54,15 +54,15 @@ export const COPY = {
         pausedAd: "Paused while your ad is showing.",
         stopped: "Stopped. Press play to move on.",
         reduced: "Nothing changes on its own here. Pick a job type and a level.",
-        unavailable: "Today's count is not available right now. Try again in a minute.",
+        unavailable: "This week's count is not available right now. Try again in a minute.",
     },
     wall: {
         chapter: "The jobs behind the count",
         title: "The jobs behind the count",
-        note: "lit = in today's count",
-        allLit: (n: string, level: string, family: string) => `All ${n} ${level} ${family} jobs open today, lit.`,
-        someLit: (lit: number, n: string, level: string, family: string) => `Here are some of them. ${lit} of the ${n} ${level} ${family} jobs open today, lit. The rest, dimmed.`,
-        more: (rest: string, family: string) => `And ${rest} more ${family} jobs open today.`,
+        note: "lit = in this week's count",
+        allLit: (n: string, level: string, family: string) => `All ${n} ${level} ${family} jobs counted this week, lit.`,
+        someLit: (lit: number, n: string, level: string, family: string) => `Here are some of them. ${lit} of the ${n} ${level} ${family} jobs counted this week, lit. The rest, dimmed.`,
+        more: (rest: string, family: string) => `And ${rest} more ${family} jobs counted this week.`,
         foot: "Titles and companies only. We don't copy the ads.",
     },
     glass: {
@@ -75,7 +75,7 @@ export const COPY = {
         readingLink: "Reading the link…",
         linkFailed: "That link can't be read. Copy the ad text and paste it instead.",
         tooMany: "That's a lot of ads for one hour. Try again soon.",
-        oneOfToday: (level: string, family: string) => `one of today's ${level} ${family} jobs`,
+        oneOfToday: (level: string, family: string) => `one of this week's ${level} ${family} jobs`,
         yourAd: "your ad · read on our server, not kept",
         asksFor: "Asks for",
         optional: "Optional",
@@ -85,16 +85,16 @@ export const COPY = {
         dateNotStated: "date not stated",
         placeNotStated: "place not stated",
         viewOriginal: "View original ad",
-        back: "Back to today's ads",
+        back: "Back to this week's ads",
         asksKick: (n: number) => (n ? `This ad asks for ${n} skill${n === 1 ? "" : "s"}` : "No skills read yet"),
-        howMany: "How many of today's",
+        howMany: "How many of this week's",
         nameEach: "jobs name each",
-        readToday: (n: string) => `${n} read today`,
+        readToday: (n: string) => `${n} read this week`,
         required: "required",
         optionalKey: "optional",
         onCv: "on your CV",
         notYet: "not on your CV yet",
-        rarest: (name: string, n: number, m: string, family: string) => `${name}: in ${n} of ${m} ${family} jobs today`,
+        rarest: (name: string, n: number, m: string, family: string) => `${name}: in ${n} of ${m} ${family} jobs this week`,
         rarestNote: "the rarest ask in this ad",
         haveOf: (have: number, n: number) => `${have} of the ${n} asks in this ad are on your CV.`,
         haveNote: "from your scan",
@@ -102,12 +102,12 @@ export const COPY = {
     },
     inside: {
         chapter: "Inside Glassbox.",
-        line: "Today's jobs and one example CV. This is what your dashboard shows.",
+        line: "This week's jobs and one example CV. This is what your dashboard shows.",
         example: "example",
         tabs: ["Market", "Your skills", "Opportunities", "Applications"],
-        market: (n: string, family: string) => `What today's ${n} ${family} jobs ask for most. Green is on the example CV.`,
+        market: (n: string, family: string) => `What this week's ${n} ${family} jobs ask for most. Green is on the example CV.`,
         skills: "How the example CV's skills connect to what these jobs ask for.",
-        jobs: "Jobs from today's count that ask for what the example CV has.",
+        jobs: "Jobs from this week's count that ask for what the example CV has.",
         jobHave: (have: number, n: number) => `${have} of the ${n} required skills are on the CV.`,
         applications: "Every job applied to, in one list, with its stage.",
         lead: "Free. One PDF. No account needed.",
@@ -141,7 +141,7 @@ export const COPY = {
     lower: {
         how: {
             chapter: "How it works",
-            lead: "We count today's jobs. Add your CV and the count becomes about you.",
+            lead: "We count this week's jobs. Add your CV and the count becomes about you.",
             steps: [
                 {title: "Read", body: "New jobs from public job boards, every day."},
                 {title: "Deduplicate", body: "A job listed twice counts once."},
@@ -176,7 +176,7 @@ export const COPY = {
     },
     footer: {
         line: "We show. You decide.",
-        sub: "Counted from public job boards, every day. Mostly tech jobs in the US and Europe.",
+        sub: "Read from public job boards every day. Counted every week. Mostly tech jobs in the US and Europe.",
     },
 } as const;
 

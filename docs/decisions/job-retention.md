@@ -20,6 +20,7 @@ agreed policy; what exists now is enough to write one and to run it safely.
 | Interest is recorded when it happens | trigger on `application` sets `jobs.last_interaction_at` on save, apply or status change |
 | Being shown in a result list is recorded | trigger on `analyses` sets `jobs.last_shown_at` for every ranked job |
 | Archiving is reversible | `jobs.archived_at` is a mark, not a delete; archived jobs leave the pool and URL lookups |
+| Closing is not deleting | `jobs.closed_at` (2026-10-08) takes a job out of the live pool when its board stops listing it (`job-sources.md`, "Closing jobs"); the row and its history stay, and it reopens if listed again |
 
 ## Lifecycle classes
 

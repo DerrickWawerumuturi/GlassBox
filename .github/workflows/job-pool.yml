@@ -2,13 +2,18 @@ name: refresh job pool
 
 on:
   schedule:
-    # 05:00 UTC — before the working day starts in Nairobi, London and Berlin.
-    - cron: "0 5 * * *"
+    # Every 6 hours. GitHub starts scheduled runs late (4 to 7 hours in
+    # Sep-Oct 2026), so no run is relied on: freshness only needs one success
+    # a day, and the weekly publication (src/jobpool/publish.py) is made by the
+    # first run after Monday 00:00 UTC, whenever it starts.
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
-# A slow run must never overlap the next one.
+# One at a time, and never beside a deploy: a deploy re-reads the pool under
+# its new PROFILER_VERSION, and a run on the old image must not undo that.
+# deploy.yml's job takes the same group.
 concurrency:
-  group: job-pool
+  group: pool-and-deploy
   cancel-in-progress: false
 
 permissions:
@@ -17,36 +22,36 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: backend
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      # The image the API runs (deploy.yml tags it :live once the container
+      # app runs it), so the collector has the app's full dependencies and its
+      # PROFILER_VERSION. On 6 and 7 Oct 2026 a hand-picked package list here
+      # missed groq and both runs died on import.
+      - uses: azure/login@v2
         with:
-          python-version: "3.11"
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # The fetcher imports none of the ML stack; installing requirements.txt
-      # would pull ~1 GB of torch for a job that only makes HTTP calls.
-      - name: Install fetcher dependencies
-        run: pip install "psycopg[binary]" psycopg_pool pydantic python-dotenv requests pycountry
+      - name: Pull the deployed image
+        run: |
+          az acr login --name jobradarregistry
+          docker pull jobradarregistry.azurecr.io/jobradar:live
 
       # The only step that sees the database. GitHub masks the secret as a whole
       # string; its parts are masked too, because a driver error can quote the
-      # host or user on their own.
-      - name: Fetch and store
+      # host or user on their own. `-e DATABASE_URL` passes it by name: its value
+      # is never on a command line.
+      - name: Collect, count and publish
         env:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "JOBRADAR_DATABASE_URL is not set on this repository"; exit 1
           fi
-          python -c "
+          python3 -c "
           import os, urllib.parse as u
           p = u.urlsplit(os.environ['DATABASE_URL'])
           for part in (p.username, p.password, p.hostname):
               if part: print('::add-mask::' + part)
           "
-          python -m src.jobpool.daily
+          docker run --rm -e DATABASE_URL jobradarregistry.azurecr.io/jobradar:live python -m src.jobpool.daily

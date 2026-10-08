@@ -291,10 +291,10 @@ class PoolProvider(JobProvider):
         places = [p for p in (scope.city, scope.country_name) if p]
         params = {
             "roles": roles,
-            # What counts as live is the pool's rule (sources.py): a board read
-            # in full daily must have been seen within days; anything else —
-            # JSearch, pasted links — gets a plain age limit, since a missed
-            # sighting of a searched posting says nothing.
+            # What counts as live is the pool's rule (sources.POOL_WINDOWS): not
+            # closed by its board (jobs.closed_at), and within the age limits.
+            # JSearch rows and pasted links get the plain age limit, since a
+            # missed sighting of a searched posting says nothing.
             **POOL_WINDOWS,
             "refreshed": list(FULL_BOARDS),
             "remote": True if scope.kind == "remote" else None,

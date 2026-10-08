@@ -21,6 +21,12 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Never beside a job pool run (job-pool.yml): this job re-reads the pool
+    # under the new PROFILER_VERSION, and a collector on the old image must not
+    # undo it halfway. Queued, not cancelled.
+    concurrency:
+      group: pool-and-deploy
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
@@ -67,8 +73,8 @@ jobs:
 
       # Opportunities reads only profiles from this image's PROFILER_VERSION. When
       # a release bumps it (a rules or skills.txt change), the pool must be
-      # re-read now, not at the next 05:00 run, or Opportunities is empty until
-      # then. Incremental: with nothing stale it takes about a second.
+      # re-read now, not at the next collection run, or Opportunities is empty
+      # until then. Incremental: with nothing stale it takes about a second.
       - name: Re-profile stale jobs
         env:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
@@ -83,6 +89,14 @@ jobs:
             -g jobradar-rg \
             --image "$IMAGE" \
             -o none
+
+      # :live is the image the API runs. job-pool.yml runs the collector in it,
+      # so the collector's code, dependencies and PROFILER_VERSION are always
+      # the API's. Moved only after the container app took the new image.
+      - name: Tag the live image
+        run: |
+          docker tag "$IMAGE" jobradarregistry.azurecr.io/jobradar:live
+          docker push jobradarregistry.azurecr.io/jobradar:live
 
       - name: Smoke test
         # A fresh revision can take a minute to pull and take traffic —

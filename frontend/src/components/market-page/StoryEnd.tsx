@@ -1,9 +1,9 @@
 import React from "react";
 import Link from "next/link";
 
-import {fmt, levelLabel, longDate} from "@/lib/market-page";
+import {fmt, levelLabel, weekDate, weekStart} from "@/lib/market-page";
 import {MARKET_NAMES, MARKET_PAGES, MarketBody, MarketName, marketPath} from "@/lib/market-pages";
-import {citeLine, Ctx, question} from "@/lib/market-story";
+import {citeLine, Ctx, topic} from "@/lib/market-story";
 import {SITE_URL} from "@/lib/site";
 
 /*
@@ -66,7 +66,7 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
     const facts: Array<[string, string]> = [
         [`${info.label} jobs`, fmt(page.jobs)], ["Employers", fmt(page.employers)],
         ...(page.internships ? [["Internships", fmt(page.internships)] as [string, string]] : []),
-        ["Remote", fmt(page.remote)], ["Counted", day(page.taken_at)],
+        ["Remote", fmt(page.remote)], ["Week of", day(weekStart(page))],
     ];
     const more = MARKET_NAMES.filter((n) => n !== info.name);
     const h3 = "m-0 mb-1.5 font-heading text-[14px] font-bold uppercase tracking-[0.06em]";
@@ -82,7 +82,7 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
                             <React.Fragment key={k}>
                                 <dt className={"m-0 border-b border-border py-[9px]"}>{k}</dt>
                                 <dd className={"m-0 border-b border-border py-[9px] text-right font-mono font-semibold"}>
-                                    {k === "Counted" ? <time dateTime={page.taken_at}>{v}</time> : v}
+                                    {k === "Week of" ? <time dateTime={weekStart(page)}>{v}</time> : v}
                                 </dd>
                             </React.Fragment>
                         ))}
@@ -94,13 +94,13 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
                         {more.map((n) => (
                             <li key={n} className={item}>
                                 <span>
-                                    <Link href={marketPath(n)} className={link}>{question({info: MARKET_PAGES[n]})}</Link>
+                                    <Link href={marketPath(n)} className={link}>{topic({info: MARKET_PAGES[n]})}</Link>
                                     {others[n] && <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>{fmt(others[n]!.jobs)} jobs</small>}
                                 </span>
                             </li>
                         ))}
                         <li className={item}><span><Link href={"/market"} className={link}>Every market page</Link>
-                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>counted {longDate(page.taken_at)}</small></span></li>
+                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>counted in the week of {weekDate(page)}</small></span></li>
                         <li className={item}><span><Link href={"/method"} className={link}>How Glassbox counts</Link>
                             <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>sources, rules, limits</small></span></li>
                     </ol>

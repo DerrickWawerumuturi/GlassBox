@@ -1,6 +1,9 @@
 # Company ATS boards to watch.  Format:  <ats>:<slug>
 # ats is one of: greenhouse | ashby | lever | workable
 # Add a line to track a new company. Verified live on 2026-09-10.
+# Removed 2026-10-08, every fetch a 404 for 5 to 21 days: greenhouse postman,
+# instabase, victory, outschool, amplitude, hightouch. A board that fails 7
+# days running is now reported as retired by the collector (source_runs).
 
 ashby:abridge
 ashby:airbyte
@@ -88,7 +91,6 @@ ashby:writer
 ashby:zapier
 ashby:zed
 greenhouse:airtable
-greenhouse:amplitude
 greenhouse:anthropic
 greenhouse:asana
 greenhouse:assemblyai
@@ -116,9 +118,7 @@ greenhouse:flexport
 greenhouse:gitlab
 greenhouse:grey
 greenhouse:gusto
-greenhouse:hightouch
 greenhouse:imbue
-greenhouse:instabase
 greenhouse:intercom
 greenhouse:invisibletech
 greenhouse:jumia
@@ -138,11 +138,9 @@ greenhouse:nuro
 greenhouse:observeai
 greenhouse:okta
 greenhouse:orb
-greenhouse:outschool
 greenhouse:pagerduty
 greenhouse:pendo
 greenhouse:planetscale
-greenhouse:postman
 greenhouse:postscript
 greenhouse:qualtrics
 greenhouse:qventus
@@ -164,7 +162,6 @@ greenhouse:twilio
 greenhouse:typeform
 greenhouse:upwork
 greenhouse:vercel
-greenhouse:victory
 greenhouse:warp
 greenhouse:weave
 greenhouse:webflow

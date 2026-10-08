@@ -4,7 +4,7 @@ import SiteFooter from "@/components/SiteFooter";
 import {lookForPage} from "@/lib/landing/look-server";
 import {homeStructuredData, publicPage} from "@/lib/seo";
 
-// Static, rebuilt at most every 5 minutes (ISR): today's count is in the HTML (look-server.ts).
+// Static, rebuilt at most every 5 minutes (ISR): this week's count is in the HTML (look-server.ts).
 export const revalidate = 300;
 
 export const metadata = publicPage("/", {

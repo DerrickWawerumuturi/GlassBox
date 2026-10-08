@@ -10,16 +10,16 @@ import {Method, Rail} from "@/components/market-page/StoryEnd";
 import StorySections, {P} from "@/components/market-page/StorySections";
 import TitleBar from "@/components/market-page/TitleBar";
 import {Ask, marketAskSkills} from "@/lib/cv-ask";
-import {stamp} from "@/lib/market-page";
+import {weekDate, weekStart} from "@/lib/market-page";
 import {MarketBody, MarketInfo, MarketName, absoluteMarket, marketPath} from "@/lib/market-pages";
-import {citeLine, Ctx, dek, findingText, framing, glance, has, headline, question, skillName, thin, UNAVAILABLE} from "@/lib/market-story";
+import {citeLine, Ctx, dek, findingText, framing, glance, has, headline, skillName, thin, topic, UNAVAILABLE} from "@/lib/market-story";
 import {marketStructuredData} from "@/lib/seo";
 import {SITE_URL} from "@/lib/site";
 
 /*
  * One market page as an editorial data story, the same template for all five
- * (docs/decisions/market-pages.md): kicker, the question, the lead finding
- * as the headline, dek, byline, the lead
+ * (docs/decisions/market-pages.md): kicker, what the page counts, the lead
+ * finding as the headline, dek, byline with the week counted, the lead
  * visual, a framing paragraph, three findings at a glance, the finding
  * sections the data supports, the CV ask, how we counted, and the rail.
  */
@@ -27,8 +27,8 @@ import {SITE_URL} from "@/lib/site";
 const WRAP = "mx-auto w-full max-w-[1120px] px-4 sm:px-6";
 
 function Head({info, page, c}: {info: MarketInfo; page: MarketBody | null; c: Ctx | null}) {
-    // The headline is the finding; the question (what people search for) sits above it.
-    const q = question({info}), h = c ? headline(c) : null;
+    // The headline is the finding; what the page counts sits above it.
+    const q = topic({info}), h = c ? headline(c) : null;
     return (
         <>
             <nav aria-label={"Breadcrumb"} className={"mb-3.5 font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground"}>
@@ -42,7 +42,7 @@ function Head({info, page, c}: {info: MarketInfo; page: MarketBody | null; c: Ct
                     <div className={"text-[14px]"}>
                         Counted by <b className={"font-heading"}>Glassbox</b>
                         <span className={"mt-0.5 block font-mono text-[12px] text-muted-foreground"}>
-                            <time dateTime={page.taken_at}>Updated {stamp(page.taken_at)}</time> · counted again every day
+                            <time dateTime={weekStart(page)}>Counted in the week of {weekDate(page)}</time> · Updated every Monday
                         </span>
                     </div>
                     <BylineActions url={absoluteMarket(info.name)} title={h ?? q} cite={citeLine(c, new URL(SITE_URL).host)} />
@@ -68,7 +68,7 @@ export default function MarketArticle({info, page, others}: {
     const body = (
         <div className={"pb-24"}>
             {c && <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(marketStructuredData(info, c.page, dek(c), headline(c)))}} />}
-            {c && <TitleBar title={headline(c) ?? question({info})} />}
+            {c && <TitleBar title={headline(c) ?? topic({info})} />}
             <section className={`${WRAP} pt-11`}>
                 <Head info={info} page={page} c={c} />
                 {c && (

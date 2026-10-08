@@ -199,17 +199,22 @@ coverage across all jobs. See `decisions/market-analyzer.md`.
 
 ## Daily pool and matching
 
-`python -m src.jobpool.daily` (`.github/workflows/job-pool.yml`, 05:00 UTC)
-fetches every board in `sources.py` concurrently — company ATS boards listed in
-`companies.txt`, the remote aggregators, Kenyan job boards' RSS feeds — keeps
-postings from the last 90 days, upserts them, and then profiles only postings
-that are new, edited (`content_hash`) or read by older rules
-(`PROFILER_VERSION`). It installs no ML stack: profiling is regex and dictionary
-lookups, ~10-35 ms a posting. `--profile-only` skips fetching (the backfill after
-migration 014 or a rules change); `--dry-run` fetches and stores nothing.
+`python -m src.jobpool.daily` (`.github/workflows/job-pool.yml`, every 6 hours,
+inside the deployed image `jobradar:live`) fetches every board in `sources.py`
+concurrently — company ATS boards listed in `companies.txt`, the remote
+aggregators, Kenyan job boards' RSS feeds — wakes the database (one retry,
+`session.wake`), then saves each source in its own transaction
+(`ingestion.persist_source`): its jobs from the last 90 days, its fetch in
+`source_runs`, and the closing rule (`decisions/job-sources.md`, "Closing
+jobs"). Then it reports sources failing for 7 days as retired and profiles
+only postings that are new, edited (`content_hash`) or read by older rules
+(`PROFILER_VERSION`). `--profile-only` skips fetching; `--dry-run` fetches and
+stores nothing.
 
-A source failing costs its own postings; the run fails (red in Actions) only
-when most sources fail or nothing could be stored.
+A source failing costs nothing: its jobs stay as they were. The run fails (red
+in Actions) only when most sources fail or nothing could be saved. After the
+snapshot, `publish.run()` publishes the week's market if it is due and passes
+its gates (`decisions/market-publication.md`).
 
 Last, `snapshot.take()` counts the profiled live pool into `market_snapshots`:
 one row per role family per day, with postings, readable postings, seniority mix
@@ -220,8 +225,8 @@ not be kept forever. A failed snapshot is logged and does not fail the run;
 `decisions/market-snapshots.md`.
 
 `GET /dashboard/opportunities` matches the live pool (`sources.POOL_WINDOWS`:
-90 days old at most; boards read in full must have been seen in the last 3
-days, anything else in the last 30) against the saved CV, prefiltered in SQL to
+not closed, 90 days old at most, seen in the last 30 days; a complete board's
+row the collector hasn't placed yet, in the last 3) against the saved CV, prefiltered in SQL to
 the role families the CV points at. Cross-posted copies of one role at one
 employer are folded into one row (`also`). Default order is newest first by the
 posting's own date, else an estimate from a relative "2 days ago", else when
@@ -233,13 +238,15 @@ cached per user and CV fingerprint for ten minutes.
 Three routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`,
 `decisions/market-pages.md`):
 
-- `GET /market/look`: today's count per technical role family, for the landing
-  page. The live pool counted by the snapshot's rules (`snapshot.counted`):
+- `GET /market/look`: the latest weekly publication's count per technical role
+  family (`market_publications`, `src/jobpool/publish.py`), for the landing
+  page. Loaded at startup and checked for a newer one every 10 minutes; it is
+  counted from the live pool only before the first publication exists. The live pool counted by the snapshot's rules (`snapshot.counted`):
   daily sources only, a cross-posted role once, skills over readable jobs. Per
   family: jobs, readable, seniority in four buckets, the top 150 skills, up to
   14 titles a level and about 6 sample ads a level. Never any ad text. Built
-  in the background at startup and every 50 minutes; a request only reads it,
-  stale while a rebuild runs, 503 with `Retry-After` before the first build.
+  by `publish.py` once a week; a request only reads what is loaded, 503 with
+  `Retry-After` only while a fresh process reads the row.
   Sent gzipped with `Cache-Control: public, max-age=3600`. 503 when there is no database.
 - `GET /market/page/{name}`: one public market page, built with the count
   above from the same read of the pool (`market_look.compute`), so the two
@@ -301,6 +308,8 @@ searches ─1─n─ search_provider_runs
 job_skills, skills (SkillNer's output until 2026-10-01; nothing reads or writes them)
 
 market_snapshots   (taken_on, profiler_version, family): daily counts, no job ids
+market_publications  one row per weekly publication or rejected candidate: gates, /market bodies
+source_runs        one row per collector source per run: ok, jobs listed, whole, closed, retired
 ```
 
 and each user's data: `users` (with `location_preferences`) ─1─n─ `cvs`,
@@ -319,7 +328,9 @@ prefix.
 A job's timestamps: `posted_at` is the source's own date, never guessed
 (`posted_at_raw` keeps what it said, e.g. "2 days ago"); `first_seen_at` is when
 JobRadar fetched it and never moves; `last_seen_at` is the latest sighting;
-`updated_at` moves only when the stored posting changed.
+`updated_at` moves only when the stored posting changed. `source` is the
+collector source that last listed it ("greenhouse:stripe"), `closed_at` when its
+complete board stopped listing it (two full fetches missed, `missed_fetches`).
 
 Identity is `(provider, external_id)` with a unique constraint; postings without
 a provider id get `fp:<sha256[:32]>` over provider/company/title/location/url,

@@ -43,6 +43,10 @@ def _company(slug: str) -> str:
     return slug.replace("-", " ").replace("_", " ").title()
 
 
+class Partial(list):
+    """A source's jobs from a read that stopped early: stored, but they close nothing."""
+
+
 def _slim(raw: dict, *heavy: str) -> dict:
     """The description is already a column; do not store it twice."""
     return {k: v for k, v in raw.items() if k not in heavy}
@@ -163,10 +167,11 @@ def arbeitnow():
             d = _json(f"https://www.arbeitnow.com/api/job-board-api?page={page}")
         except Exception:
             # A dead first page is a dead source, reported as one. Later, keep
-            # what was read: the live window covers a day of missed sightings.
+            # what was read, marked Partial: a feed read halfway says nothing
+            # about the jobs it didn't reach, so it closes none of them.
             if page == 1:
                 raise
-            break
+            return Partial(out)
         for j in d.get("data", []):
             out.append(Job(
                 provider="arbeitnow", external_id=j.get("slug"),
@@ -352,13 +357,34 @@ ARBEITNOW_PAGES = int(os.getenv("JOBRADAR_POOL_ARBEITNOW_PAGES", "40"))
 AGGREGATORS = [remoteok, remotive, arbeitnow, jobicy, himalayas, himalayas_regional, weworkremotely]
 ATS = {"greenhouse": greenhouse, "ashby": ashby, "lever": lever, "workable": workable}
 
-# The live pool. Boards read in full every day: a posting missing from one for a
-# few days has been taken down. RSS feeds show only their latest items and
-# searches only what matched, so for everything else a missed sighting says
-# nothing and a plain age limit applies. Shared by PoolProvider (analyses) and
-# the opportunities list, so both mean the same pool.
-FULL_BOARDS = (*ATS, "remoteok", "remotive", "arbeitnow", "jobicy", "himalayas", "weworkremotely")
+# Every provider the collector stores. Anything else in `jobs` came from a
+# user: a scan's providers or a pasted link ("url").
+DAILY_PROVIDERS = (*ATS, "remoteok", "remotive", "arbeitnow", "jobicy", "himalayas", "weworkremotely",
+                   *KENYAN_BOARDS)
+# Complete boards: each fetch lists every open job, so a job missing from two
+# full fetches of its source in a row has closed (jobs.closed_at; the rule is
+# in ingestion.persist_source). The window feeds (RemoteOK, Remotive, Jobicy,
+# Himalayas, We Work Remotely, the Kenyan RSS boards) list only their newest
+# jobs: a job that scrolled off says nothing, so they leave by age alone. On
+# 2026-10-08 jobs dropping out of Himalayas and Jobicy had lived 0.3 and 0.7
+# days on average, against 8.5 for Greenhouse and Ashby: scrolled, not closed.
+FULL_BOARDS = (*ATS, "arbeitnow")
+# The live pool, shared by PoolProvider (analyses), Opportunities and the
+# market counts, so all three mean the same pool. Posted in the last `age`
+# days, not closed, and seen in the last `unverified` days. A complete board's
+# row the collector hasn't placed yet (jobs.source is NULL: from before
+# migration 018) keeps the old rule, seen in the last `live` days, until its
+# next sighting.
 POOL_WINDOWS = {"age": 90, "live": 3, "unverified": 30}
+# A collection run where fewer sources than this answered is not a refresh:
+# daily.py stores nothing and fails, and the publication's freshness check
+# doesn't count it.
+MIN_HEALTHY_SOURCES = 0.5
+
+
+def closes_by_absence(source: str) -> bool:
+    """A complete board (FULL_BOARDS): absence from its full fetches closes a job."""
+    return source.split(":", 1)[0] in FULL_BOARDS
 
 
 def load_boards(path=None):
@@ -375,20 +401,23 @@ def load_boards(path=None):
 
 
 def fetch_all(workers=24):
-    """Every source concurrently. One dead source never stops the run."""
-    jobs, report = [], []
+    """
+    Every source concurrently, as [(source, jobs, error)], most jobs first.
+    Sources are named as source_runs and jobs.source name them: "remoteok",
+    "ke:myjobmag", "greenhouse:stripe". One dead source never stops the run:
+    its error is reported and its jobs are None. `jobs` is a Partial when the
+    read stopped early.
+    """
+    calls = [(fn.__name__, fn, ()) for fn in AGGREGATORS]
+    calls += [(f"ke:{name}", kenyan_board, (name,)) for name in KENYAN_BOARDS]
+    calls += [(f"{ats}:{slug}", ATS[ats], (slug,)) for ats, slug in load_boards()]
+    results = []
     with cf.ThreadPoolExecutor(workers) as ex:
-        futs = {ex.submit(fn): fn.__name__ for fn in AGGREGATORS}
-        futs.update({ex.submit(kenyan_board, name): f"ke:{name}" for name in KENYAN_BOARDS})
-        for ats, slug in load_boards():
-            futs[ex.submit(ATS[ats], slug)] = f"{ats}:{slug}"
+        futs = {ex.submit(fn, *args): name for name, fn, args in calls}
         for fut in cf.as_completed(futs):
-            name = futs[fut]
             try:
-                got = fut.result()
-                jobs.extend(got)
-                report.append((name, len(got), None))
+                results.append((futs[fut], fut.result(), None))
             except Exception as err:
-                report.append((name, 0, type(err).__name__))
-    report.sort(key=lambda r: -r[1])
-    return jobs, report
+                results.append((futs[fut], None, type(err).__name__))
+    results.sort(key=lambda r: -len(r[1] or ()))
+    return results

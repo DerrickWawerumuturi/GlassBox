@@ -14,14 +14,29 @@ export function longDate(iso: string): string {
     return new Date(iso).toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric", timeZone: "UTC"});
 }
 
+/**
+ * The Monday (ISO date) that starts the week a published count was taken:
+ * the body's `week`, or worked out from `taken_at` for a body from before
+ * weekly publications. The market is published once a week
+ * (docs/decisions/market-publication.md), so pages date it by its week.
+ */
+export function weekStart(body: {week?: string; taken_at: string}): string {
+    if (body.week) return body.week;
+    const d = new Date(body.taken_at), back = (d.getUTCDay() + 6) % 7;
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - back)).toISOString().slice(0, 10);
+}
+
+/** "5 October 2026": the Monday of the week a published count was taken. */
+export const weekDate = (body: {week?: string; taken_at: string}) => longDate(weekStart(body));
+
+/** "5 Oct": the same Monday, short, where the year goes without saying (the landing page). */
+export const weekDay = (body: {week?: string; taken_at: string}) =>
+    new Date(weekStart(body)).toLocaleDateString("en-GB", {day: "numeric", month: "short", timeZone: "UTC"});
+
 /** "7 Oct 2026": the day the count was taken, short (UTC). */
 export const shortDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric", timeZone: "UTC"});
 
-/** "7 Oct 2026, 05:00 UTC": the byline's updated time. */
-export function stamp(iso: string): string {
-    return `${shortDate(iso)}, ${new Date(iso).toISOString().slice(11, 16)} UTC`;
-}
 
 /**
  * A skill's name in a chart's narrow label column: without the examples in

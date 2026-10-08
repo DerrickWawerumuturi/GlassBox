@@ -1,4 +1,10 @@
-# Decision: the public market routes (today's count, a pasted ad)
+# Decision: the public market routes (the published count, a pasted ad)
+
+**Since 2026-10-08** `/market/look` and `/market/page/*` serve only the latest
+weekly publication from `market_publications`; the API counts the live pool
+only before the first publication exists. Collection, gates and serving:
+`market-publication.md`. The caching below describes the live count that
+remains as that fallback.
 
 **Status:** in place from 2026-10-05.
 **Files:** `backend/src/api/market.py`, `backend/src/jobpool/market_look.py`,
@@ -92,8 +98,10 @@ decides by `keepLastPage()`:
 | `next build` (`NEXT_PHASE=phase-production-build`): no page yet | renders without the count; the browser fetches it |
 | `next dev`, tests | renders without the count |
 
-If the build itself could not get the count, the thin build page stays until
-a revalidation succeeds, as before. Checked on a local production build: with
+If the build itself could not get the count, the thin build page stayed until
+a revalidation succeeded. Since 2026-10-08 the build waits up to 90 s for the
+API and then fails, so Vercel keeps the previous deployment, and a count with
+no jobs is refused everywhere (`market-publication.md`). Checked on a local production build: with
 the API stopped and the fetch cache cleared, `/` kept its count after the
 revalidate window (`x-nextjs-cache: STALE`, then `HIT`, the error in the log;
 after a failure Next retries within 30 s). Tests: `look-server.test.ts`.

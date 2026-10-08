@@ -9,6 +9,7 @@ from src.database.repositories import (
     observation_repository,
     profile_repository,
     search_repository,
+    source_repository,
 )
 from src.database.session import connection, is_configured
 from src.matching.requirements import PROFILER_VERSION, JobProfile, content_hash, profile_job
@@ -28,7 +29,8 @@ def _parse_timestamp(value: str | None) -> datetime | None:
         return None
 
 
-def _to_record(job, identity: JobIdentity, identity_source: str, fingerprint: str) -> JobRecord:
+def _to_record(job, identity: JobIdentity, identity_source: str, fingerprint: str,
+               source: str | None = None) -> JobRecord:
     raw = job.raw or {}
     return JobRecord(
         provider=identity.provider,
@@ -52,7 +54,20 @@ def _to_record(job, identity: JobIdentity, identity_source: str, fingerprint: st
         remote_eligibility=job.remote_eligibility,
         posted_at=_parse_timestamp(job.posted_at_utc),
         posted_at_raw=job.posted_at,
+        source=source,
     )
+
+
+def _records(jobs: list, source: str | None = None) -> tuple[list[JobRecord], dict[JobIdentity, int], int]:
+    """Jobs -> (records with one per identity, the first rank of each identity, duplicates dropped)."""
+    records: list[JobRecord] = []
+    ranks: dict[JobIdentity, int] = {}
+    for rank, job in enumerate(jobs):
+        identity, identity_source, fingerprint = resolve_identity(job)
+        records.append(_to_record(job, identity, identity_source, fingerprint, source))
+        ranks.setdefault(identity, rank)
+    deduped, duplicates = job_repository.dedupe(records)
+    return deduped, ranks, duplicates
 
 
 def _profile_row(row: dict) -> tuple:
@@ -123,15 +138,7 @@ class JobIngestionService:
             return {}
 
         try:
-            records: list[JobRecord] = []
-            ranks: dict[JobIdentity, int] = {}
-
-            for rank, job in enumerate(jobs):
-                identity, identity_source, fingerprint = resolve_identity(job)
-                records.append(_to_record(job, identity, identity_source, fingerprint))
-                ranks.setdefault(identity, rank)
-
-            deduped, in_batch_duplicates = job_repository.dedupe(records)
+            deduped, ranks, in_batch_duplicates = _records(jobs)
 
             with connection() as conn:
                 previous = job_repository.existing_payload_hashes(conn, deduped)
@@ -179,6 +186,33 @@ class JobIngestionService:
         if profile:
             self.refresh_profiles(list(job_ids.values()))
         return job_ids
+
+    def persist_source(self, run_at: datetime, source: str, listed: list | None, recent: list,
+                       error: str | None = None, closes: bool = False) -> dict:
+        """
+        One source of a collection run, in its own transaction: its jobs stored,
+        its fetch recorded in source_runs, and, after a full fetch of a
+        complete board read to its end (`closes`), its jobs that were missing
+        twice in a row closed. `listed` is everything the source returned (None
+        when the fetch failed), `recent` the jobs young enough to store. A failed fetch only records the failure: it touches no
+        job. Returns {"ok", "stored", "whole", "closed"}.
+
+        Raises when the database fails, so the run can report this source and
+        go on with the next; unlike the other methods there is no cooldown,
+        which would skip every source after the first failure.
+        """
+        if not self.enabled:
+            return {"ok": False, "stored": 0, "whole": False, "closed": 0}
+        with connection() as conn:
+            if listed is None:
+                source_repository.record(conn, run_at, source, ok=False, error=error)
+                return {"ok": False, "stored": 0, "whole": False, "closed": 0}
+            deduped, _, _ = _records(recent, source)
+            upserted = job_repository.upsert_many(conn, deduped)
+            whole = closes and source_repository.is_full(len(listed), source_repository.usual(conn, source))
+            closed = source_repository.close_missing(conn, source, [row.id for row in upserted]) if whole else 0
+            source_repository.record(conn, run_at, source, ok=True, jobs=len(listed), whole=whole, closed=closed)
+        return {"ok": True, "stored": len(upserted), "whole": whole, "closed": closed}
 
     def refresh_profiles(self, ids: list[int] | None = None) -> int:
         """

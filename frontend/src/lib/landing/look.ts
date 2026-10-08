@@ -2,7 +2,7 @@ import {API_BASE_URL} from "@/lib/api";
 import {skillKey} from "@/lib/market";
 
 /*
- * Today's count for the landing page: GET /market/look (docs/decisions/
+ * This week's published count for the landing page: GET /market/look (docs/decisions/
  * market-look.md), and the pure helpers the page draws it with. Ported from
  * the "Look around first" prototype (docs/local/look-around-prototype.html).
  */
@@ -34,7 +34,10 @@ export interface LookFamily {
 }
 
 export interface Look {
+    /** When the jobs were collected (the publication's as_of). */
     taken_at: string;
+    /** The Monday of the week the count was published for, "2026-10-05". */
+    week?: string;
     profiler_version: string;
     families: Record<string, LookFamily>;
     skills: Record<string, string>;
@@ -50,15 +53,22 @@ export function familyOrder(look: Look): string[] {
     return [...CYCLE.filter((f) => present.includes(f)), ...present.filter((f) => !CYCLE.includes(f))];
 }
 
+/** Every job a count holds, over its job types: 0 means no count, never an empty market. */
+export const lookJobs = (look: Pick<Look, "families">) => Object.values(look.families ?? {}).reduce((n, f) => n + (f?.jobs ?? 0), 0);
+
 /**
- * Today's count. Right after the API starts it is still being built: the API
- * answers 503 with Retry-After, and we ask again (the page keeps its loading
- * state) for up to about a minute.
+ * This week's count. Right after the API starts it is still being loaded: the
+ * API answers 503 with Retry-After, and we ask again (the page keeps its
+ * loading state) for up to about a minute. A count with no jobs is refused.
  */
 export async function getLook(signal?: AbortSignal, wait = (ms: number) => new Promise((r) => setTimeout(r, ms))): Promise<Look> {
     for (let attempt = 0; ; attempt++) {
         const response = await fetch(`${API_BASE_URL}/market/look`, {signal});
-        if (response.ok) return response.json();
+        if (response.ok) {
+            const look = await response.json() as Look;
+            if (lookJobs(look) > 0) return look;
+            throw new Error("market look has no jobs");
+        }
         const retry = Number(response.headers.get("Retry-After"));
         if (response.status !== 503 || !retry || attempt >= 5) throw new Error(`market look failed: ${response.status}`);
         await wait(Math.min(retry, 15) * 1000);
