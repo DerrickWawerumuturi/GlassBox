@@ -13,8 +13,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 BACKEND = Path(__file__).resolve().parents[1]
 WORKFLOWS = BACKEND.parent / ".github" / "workflows"
+# deploy.yml runs the tests inside the image, which holds backend/ only: the workflows
+# are checked from a checkout (locally, and in any run that has the repo).
+if not (WORKFLOWS / "job-pool.yml").exists():
+    pytest.skip("the .github workflows aren't in this tree (tests running inside the image)", allow_module_level=True)
 POOL = (WORKFLOWS / "job-pool.yml").read_text()
 DEPLOY = (WORKFLOWS / "deploy.yml").read_text()
 LIVE = "jobradarregistry.azurecr.io/jobradar:live"
