@@ -20,10 +20,23 @@ records the models considered as replacements.
 ## Model
 
 `sentence-transformers/all-MiniLM-L6-v2` — 6 layers, 384-dimensional output.
-Chosen for cost rather than accuracy ceiling: it loads in ~6 seconds, runs on
-CPU, and the filter embeds one profile string against a few dozen titles per
-analysis. Baked into the image (`HF_HOME=/opt/hf`, `HF_HUB_OFFLINE=1`) so a cold
-start never downloads it.
+Chosen for cost rather than accuracy ceiling: it runs on CPU, and the filter
+embeds one profile string against a few dozen titles per analysis. Baked into
+the image (`HF_HOME=/opt/hf`, `HF_HUB_OFFLINE=1`) so a cold start never
+downloads it.
+
+**Runtime: ONNX Runtime, not torch (2026-10-12, GitHub issue #4).** The model's
+repository ships an ONNX export of the same weights (`onnx/model.onnx`, pinned
+to revision `1110a243`). `embedder.py` runs it with `onnxruntime` and the
+repository's `tokenizer.json`, then does what sentence-transformers did: 256
+tokens at most, mean pooling over the attention mask, unit length. Measured
+against sentence-transformers 5.7 on three profiles and 27 titles: cosines
+agree to 2.7e-7 and the market filter keeps exactly the same jobs
+(`tests/test_embedder.py` holds recorded values). Torch was 790 MB of the
+image's 1.7 GB of packages; the analysis stack now loads in about 1.3 s in the
+container instead of 8.5 s (`deployment.md`, "What wakes the API"). One batch
+of 40 titles takes about 70 ms on a laptop (torch: about 35 ms); per scan that
+doesn't matter.
 
 ## If embeddings come back into matching
 

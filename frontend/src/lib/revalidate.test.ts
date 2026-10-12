@@ -1,3 +1,6 @@
+import {readFileSync} from "node:fs";
+import {join} from "node:path";
+
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
 vi.mock("next/cache", () => ({revalidatePath: vi.fn()}));
@@ -40,6 +43,7 @@ describe("POST /api/revalidate", () => {
         expect(paths).toEqual(expect.arrayContaining(["/", "/market", ...MARKET_NAMES.map((name) => `/market/${name}`),
             "/market/entry-level-software/years-of-experience"]));
         expect(revalidatePath).toHaveBeenCalledWith("/market", "layout");    // the share images under /market
+        expect(revalidatePath).toHaveBeenCalledWith("/sitemap.xml");         // its lastmod, now rebuilt once a day at most
         expect((await response.json()).revalidated).toEqual(MARKET_PATHS);
     });
 
@@ -51,5 +55,16 @@ describe("POST /api/revalidate", () => {
         for (let i = 0; i < LIMIT.calls; i++) expect(handleRevalidate(call("Bearer wrong"), SECRET, 1_000).status).toBe(401);
         expect(handleRevalidate(call(`Bearer ${SECRET}`), SECRET, 1_000).status).toBe(429);
         expect(handleRevalidate(call(`Bearer ${SECRET}`), SECRET, 1_000 + LIMIT.perMs).status).toBe(200);
+    });
+});
+
+describe("the pages the publication revalidates", () => {
+    // With `dynamicParams = false`, Next 16.3 answered 404 for /market/ai and the
+    // years page once /api/revalidate had dropped them (next start, 12 Oct 2026).
+    // Unknown names are a 404 from notFound() instead.
+    it.each(["market/[page]/page.tsx", "market/[page]/years-of-experience/page.tsx"])("%s keeps dynamic params", (file) => {
+        const source = readFileSync(join(__dirname, "..", "app", file), "utf8");
+        expect(source).not.toMatch(/^export const dynamicParams = false/m);
+        expect(source).toContain("notFound()");
     });
 });

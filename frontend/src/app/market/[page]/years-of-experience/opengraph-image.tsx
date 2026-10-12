@@ -12,7 +12,7 @@ import {TOPIC, unstatedShare, yearsCounts, yearsHeadline} from "@/lib/years-answ
 export const alt = "How many years of experience entry level software jobs ask for, from Glassbox's weekly count";
 export const size = SHARE_SIZE;
 export const contentType = "image/png";
-export const revalidate = 300;
+export const revalidate = 86400;
 
 // The address as the image prints it: the full one wraps under the wordmark.
 const SHOWN = "/market/…/years-of-experience";

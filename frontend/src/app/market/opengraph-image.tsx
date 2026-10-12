@@ -7,7 +7,7 @@ import {fmt, weekDate} from "@/lib/market-page";
 export const alt = "What this week's tech jobs ask for, counted by Glassbox";
 export const size = SHARE_SIZE;
 export const contentType = "image/png";
-export const revalidate = 300;
+export const revalidate = 86400;
 
 export default async function OgImage() {
     const pages = Object.values(await allMarkets()).filter((p) => p !== null);

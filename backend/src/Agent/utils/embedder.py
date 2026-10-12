@@ -4,13 +4,25 @@ market before skill extraction, so an analysis' market statistics are not
 skewed by off-market postings. Matching a job to the user is src/matching —
 fit, not text similarity — and no longer uses embeddings. See
 decisions/embeddings.md.
+
+The model runs on ONNX Runtime, not torch: the same weights, exported by the
+model's authors (onnx/model.onnx in the same repository), with the same
+tokenizer, mean pooling and normalisation sentence-transformers applies. Torch
+was most of a 1 GB image that every scale-from-zero pulls (decisions/deployment.md,
+GitHub issue #4); the vectors agree to about 1e-6.
 """
 import os
 
-from sentence_transformers import SentenceTransformer
-from sentence_transformers.util import cos_sim
+import numpy as np
 
 from src.Agent.utils.types import ParsedQuery
+
+MODEL_REPO = "sentence-transformers/all-MiniLM-L6-v2"
+# Pinned: the Dockerfile bakes these files into the image and the API reads them offline.
+MODEL_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+MODEL_FILES = ("onnx/model.onnx", "tokenizer.json")
+# sentence-transformers' max_seq_length for this model (sentence_bert_config.json).
+MAX_TOKENS = 256
 
 # Fraction of the best-matching title's score a posting must reach to be counted
 # as part of this user's market. Relative rather than absolute because the
@@ -36,9 +48,40 @@ def profile_text(query: ParsedQuery) -> str:
     return " ".join(part for part in parts if part).strip()
 
 
+def model_file(name: str) -> str:
+    """A model file from the Hugging Face cache (HF_HOME); offline in the image, where it was baked in."""
+    from huggingface_hub import hf_hub_download
+    return hf_hub_download(MODEL_REPO, name, revision=MODEL_REVISION)
+
+
+class MiniLM:
+    """all-MiniLM-L6-v2 as sentence-transformers runs it: tokens, the model, mean pooling, unit length."""
+
+    def __init__(self):
+        import onnxruntime
+        from tokenizers import Tokenizer
+
+        self.tokenizer = Tokenizer.from_file(model_file("tokenizer.json"))
+        self.tokenizer.enable_truncation(MAX_TOKENS)
+        self.tokenizer.enable_padding(pad_id=0, pad_token="[PAD]")  # to the longest in the batch
+        self.session = onnxruntime.InferenceSession(model_file("onnx/model.onnx"),
+                                                    providers=["CPUExecutionProvider"])
+
+    def encode(self, texts: list[str]) -> np.ndarray:
+        encoded = self.tokenizer.encode_batch(texts)
+        ids = np.array([e.ids for e in encoded], dtype=np.int64)
+        mask = np.array([e.attention_mask for e in encoded], dtype=np.int64)
+        types = np.array([e.type_ids for e in encoded], dtype=np.int64)
+        hidden = self.session.run(["last_hidden_state"],
+                                  {"input_ids": ids, "attention_mask": mask, "token_type_ids": types})[0]
+        weights = mask[..., None].astype(hidden.dtype)
+        pooled = (hidden * weights).sum(axis=1) / np.clip(weights.sum(axis=1), 1e-9, None)
+        return pooled / np.clip(np.linalg.norm(pooled, axis=1, keepdims=True), 1e-12, None)
+
+
 class SentenceEmbedder:
     def __init__(self):
-        self.model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+        self.model = MiniLM()
 
     def role_relevance(self, query: ParsedQuery, jobs: list) -> list:
         """Cosine of the user's profile against each job title."""
@@ -47,7 +90,8 @@ class SentenceEmbedder:
             return [1.0] * len(jobs)
 
         titles = [getattr(job, "title", "") or "" for job in jobs]
-        return cos_sim(self.model.encode(profile), self.model.encode(titles))[0].tolist()
+        vectors = self.model.encode([profile, *titles])  # unit length, so the dot product is the cosine
+        return (vectors[1:] @ vectors[0]).tolist()
 
     def filter_by_role(
         self,

@@ -21,7 +21,7 @@ const HUB = {
     description: "The skills this week's tech jobs name, counted from live jobs: entry level software, software engineering, AI, machine learning and DevOps.",
 };
 
-export const revalidate = 300;
+export const revalidate = 86400;
 export const metadata = publicPage("/market", {
     title: "What this week's tech jobs ask for", description: HUB.description,
     share: {title: "What this week's tech jobs ask for, counted", description: HUB.description}, ownImage: true, article: true,

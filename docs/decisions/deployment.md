@@ -50,6 +50,11 @@ the scan stopped loading spaCy and SkillNer on 2026-10-01, and step 4 of
 packages, model and data). torch + MiniLM is what remains. The 2 vCPU / 4 GiB
 size has not been re-measured since; it is now generous, not tight.
 
+**Since 2026-10-12** torch is gone too (MiniLM on ONNX Runtime,
+`decisions/embeddings.md`). Measured locally with the analysis stack loaded:
+490 MiB before, 251 MiB after (`docker stats`). The size is unchanged; whether
+to shrink it is the founder's call.
+
 Consumption locks CPU and memory to a fixed ratio (0.5→1Gi, 1→2Gi, 1.5→3Gi,
 2→4Gi), so memory cannot be bought without CPU. The 2 vCPU is wanted anyway —
 extraction is ~80% of runtime and superlinear in posting length.
@@ -71,6 +76,83 @@ to 10 replicas of 2 vCPU could exhaust the grant in a few hours.
 The cost of scale-to-zero is that every cold request pays the full model load
 (~43s measured). That is why the probes below matter, and why nothing in the
 boot path may touch the network.
+
+Two billing facts (Microsoft Learn, "Billing in Azure Container Apps",
+https://learn.microsoft.com/en-us/azure/container-apps/billing): the reduced
+*idle* rate applies only to a revision with a minimum replica count above
+zero, so with `minReplicas: 0` every second a replica runs is billed at the
+active rate; and a revision scaled to zero costs nothing. The free grant per
+subscription per calendar month is 180,000 vCPU-seconds, 360,000 GiB-seconds
+and 2 million requests. So the cost is the time a replica is up, whatever it
+does while up. Each wake keeps it up for at least the `cooldownPeriod`
+(300 s) after the last request.
+
+## What wakes the API, and the cold start (2026-10-12, GitHub issue #4)
+
+Measured read only (Azure Monitor metrics at one minute, Log Analytics
+console and system logs), 5 to 12 Oct 2026:
+
+- A replica ran 5,181 of the 11,519 minutes (28% on 6 Oct, 55 to 64% on 7 to
+  11 Oct): 517 wakes, a median 6 minutes each (start plus the 300 s
+  cooldown), and 414 of them saw 3 requests or fewer. At 2 vCPU that is
+  621,720 vCPU-seconds in 8 days, against a monthly free grant of 180,000.
+- The first request after each quiet spell of over 6 minutes was
+  `GET /market/look` 477 times, a market page 40 times, `/` 13 times, a
+  signed in route 12 times, `/health` 3 times and scanners (`/.env` and the
+  like) a handful. Wakes were spread evenly over the 24 hours. `/market/look`
+  is only read by the server render of `/`, `/about` and `/product`, so
+  nearly every wake was a page rebuild: every public page had
+  `revalidate = 300` and the API fetch `next.revalidate: 300`, so any visit or
+  crawler after 5 quiet minutes rebuilt a page against the API.
+- `market.keep_fresh` (one database check every 10 minutes) doesn't keep a
+  replica up: scaling follows HTTP requests, and the sessions ended about 5
+  minutes after the last one. CPU over 0.01 core in only 463 of the 5,181 up
+  minutes. It stays as it is.
+
+Fix, frontend: every public page and the fetch now `revalidate` once a day
+(86,400 s). The weekly publication revalidates the pages and opens each one
+(`market-publication.md`), so a day is only the safety net; `next build`
+still prerenders them all. Locally, after a build, visits to `/`, `/about`,
+`/market`, a market page, the sitemap and a share image made no API call. The
+browser's only call on public pages is `GET /health` when the CV sheet opens
+(`wakeApi`), which is the visitor asking to scan.
+
+Where a cold start goes (median over 657 replica starts; p90 in brackets):
+
+| Step | Seconds |
+|---|---|
+| replica scheduled to image pull starting | 2.0 |
+| image pull, 588 MB compressed | 10.4 (11.6) |
+| container created and started | 2.0 |
+| process start to uvicorn listening | 1.4 (2.1) |
+| scheduled to first request served | 19.3 (28.6) |
+| scheduled to first 200 | 24.4 |
+| analysis stack loaded, after uvicorn (20 s delay + load) | 24.9 |
+
+291 of the 659 starts answered 503 first while the publication loaded. The
+request's wait before the replica is scheduled isn't logged; the 43 s a
+visitor saw is that wait plus the steps above plus a 503 retry.
+
+Fix, backend: no torch (`decisions/embeddings.md`), and pandas, anthropic,
+xai-sdk, ipython and pgvector dropped from `requirements.txt` (nothing
+imports them; `requests`, which `providers.py` imports and xai-sdk used to
+bring, is now listed). Measured locally (`linux/amd64` under emulation on an
+Apple laptop, so slower than Azure):
+
+| | Before | After |
+|---|---|---|
+| image (compressed, as pulled) | 587 MB | 224 MB |
+| site-packages | 1.7 GB | 302 MB (+ 87 MB model) |
+| `import main` | 1.5 to 1.7 s | 1.3 to 1.6 s |
+| analysis stack load | 8.5 to 8.8 s | 1.3 to 1.6 s |
+| container start to `/health` | 2.2 to 2.8 s | 1.9 to 2.0 s |
+| container start to analysis stack loaded | 10 to 14 s | 3.3 s |
+
+The pull time on Azure after deploy is to be read from the same system logs
+(`PulledImage`, "in N s"); it isn't estimated here.
+
+Not changed, the founder's call: `cooldownPeriod` (300 s, the floor on every
+wake) and the 2 vCPU / 4 GiB size. Both are Azure settings, not code.
 
 ## Probes: startup and readiness, no liveness
 
@@ -97,8 +179,9 @@ is a worse failure than the one it would be guarding against.
 Two dependencies download themselves at import unless baked in, both inside the
 startup window and both on the critical path of every scale-from-zero:
 
-- **MiniLM** — `embedder.py:34` constructs `SentenceTransformer` at import. The
-  image now pre-fetches it and pins `HF_HOME=/opt/hf` with `HF_HUB_OFFLINE=1`.
+- **MiniLM** — the embedder loads it when the analysis stack loads. The image
+  pre-fetches the files `embedder.py` names (`MODEL_FILES`, pinned revision)
+  and pins `HF_HOME=/opt/hf` with `HF_HUB_OFFLINE=1`.
 - **skillNer's databases** (until 2026-10-05) — `skillNer/general_params.py`
   opened `skill_db_relax_20.json` **relative to the working directory** and,
   failing that, fetched it from `raw.githubusercontent.com` with an unguarded

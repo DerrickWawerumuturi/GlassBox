@@ -82,7 +82,8 @@ transfer from about 8 MB to a fraction of it.
 ### On the landing page (ISR, 2026-10-07)
 
 `/`, `/product` and `/about` render today's count on the server and are
-rebuilt at most every 5 minutes (`lib/landing/look-server.ts`). Before this
+rebuilt at most every 5 minutes (`lib/landing/look-server.ts`; once a day since
+2026-10-12, see the end of this section). Before this
 change a failed fetch rendered the page without the count, and that thin page
 was cached for the full 5 minutes. After an API restart (503 until the count
 is built) visitors and crawlers got it: 280 words instead of 800 on 7 Oct.
@@ -110,6 +111,11 @@ Keeping the last page has a cost on a quiet site: a visit's rebuild gets 4 s
 and a sleeping API needs about 43, so the old week stayed for 11 hours on
 12 Oct 2026. Since then the publication job revalidates the pages itself and
 opens each one with the API awake (`market-publication.md`, "The frontend").
+
+The 5 minute window also woke the API: any visit after a quiet spell rebuilt a
+page against it. Since 2026-10-12 (GitHub issue #4) every page's `revalidate`
+and the fetch's `next.revalidate` are a day; the publication's revalidation is
+what shows a new week (`deployment.md`, "What wakes the API").
 
 ### Market pages from the same build (2026-10-07)
 

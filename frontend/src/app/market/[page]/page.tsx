@@ -8,13 +8,14 @@ import {publicPage} from "@/lib/seo";
 
 /*
  * The five market pages, one template (docs/decisions/market-pages.md).
- * Static, rebuilt at most every 5 minutes (ISR), like the landing page: a
- * failed fetch during a revalidation keeps the last good page (look-server.ts).
- * Any other name is a 404.
+ * Static, rebuilt by the weekly publication and at most once a day (ISR), like
+ * the landing page: a failed fetch during a revalidation keeps the last good
+ * page (look-server.ts). Any other name is a 404 from notFound(), before any
+ * fetch. Not `dynamicParams = false`: with it, Next 16.3 answers 404 for these
+ * very pages once /api/revalidate has dropped them (measured, GitHub issue #4).
  */
 
-export const revalidate = 300;
-export const dynamicParams = false;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return MARKET_NAMES.map((page) => ({page}));

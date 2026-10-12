@@ -95,6 +95,18 @@ The CV scan and Opportunities still read the live pool and keep "today's jobs".
   "layout")` for the share images. `revalidatePath` also expires the API
   fetches those pages made: they carry the page's implicit cache tags (Next 16
   `revalidatePath` docs, "What can be invalidated"), so no fetch tags were added.
+- Since 2026-10-12 (GitHub issue #4) this is the only regular rebuild. Every
+  public page's `revalidate` and the API fetch's `next.revalidate` are a day
+  (86,400 s), a safety net, so visits no longer wake the API every 5 minutes
+  (`deployment.md`, "What wakes the API"). If the refresh fails, the old week
+  shows for up to a day, not 5 minutes. `/sitemap.xml` is revalidated too (its
+  lastmod is the week's); nothing opens it, and a crawler's visit rebuilds it
+  from the fetches the pages just refilled.
+- The market pages and the years page don't set `dynamicParams = false`. With
+  it, on a local `next start` (Next 16.3) `/market/ai` and the years page
+  answered 404 after `/api/revalidate` had dropped them (`NoFallbackError` in
+  the log), with the code from issue #1 as well. Unknown names are a 404 from
+  `notFound()`, checked before any fetch, so they never call the API.
 
 ### Workflows
 

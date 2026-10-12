@@ -12,11 +12,11 @@ import {TOPIC, yearsAnswer, yearsCounts, yearsHeadline} from "@/lib/years-answer
  * How many years of experience entry level software jobs ask for, from the
  * entry level page's weekly count (docs/decisions/market-pages.md, "Years of
  * experience"). Under /market/[page], so it is served for that one page only;
- * every other name is a 404. Static and rebuilt like the market pages (ISR).
+ * every other name is a 404 from notFound(). Static and rebuilt like the market
+ * pages (ISR), and like them without `dynamicParams = false` (see ../page.tsx).
  */
 
-export const revalidate = 300;
-export const dynamicParams = false;
+export const revalidate = 86400;
 
 const PAGE = "entry-level-software";
 

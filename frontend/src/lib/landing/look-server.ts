@@ -1,8 +1,16 @@
 import {API_BASE_URL} from "@/lib/api";
 import {lookJobs, type Look} from "@/lib/landing/look";
 
-/** How long the landing page's HTML keeps the count before Next asks again (ISR). */
-export const LOOK_REVALIDATE_SECONDS = 300;
+/**
+ * How long a published body stays in Next's data cache before a visit asks the
+ * API again: a day. The count changes once a week, and the publication job
+ * drops the cached pages and their fetches itself (lib/revalidate.ts). At 5
+ * minutes any visit after a quiet spell rebuilt a page and woke the API, which
+ * scales to zero: 477 of its 517 wakes in the week to 12 Oct 2026 (GitHub issue
+ * #4, decisions/deployment.md). Every page's `revalidate` is a day to match:
+ * the shortest one on a route sets how often it rebuilds.
+ */
+export const LOOK_REVALIDATE_SECONDS = 86_400;
 
 /**
  * What a render does when the count can't be had. In a running production

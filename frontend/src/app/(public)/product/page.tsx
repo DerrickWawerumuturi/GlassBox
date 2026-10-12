@@ -14,7 +14,7 @@ export const metadata = publicPage("/product", {
 });
 
 // Static, with this week's counts for the numbers box (ISR, like the home page).
-export const revalidate = 300;
+export const revalidate = 86400;
 
 /** This week's real counts for the Market section, or nothing when the count isn't available. */
 async function numbers(): Promise<string[] | null> {

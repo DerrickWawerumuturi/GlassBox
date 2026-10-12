@@ -6,7 +6,7 @@ import {sitemapEntries} from "@/lib/seo";
 
 // The public pages (lib/seo.ts PUBLIC_PATHS). Only the market pages carry a
 // lastmod: the day their numbers were counted. The build time is not when a page changed.
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const pages = await allMarkets();

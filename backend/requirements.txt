@@ -3,18 +3,19 @@ uvicorn[standard]
 psycopg[binary]
 psycopg-pool
 groq
-pgvector
-anthropic
 httpx
+requests
 python-dotenv
 pydantic
 pycountry
 
-pandas
 pdf-inspector
-xai-sdk
-sentence-transformers
 python-multipart
-ipython
 pyjwt
 openpyxl
+
+# MiniLM without torch (src/Agent/utils/embedder.py)
+onnxruntime
+tokenizers
+huggingface_hub
+numpy

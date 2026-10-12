@@ -14,7 +14,7 @@ import {findingCount, findingShare, headline, topic} from "@/lib/market-story";
 export const alt = "A finding from Glassbox's count of this week's tech jobs";
 export const size = SHARE_SIZE;
 export const contentType = "image/png";
-export const revalidate = 300;
+export const revalidate = 86400;
 
 export function generateStaticParams() {
     return MARKET_NAMES.map((page) => ({page}));

@@ -47,9 +47,10 @@ from src.jobpool.opportunities import NoProfile, opportunity_service
 from src.jobpool.service import job_url_service
 
 
-# The analysis stack (sentence-transformers and torch) takes seconds to import. Imported at the top of this
-# file it held every route hostage: after a scale-from-zero the applications
-# list could not answer until the models finished loading. Routes that need it
+# The analysis stack (MiniLM on ONNX Runtime, the LLM clients) took seconds to
+# import while it ran on torch, about a second since (issue #4). Imported at the
+# top of this file it held every route hostage: after a scale-from-zero the
+# applications list could not answer until the models finished loading. Routes that need it
 # import it on first use; startup loads it in the background so the first
 # analysis is not slower than before.
 def _agent():

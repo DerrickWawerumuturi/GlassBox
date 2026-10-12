@@ -118,7 +118,7 @@ most named: category, any, required, employers, compare_any, broad),
 The founder approved the pages as reporting, not a dashboard
 (`docs/local/market-pages-editorial.html`): data, then what it shows. One
 template, `components/market-page/MarketArticle.tsx`, serves all five pages,
-server rendered at `/market/{name}` (ISR, 5 minutes; a failed fetch during a
+server rendered at `/market/{name}` (ISR, 5 minutes, a day since 2026-10-12; a failed fetch during a
 revalidation keeps the last good page, `builtForPage`). In reading order:
 
 1. **Kicker** "Market / {page}" (the breadcrumb), the **lead finding** as

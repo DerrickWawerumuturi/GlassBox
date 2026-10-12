@@ -19,6 +19,8 @@ import {MARKET_NAMES, YEARS_PATH} from "@/lib/market-names";
 /** Every page that shows the published market. The /market layout covers both share images. */
 export const MARKET_PATHS = ["/", "/about", "/product", "/market", ...MARKET_NAMES.map((name) => `/market/${name}`), YEARS_PATH];
 
+export const SITEMAP_PATH = "/sitemap.xml";
+
 const MAX_HEADER = 512;
 /** The job calls once a week; a few retries fit, guessing doesn't. Per server instance. */
 export const LIMIT = {calls: 10, perMs: 60_000};
@@ -44,6 +46,8 @@ export function handleRevalidate(request: Request, secret = process.env.REVALIDA
     }
     for (const path of MARKET_PATHS) revalidate(path);
     revalidate("/market", "layout");
+    // Its lastmod is the week's; nobody opens it after, and a crawler's visit rebuilds it from the fresh fetches.
+    revalidate(SITEMAP_PATH);
     return Response.json({revalidated: MARKET_PATHS});
 }
 

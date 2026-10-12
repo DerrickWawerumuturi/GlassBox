@@ -90,7 +90,7 @@ Both steps are offloaded because they are synchronous and slow; running them
 inline pinned the event loop and made the whole API unreachable. The lock is
 required *because* of the offload — see `decisions/` and the changelog.
 
-The analysis stack (sentence-transformers and torch) is **not** imported when
+The analysis stack (MiniLM on ONNX Runtime, no torch since 2026-10-12) is **not** imported when
 `main.py` loads. `_agent()` imports it on first use and startup warms it in the
 background, so after a scale-from-zero every other route answers in under a
 second instead of waiting for the model.
