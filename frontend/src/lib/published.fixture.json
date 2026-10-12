@@ -1,0 +1,19 @@
+{
+  "about": "market_publications rows, inserted by backend tests/test_publish.py and frontend src/lib/published.test.ts. Both must serve row `served`: published, latest published_at, then highest id.",
+  "served": 4,
+  "rows": [
+    {"id": 1, "week": "2026-10-05", "as_of": "2026-10-05T05:40:00Z", "published_at": "2026-10-05T06:00:00Z", "status": "published",
+     "look": {"taken_at": "2026-10-05T05:40:00Z", "week": "2026-10-05", "profiler_version": "fixture", "families": {"backend": {"jobs": 1}}, "skills": {}},
+     "pages": {"ai": {"taken_at": "2026-10-05T05:40:00Z", "week": "2026-10-05", "jobs": 1}}},
+    {"id": 2, "week": "2026-10-12", "as_of": "2026-10-12T05:40:00Z", "published_at": null, "status": "rejected", "look": null, "pages": null},
+    {"id": 3, "week": "2026-10-12", "as_of": "2026-10-12T05:40:00Z", "published_at": "2026-10-12T06:00:00Z", "status": "published",
+     "look": {"taken_at": "2026-10-12T05:40:00Z", "week": "2026-10-12", "profiler_version": "fixture", "families": {"backend": {"jobs": 3}}, "skills": {}},
+     "pages": {"ai": {"taken_at": "2026-10-12T05:40:00Z", "week": "2026-10-12", "jobs": 3}}},
+    {"id": 4, "week": "2026-10-12", "as_of": "2026-10-12T05:40:00Z", "published_at": "2026-10-12T06:00:00Z", "status": "published",
+     "look": {"taken_at": "2026-10-12T05:40:00Z", "week": "2026-10-12", "profiler_version": "fixture", "families": {"backend": {"jobs": 4}}, "skills": {"python": "Python"}},
+     "pages": {"ai": {"taken_at": "2026-10-12T05:40:00Z", "week": "2026-10-12", "jobs": 4}}},
+    {"id": 5, "week": "2026-09-28", "as_of": "2026-09-28T05:40:00Z", "published_at": "2026-09-28T06:00:00Z", "status": "published",
+     "look": {"taken_at": "2026-09-28T05:40:00Z", "week": "2026-09-28", "profiler_version": "fixture", "families": {"backend": {"jobs": 5}}, "skills": {}},
+     "pages": {"ai": {"taken_at": "2026-09-28T05:40:00Z", "week": "2026-09-28", "jobs": 5}}}
+  ]
+}

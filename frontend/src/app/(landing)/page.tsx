@@ -4,9 +4,9 @@ import SiteFooter from "@/components/SiteFooter";
 import {lookForPage} from "@/lib/landing/look-server";
 import {homeStructuredData, publicPage} from "@/lib/seo";
 
-// Static: this week's count is in the HTML (look-server.ts). The weekly publication rebuilds it
-// (lib/revalidate.ts); a day is the safety net, so visits wake the API once a day at most (issue #4).
-export const revalidate = 86400;
+// Static: this week's count is in the HTML, read from the database (look-server.ts). Built at
+// deploy and rebuilt only by the weekly publication (lib/revalidate.ts): no timer, no API (issue #5).
+export const revalidate = false;
 
 export const metadata = publicPage("/", {
     title: COPY.meta.title,

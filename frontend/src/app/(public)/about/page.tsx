@@ -9,7 +9,8 @@ export const metadata = publicPage("/about", {
     description: "Why Glassbox exists: job ads list everything, so we count what this week's jobs really ask for.",
 });
 
-export const revalidate = 86400;
+// Static; the weekly publication rebuilds it (lib/revalidate.ts).
+export const revalidate = false;
 
 /** Two numbers as the site writes them, counted this week, for "What we count". */
 async function examples(): Promise<string[] | null> {

@@ -1,20 +1,28 @@
 import {readdirSync, readFileSync, statSync} from "node:fs";
 import {join, relative} from "node:path";
 
-import {describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
-import {LOOK_REVALIDATE_SECONDS} from "@/lib/landing/look-server";
+import LOOK from "@/lib/landing/look.fixture.json";
+import PAGES from "@/lib/market-story.fixture.json";
 
 /*
- * A visit to a public page doesn't wake the API (GitHub issue #4). The API
- * scales to zero; a page or fetch that expires every 5 minutes made the next
- * visit rebuild it against the API, and that was 477 of its 517 wakes in the
- * week to 12 Oct 2026. The weekly publication rebuilds the pages itself
- * (lib/revalidate.ts), so a day is only a safety net. This reads every route's
- * `revalidate` under src/app: the shortest one on a route sets how often it rebuilds.
+ * Public pages never wake the API (GitHub issues #4 and #5). The API scales to
+ * zero; page rebuilds that asked it for the count were 477 of its 517 wakes in
+ * the week to 12 Oct 2026. Pages now read the publication from the database
+ * (lib/published.ts) and have no timer: they are built at deploy and rebuilt
+ * when the weekly publication calls /api/revalidate.
  */
 
-const DAY = 86_400;
+const read = vi.hoisted(() => ({calls: 0}));
+vi.mock("@/lib/published", async (original) => ({
+    ...await original<typeof import("@/lib/published")>(),
+    currentPublication: async () => {
+        read.calls++;
+        return {id: 1, look: LOOK, pages: PAGES};
+    },
+}));
+
 const APP = join(__dirname, "..", "app");
 
 function files(dir: string): string[] {
@@ -25,19 +33,59 @@ function files(dir: string): string[] {
     });
 }
 
-const segments = files(APP).flatMap((path) => {
-    const match = readFileSync(path, "utf8").match(/^export const revalidate = ([\d_]+);/m);
-    return match ? [[relative(APP, path), Number(match[1].replaceAll("_", ""))] as const] : [];
-});
+const routes = files(APP).map((path) => [relative(APP, path), readFileSync(path, "utf8")] as const);
+const readers = routes.filter(([, text]) => text.includes("@/lib/landing/look-server")).map(([path]) => path);
 
-describe("public pages and the API", () => {
-    it("keep the API's published bodies in Next's cache for a day", () => {
-        expect(LOOK_REVALIDATE_SECONDS).toBeGreaterThanOrEqual(DAY);
+describe("public pages", () => {
+    it("rebuild only on demand: every page reading the count has revalidate = false", () => {
+        expect(readers).toEqual(expect.arrayContaining(["(landing)/page.tsx", "(public)/about/page.tsx", "(public)/product/page.tsx",
+            "market/page.tsx", "market/[page]/page.tsx", "market/[page]/years-of-experience/page.tsx", "sitemap.ts",
+            "market/opengraph-image.tsx", "market/[page]/opengraph-image.tsx", "market/[page]/years-of-experience/opengraph-image.tsx"]));
+        for (const [path, text] of routes.filter(([p]) => readers.includes(p))) {
+            expect([path, text.match(/^export const revalidate = (.+);/m)?.[1]]).toEqual([path, "false"]);
+        }
     });
 
-    it("rebuild on a timer once a day at most", () => {
-        expect(segments.map(([path]) => path)).toEqual(expect.arrayContaining(
-            ["(landing)/page.tsx", "market/page.tsx", "market/[page]/page.tsx", "sitemap.ts"]));
-        expect(segments.filter(([, seconds]) => seconds < DAY)).toEqual([]);
+    it("never set a numeric revalidate: no page, share image or sitemap rebuilds on a timer", () => {
+        expect(routes.filter(([, text]) => /^export const revalidate = \d/m.test(text)).map(([path]) => path)).toEqual([]);
+    });
+});
+
+describe("rendering a public page", () => {
+    const fetches: string[] = [];
+    beforeEach(() => {
+        fetches.length = 0;
+        read.calls = 0;
+        vi.stubGlobal("fetch", vi.fn(async (url: unknown) => {
+            fetches.push(String(url));
+            throw new Error("public pages must not fetch");
+        }));
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("reads the publication and never calls the API", async () => {
+        const params = (page: string) => ({params: Promise.resolve({page})});
+        const home = await import("@/app/(landing)/page");
+        const about = await import("@/app/(public)/about/page");
+        const product = await import("@/app/(public)/product/page");
+        const hub = await import("@/app/market/page");
+        const market = await import("@/app/market/[page]/page");
+        const years = await import("@/app/market/[page]/years-of-experience/page");
+        const sitemap = await import("@/app/sitemap");
+
+        const homeEl = await home.default() as {props: {children: Array<{props?: {initial?: unknown}}>}};
+        expect(homeEl.props.children[1].props?.initial).toEqual(LOOK);
+        await about.default();
+        await product.default();
+        await hub.default();
+        expect((await market.generateMetadata(params("ai"))).title).toBeTruthy();
+        await market.default(params("ai"));
+        await years.generateMetadata(params("entry-level-software"));
+        await years.default(params("entry-level-software"));
+        const map = await sitemap.default();
+        expect(map.find((e) => e.url.endsWith("/market/ai"))?.lastModified).toBeTruthy();
+
+        expect(fetches).toEqual([]);
+        expect(read.calls).toBeGreaterThan(0);
     });
 });

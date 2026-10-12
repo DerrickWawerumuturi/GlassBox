@@ -2,15 +2,15 @@ import Link from "next/link";
 import {ArrowRightIcon} from "lucide-react";
 
 import {weekDate, weekStart} from "@/lib/market-page";
-import {allMarkets, MARKET_NAMES, MARKET_PAGES, MarketBody, MarketInfo, marketPath} from "@/lib/market-pages";
+import {MARKET_NAMES, MARKET_PAGES, MarketBody, MarketInfo, marketPath} from "@/lib/market-pages";
 import {cardLine, headline, topic} from "@/lib/market-story";
-import {keepLastPage} from "@/lib/landing/look-server";
+import {allMarkets, keepLastPage} from "@/lib/landing/look-server";
 import {publicPage} from "@/lib/seo";
 
 /*
  * /market: every market page as a card with its lead finding as the title,
  * so the site reads as a place that reports on the job market and search
- * finds the pages through one hub. Server rendered; a failed fetch during a
+ * finds the pages through one hub. Server rendered; a failed read during a
  * revalidation keeps the last good hub (look-server.ts). A page with no count
  * this week has no card.
  */
@@ -21,7 +21,7 @@ const HUB = {
     description: "The skills this week's tech jobs name, counted from live jobs: entry level software, software engineering, AI, machine learning and DevOps.",
 };
 
-export const revalidate = 86400;
+export const revalidate = false;
 export const metadata = publicPage("/market", {
     title: "What this week's tech jobs ask for", description: HUB.description,
     share: {title: "What this week's tech jobs ask for, counted", description: HUB.description}, ownImage: true, article: true,

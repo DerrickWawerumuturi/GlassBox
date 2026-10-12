@@ -1,6 +1,6 @@
 import {findingImage, shareImage, SHARE_SIZE} from "@/components/market-page/ShareImage";
 import {fmt, weekDate} from "@/lib/market-page";
-import {marketForPage} from "@/lib/market-pages";
+import {marketForPage} from "@/lib/landing/look-server";
 import {TOPIC, unstatedShare, yearsCounts, yearsHeadline} from "@/lib/years-answer";
 
 /*
@@ -12,7 +12,7 @@ import {TOPIC, unstatedShare, yearsCounts, yearsHeadline} from "@/lib/years-answ
 export const alt = "How many years of experience entry level software jobs ask for, from Glassbox's weekly count";
 export const size = SHARE_SIZE;
 export const contentType = "image/png";
-export const revalidate = 86400;
+export const revalidate = false;
 
 // The address as the image prints it: the full one wraps under the wordmark.
 const SHOWN = "/market/…/years-of-experience";

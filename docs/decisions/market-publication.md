@@ -5,7 +5,7 @@
 `backend/src/database/repositories/{source,publication}_repository.py`,
 `backend/src/database/backfill_job_source.py`, migrations `018_job_sources.sql`,
 `019_market_publications.sql`, `.github/workflows/{job-pool,deploy}.yml`,
-`frontend/src/lib/landing/look-server.ts`, `frontend/src/lib/market-pages.ts`.
+`frontend/src/lib/published.ts`, `frontend/src/lib/landing/look-server.ts`, `frontend/src/lib/revalidate.ts`.
 
 ## Why
 
@@ -64,49 +64,66 @@ The CV scan and Opportunities still read the live pool and keep "today's jobs".
 
 ### The frontend
 
+Since 2026-10-12 (GitHub issue #5) the site reads the publication straight
+from the database and never asks the API for it.
+
+- `lib/published.ts` (server only: `import "server-only"`) runs one query,
+  the same row the API serves (`publication_repository.LATEST`): `select id,
+  look, pages from market_publications where status = 'published' order by
+  published_at desc, id desc limit 1`. `look` is the `/market/look` body and
+  `pages[name]` the `/market/page/{name}` body, exactly as the API sends them:
+  the API adds nothing to the stored JSON, so no computation moved. The one
+  thing not carried over is the API's live count before the first publication;
+  publications exist since 2026-10-05, so the site needs none.
+- The address is `MARKET_DATABASE_URL`, server only (never `NEXT_PUBLIC_`), on
+  Vercel for Production and Preview. It logs in as `glassbox_site`, a Neon role
+  that can only `select` from `market_publications` (`deployment.md`, "The
+  site's database login"). Driver: postgres.js over TCP, one connection per
+  server instance, `prepare: false` for Neon's pooled address. Not Neon's HTTP
+  driver: it can't talk to the local test Postgres, so tests and local builds
+  would run a different path from production.
+  `channel_binding=require` in Neon's copied address is dropped before
+  connecting (postgres.js would send it as a server setting).
+- One read per render: a page, its metadata and its rail share it (React
+  `cache`, `currentPublication`).
 - A body with 0 jobs (a page) or no jobs in any job type (the look) is no count:
   refused on the server render and in the browser, never drawn.
-- At `next build` the fetch waits up to 90 s (`BUILD_WAIT_MS`, retries every
-  5 s, each attempt up to 30 s so a replica can wake). If the API still hasn't
-  answered, the build fails and Vercel keeps the previous deployment. Checked
-  locally: with the API down the build failed after 3 min ("didn't answer in
-  90 s; failing the build"). A body the API did send but that has no jobs isn't
-  waited for.
-- In a running server a failed revalidation still throws, so Next keeps the
-  last good page (`market-look.md`).
-- A publication refreshes the site at once (2026-10-12, GitHub issue #1). ISR
-  only rebuilds a page on a visit, and that rebuild gives the API 4 s, while a
-  sleeping API takes about 43 s to wake. On 12 Oct the week was published at
-  06:02 UTC and seeglassbox.com served the 5 October week for 11 more hours
-  (`x-vercel-cache: STALE`, `age: 41580`). Now `publish.run()` calls
-  `refresh_site.refresh()` after every publication (scheduled, `--now`,
-  `--accept`): it wakes the API (`GET /market/look`, retries for up to 90 s),
-  then `POST ${SITE_URL}/api/revalidate` with `Authorization: Bearer
-  REVALIDATE_SECRET`, then opens `/`, `/about`, `/product`, `/market`, each
-  market page and each share image once, so they are rebuilt before the next
-  visitor. If the API never wakes it doesn't revalidate (a rebuild against a
-  sleeping API would only keep the old pages). No secret: one log line, no
-  calls. Any failure: one `::warning` line; the publication stands.
+- At `next build` the read retries every 3 s for up to 30 s (`BUILD_WAIT_MS`;
+  Neon wakes a suspended database in a second or two). Then, or at once when
+  `MARKET_DATABASE_URL` isn't set, or when nothing is published, the build
+  fails ("failing the build so the last deployment stays live") and Vercel
+  keeps the previous deployment. Checked locally: without the variable the
+  build failed on the first page.
+- Every public page, share image and the sitemap has `revalidate = false`: no
+  timer. They are built at deploy and rebuilt only after `/api/revalidate`.
+  `page-wakes.test.ts` fails if any route under `src/app` sets a numeric
+  `revalidate`, or if a page renders a fetch.
+- In a running server a failed read throws, so Next keeps the last good page
+  (`market-look.md`).
+- A publication refreshes the site at once (GitHub issues #1 and #5).
+  `publish.run()` calls `refresh_site.refresh()` after every publication
+  (scheduled, `--now`, `--accept`): `POST ${SITE_URL}/api/revalidate` with
+  `Authorization: Bearer REVALIDATE_SECRET`, then it opens `/`, `/about`,
+  `/product`, `/market`, each market page and each share image once, so they
+  are rebuilt before the next visitor. It no longer wakes the API first (it did
+  from #1 until #5). No secret: one log line, no calls, and the site keeps the
+  last week until its next deploy. Any failure: one `::warning` line; the
+  publication stands.
 - `/api/revalidate` (`lib/revalidate.ts`): POST only, no body read, the header
   capped at 512 characters and compared with the secret in constant time
   (SHA-256 digests, `timingSafeEqual`); 503 when the secret isn't set, 401
-  otherwise, 10 calls a minute per server instance (429). It calls
-  `revalidatePath` for each of those pages and `revalidatePath("/market",
-  "layout")` for the share images. `revalidatePath` also expires the API
-  fetches those pages made: they carry the page's implicit cache tags (Next 16
-  `revalidatePath` docs, "What can be invalidated"), so no fetch tags were added.
-- Since 2026-10-12 (GitHub issue #4) this is the only regular rebuild. Every
-  public page's `revalidate` and the API fetch's `next.revalidate` are a day
-  (86,400 s), a safety net, so visits no longer wake the API every 5 minutes
-  (`deployment.md`, "What wakes the API"). If the refresh fails, the old week
-  shows for up to a day, not 5 minutes. `/sitemap.xml` is revalidated too (its
-  lastmod is the week's); nothing opens it, and a crawler's visit rebuilds it
-  from the fetches the pages just refilled.
+  otherwise, 10 calls a minute per server instance (429). Then it reads the
+  publication itself; if it can't, it answers 503 and drops nothing.
+  `revalidatePath` expires a page at once, and a page whose render then fails
+  answers 500 until a render succeeds (measured with `next start` and the
+  login's `select` revoked), so pages are only dropped once the read works.
+  Then `revalidatePath` for each page, `revalidatePath("/market", "layout")`
+  for the share images, and `/sitemap.xml` (its lastmod is the week's).
 - The market pages and the years page don't set `dynamicParams = false`. With
   it, on a local `next start` (Next 16.3) `/market/ai` and the years page
   answered 404 after `/api/revalidate` had dropped them (`NoFallbackError` in
   the log), with the code from issue #1 as well. Unknown names are a 404 from
-  `notFound()`, checked before any fetch, so they never call the API.
+  `notFound()`, checked before any read.
 
 ### Workflows
 
@@ -140,7 +157,7 @@ unchanged. Public week on week comparisons should come from publications.
 
 - `python -m src.jobpool.publish --status` lists the row: `published`, week of 2026-10-05, about 17,000 to 20,000 jobs, as of the run's time.
 - `curl -s https://jobradar-backend.agreeabledune-79b95957.southafricanorth.azurecontainerapps.io/market/look | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['week'], d['taken_at'])"` prints `2026-10-05` and the run's time (within 10 minutes of publishing; the API checks every 10).
-- seeglassbox.com/market says "Counted in the week of 5 October 2026 · Updated every Monday" right after the run (the run's log says "site refreshed: N pages rebuilt"). Without `REVALIDATE_SECRET` it waits for visits that reach an awake API.
+- seeglassbox.com/market says "Counted in the week of 5 October 2026 · Updated every Monday" right after the run (the run's log says "site refreshed: N pages rebuilt"). Without `REVALIDATE_SECRET` it keeps the last week until the next deploy.
 
 **Site refresh setup (once, 2026-10-12):** generate a secret yourself, for example
 `openssl rand -hex 32`, and set the same value in two places: GitHub, the repository's
@@ -152,6 +169,6 @@ redeploy so the site reads it. Nothing on Azure: the job runs in GitHub Actions.
 ## Not done (parked in the design)
 
 ATS webhooks, Google's Indexing API, deleting old jobs, email alerts, keeping the
-API awake (the site refresh wakes it once instead), an Azure scheduled job instead of GitHub Actions. A profiler version
+API awake (the site reads the database instead, issue #5), an Azure scheduled job instead of GitHub Actions. A profiler version
 change mid week doesn't trigger a new publication: the published skill keys can
 differ from a fresh CV scan's until the next Monday.

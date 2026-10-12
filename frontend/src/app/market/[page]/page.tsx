@@ -2,20 +2,20 @@ import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 
 import MarketArticle from "@/components/market-page/MarketArticle";
-import {allMarkets, isMarketName, MARKET_NAMES, MARKET_PAGES, marketForPage, marketPath} from "@/lib/market-pages";
+import {allMarkets, marketForPage} from "@/lib/landing/look-server";
+import {isMarketName, MARKET_NAMES, MARKET_PAGES, marketPath} from "@/lib/market-pages";
 import {pageDescription, pageTitle} from "@/lib/market-story";
 import {publicPage} from "@/lib/seo";
 
 /*
  * The five market pages, one template (docs/decisions/market-pages.md).
- * Static, rebuilt by the weekly publication and at most once a day (ISR), like
- * the landing page: a failed fetch during a revalidation keeps the last good
- * page (look-server.ts). Any other name is a 404 from notFound(), before any
- * fetch. Not `dynamicParams = false`: with it, Next 16.3 answers 404 for these
+ * Static, built at deploy and rebuilt only by the weekly publication, like the
+ * landing page: a failed read during a revalidation keeps the last good page
+ * (look-server.ts). Any other name is a 404 from notFound(), before any read. Not `dynamicParams = false`: with it, Next 16.3 answers 404 for these
  * very pages once /api/revalidate has dropped them (measured, GitHub issue #4).
  */
 
-export const revalidate = 86400;
+export const revalidate = false;
 
 export function generateStaticParams() {
     return MARKET_NAMES.map((page) => ({page}));

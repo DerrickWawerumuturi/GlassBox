@@ -216,6 +216,9 @@ Fill in `frontend/.env.local`:
   as a redirect URI.
 - `API_JWT_SECRET`: the same value as the backend's.
 - `NEXT_PUBLIC_POSTHOG_KEY`: leave empty to turn analytics off.
+- `MARKET_DATABASE_URL`: where public pages read the published week, server
+  only. Leave empty in dev (the browser asks the API for the count); a build
+  needs it (see "Tests").
 
 Open [localhost:3000](http://localhost:3000).
 
@@ -245,7 +248,19 @@ DATABASE_URL="" python -m pytest -q
 ```sh
 npx tsc --noEmit
 npm test          # vitest
-npm run build
+TEST_MARKET_DATABASE_URL=$TEST_DB npm test   # also the publication query, on the local Postgres
+```
+
+`npm run build` reads the published week from `MARKET_DATABASE_URL` and fails
+without one. Locally, a database of its own holding one publication made from
+the test fixtures (the backend tests empty `market_publications` in `jobradar_test`):
+
+```sh
+docker exec glassbox-test-pg psql -U postgres -c "create database glassbox_site"
+docker exec -i glassbox-test-pg psql -U postgres -d glassbox_site < ../backend/src/database/migrations/019_market_publications.sql
+python3 -c 'import json; l=json.load(open("src/lib/landing/look.fixture.json")); p=json.load(open("src/lib/market-story.fixture.json")); q=lambda o: "$$"+json.dumps(o)+"$$::jsonb"; print(f"insert into market_publications (week, as_of, published_at, status, profiler_version, jobs, gates, look, pages) values (current_date, now(), now(), $$published$$, $$fixture$$, 17000, $$[]$$::jsonb, {q(l)}, {q(p)})")' \
+  | docker exec -i glassbox-test-pg psql -U postgres -d glassbox_site
+MARKET_DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/glassbox_site NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:9 npm run build
 ```
 
 ## Deploy

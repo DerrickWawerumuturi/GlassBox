@@ -1,7 +1,9 @@
 import {createHash, timingSafeEqual} from "node:crypto";
 import {revalidatePath} from "next/cache";
 
+import {lookForPage} from "@/lib/landing/look-server";
 import {MARKET_NAMES, YEARS_PATH} from "@/lib/market-names";
+import {loadPublication} from "@/lib/published";
 
 /*
  * POST /api/revalidate: the weekly publication job asks the site to drop its
@@ -10,10 +12,15 @@ import {MARKET_NAMES, YEARS_PATH} from "@/lib/market-names";
  * visit, and a visit's rebuild timed out on the sleeping API: on 12 Oct 2026
  * the 5 October week stayed up for 11 hours.
  *
- * revalidatePath expires each page's HTML and, through the page's implicit
- * cache tags, the API fetches it made (next/cache docs, "What can be
- * invalidated"); the next visit rebuilds it. The job opens each page right
- * after, with the API awake. Only the job knows REVALIDATE_SECRET.
+ * revalidatePath expires each page's HTML; the next visit rebuilds it from
+ * the database (lib/published.ts), and the job opens each page right after.
+ * Public pages have no timer (`revalidate = false`), so this and a deploy are
+ * the only rebuilds (GitHub issue #5). Only the job knows REVALIDATE_SECRET.
+ *
+ * revalidatePath expires a page at once: the next visit renders it, and a
+ * render that can't read the publication answers 500 (measured with next
+ * start). So the pages are dropped only after this server has read the new
+ * publication itself; if it can't, they all stay as they are and the job warns.
  */
 
 /** Every page that shows the published market. The /market layout covers both share images. */
@@ -34,9 +41,19 @@ export function authorized(header: string | null, secret: string): boolean {
     return timingSafeEqual(digest(header.slice("Bearer ".length)), digest(secret));
 }
 
-/** Answers the request; the body is never read. `now` and `revalidate` are for tests. */
-export function handleRevalidate(request: Request, secret = process.env.REVALIDATE_SECRET?.trim() ?? "",
-                                 now = Date.now(), revalidate: typeof revalidatePath = revalidatePath): Response {
+/** Whether this server can read a publication with a count now: what the rebuilt pages will read. */
+export async function publicationReadable(): Promise<boolean> {
+    try {
+        return (await lookForPage(() => loadPublication(), false, false)) !== null;
+    } catch {
+        return false;
+    }
+}
+
+/** Answers the request; the body is never read. `now`, `revalidate` and `readable` are for tests. */
+export async function handleRevalidate(request: Request, secret = process.env.REVALIDATE_SECRET?.trim() ?? "",
+                                       now = Date.now(), revalidate: typeof revalidatePath = revalidatePath,
+                                       readable = publicationReadable): Promise<Response> {
     recent = recent.filter((at) => now - at < LIMIT.perMs);
     if (recent.length >= LIMIT.calls) return Response.json({error: "too many requests"}, {status: 429});
     recent.push(now);
@@ -44,9 +61,12 @@ export function handleRevalidate(request: Request, secret = process.env.REVALIDA
     if (!authorized(request.headers.get("authorization"), secret)) {
         return Response.json({error: "unauthorized"}, {status: 401});
     }
+    if (!await readable()) {
+        return Response.json({error: "the publication can't be read; every page kept"}, {status: 503});
+    }
     for (const path of MARKET_PATHS) revalidate(path);
     revalidate("/market", "layout");
-    // Its lastmod is the week's; nobody opens it after, and a crawler's visit rebuilds it from the fresh fetches.
+    // Its lastmod is the week's; nobody opens it after, and a crawler's visit rebuilds it from the new row.
     revalidate(SITEMAP_PATH);
     return Response.json({revalidated: MARKET_PATHS});
 }

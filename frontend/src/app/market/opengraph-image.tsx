@@ -1,4 +1,4 @@
-import {allMarkets} from "@/lib/market-pages";
+import {allMarkets} from "@/lib/landing/look-server";
 import {shareImage, SHARE_SIZE} from "@/components/market-page/ShareImage";
 import {fmt, weekDate} from "@/lib/market-page";
 
@@ -7,7 +7,7 @@ import {fmt, weekDate} from "@/lib/market-page";
 export const alt = "What this week's tech jobs ask for, counted by Glassbox";
 export const size = SHARE_SIZE;
 export const contentType = "image/png";
-export const revalidate = 86400;
+export const revalidate = false;
 
 export default async function OgImage() {
     const pages = Object.values(await allMarkets()).filter((p) => p !== null);

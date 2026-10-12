@@ -1,11 +1,11 @@
-import {builtForPage, hasJobs} from "@/lib/landing/look-server";
 import {MARKET_NAMES, MarketName} from "@/lib/market-names";
 import {SITE_URL} from "@/lib/site";
 
 /*
- * The market pages: which exist, what each counts, and the body the API
- * serves for each (GET /market/page/{name}, backend market_pages.py and
- * market_story.py). The words built from these numbers are in market-story.ts.
+ * The market pages: which exist, what each counts, and the body each week's
+ * publication stores for each (backend market_pages.py and market_story.py;
+ * read for a render by landing/look-server.ts). The words built from these
+ * numbers are in market-story.ts.
  * docs/decisions/market-pages.md
  */
 
@@ -140,20 +140,6 @@ export interface MarketBody {
     /** Names that read differently mid sentence ("distributed systems"); the rest read as `names`. */
     inline_names?: Record<string, string>;
     story: Story;
-}
-
-/** A page's counts for the server render; throws during a revalidation to keep the last good page (look-server.ts). */
-export function marketForPage(name: MarketName, keep?: boolean, timeoutMs = 4000, fetcher: typeof fetch = fetch,
-                              wait?: number): Promise<MarketBody | null> {
-    // No jobs is no count, never an empty page. A body with no story is an API from before the editorial pages.
-    return builtForPage<MarketBody>(`/market/page/${name}`, (body) => hasJobs(body.jobs) && Boolean(body.story?.squares),
-        timeoutMs, fetcher, keep, wait);
-}
-
-/** Every page's counts, for the hub and the rail. A page that can't be had is null; it never blocks the page asking. */
-export async function allMarkets(keep = false): Promise<Record<MarketName, MarketBody | null>> {
-    const bodies = await Promise.all(MARKET_NAMES.map((name) => marketForPage(name, keep)));
-    return Object.fromEntries(MARKET_NAMES.map((name, i) => [name, bodies[i]])) as Record<MarketName, MarketBody | null>;
 }
 
 export const absoluteMarket = (name?: MarketName) => `${SITE_URL}${name ? marketPath(name) : "/market"}`;

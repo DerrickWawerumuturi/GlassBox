@@ -117,6 +117,43 @@ still prerenders them all. Locally, after a build, visits to `/`, `/about`,
 browser's only call on public pages is `GET /health` when the CV sheet opens
 (`wakeApi`), which is the visitor asking to scan.
 
+### Public pages read the database, not the API (2026-10-12, GitHub issue #5)
+
+A day was still a timer: any visit after a quiet day rebuilt a page against
+the API, and the weekly refresh woke it on purpose. Now the public pages read
+the published week from Neon (`frontend/src/lib/published.ts`) and have
+`revalidate = false`: they are built at deploy and rebuilt only when the
+Monday publication calls `/api/revalidate` (`market-publication.md`, "The
+frontend"). The refresh job no longer wakes the API.
+
+What each automatic behaviour now calls, per day:
+
+| What | Azure API | Neon | Vercel functions |
+|---|---|---|---|
+| A visit to a public page or share image | 0 | 0 | 0 (served from the cache) |
+| The Monday refresh, once a week | 0 (was 1 wake, about 6 min) | 1 + 18 reads a week, about 3 a day | 1 + 18 renders a week, about 3 a day |
+| A deploy (Production or Preview) | 0 | 18 reads | 0 at run time (renders in the build) |
+
+Each read is one query for one row, under 1 MB (look and pages). That is
+under 20 MB of transfer a week, against Neon's free plan allowance of several
+GB a month (5 GB when this was written), and about 80 function invocations a
+month against Vercel Hobby's 1 million. The reads on Monday come right after
+the collector wrote the publication, so Neon is already awake: no extra
+compute wake. The 18: `/`, `/about`, `/product`, `/market`, five market pages,
+the years page, the sitemap, and seven share images.
+
+### The site's database login (2026-10-12, issue #5)
+
+The site logs in as `glassbox_site`, created by the founder in the Neon SQL
+editor (not the console's Roles page: roles made there join `neon_superuser`).
+It can connect, use schema `public` and `select` from `market_publications`,
+nothing else; `default_transaction_read_only = on`; `statement_timeout = 15s`.
+Its pooled address (`-pooler` host, `sslmode=verify-full`) is
+`MARKET_DATABASE_URL` on Vercel for Production and Preview. The main database
+password stays in the backend, GitHub secrets and Azure. Set the variable
+before pushing code that reads it: without it `next build` fails on purpose and
+Vercel keeps the last deployment live.
+
 Where a cold start goes (median over 657 replica starts; p90 in brackets):
 
 | Step | Seconds |

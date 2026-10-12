@@ -6,8 +6,10 @@ The gates and the serving rules run everywhere, with the database calls faked.
 The end to end tests write market_publications and source_runs to a LOCAL
 database and are skipped without one.
 """
+import json
 import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -278,3 +280,29 @@ def test_the_status_command_lists_publications(clean_publications, monkeypatch, 
     publish.main(["--status"])
     out = capsys.readouterr().out
     assert "FAIL jobs:" in out and "rejected" in out
+
+
+# The site reads the same row from the database itself (frontend src/lib/published.ts,
+# GitHub issue #5); its test inserts these rows too and must pick the same one.
+SHARED = Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "published.fixture.json"
+
+
+@local
+@pytest.mark.skipif(not SHARED.exists(), reason="the frontend's fixture is not in this checkout (the deploy image)")
+def test_the_api_serves_the_row_the_site_reads(clean_publications):
+    from psycopg.types.json import Jsonb
+    from src.database.session import connection
+    fixture = json.loads(SHARED.read_text())
+    with connection() as conn, conn.cursor() as cur:
+        for r in fixture["rows"]:
+            cur.execute(
+                "insert into market_publications (id, week, as_of, published_at, status, profiler_version, jobs, gates, look, pages)"
+                " overriding system value values (%s, %s, %s, %s, %s, 'fixture', 10, '[]', %s, %s)",
+                (r["id"], r["week"], r["as_of"], r["published_at"], r["status"],
+                 None if r["look"] is None else Jsonb(r["look"]), None if r["pages"] is None else Jsonb(r["pages"])))
+    ml.forget()
+    assert ml.refresh()
+    served = next(r for r in fixture["rows"] if r["id"] == fixture["served"])
+    client = TestClient(main.app)
+    assert client.get("/market/look").json() == served["look"]                 # as stored, nothing added
+    assert client.get("/market/page/ai").json() == served["pages"]["ai"]

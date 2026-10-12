@@ -13,8 +13,8 @@ export const metadata = publicPage("/product", {
     description: "This week's jobs, counted. Then where you stand, once your CV is in.",
 });
 
-// Static, with this week's counts for the numbers box (ISR, like the home page).
-export const revalidate = 86400;
+// Static, with this week's counts for the numbers box; rebuilt like the home page.
+export const revalidate = false;
 
 /** This week's real counts for the Market section, or nothing when the count isn't available. */
 async function numbers(): Promise<string[] | null> {

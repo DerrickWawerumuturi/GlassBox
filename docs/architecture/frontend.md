@@ -15,11 +15,13 @@ src/
     auth.ts, proxy.ts            NextAuth (Google); the token subject is Google's account id
     api/token/route.ts           mints the short-lived JWT the backend verifies
     api/logo/route.ts            same-origin company-logo proxy
-    api/revalidate/route.ts      POST from the publication job: drops the cached market pages (lib/revalidate.ts, Bearer REVALIDATE_SECRET)
-    (landing)/page.tsx           landing, static with ISR (5 min), today's count fetched on the server (lib/landing/look-server.ts;
-                                 a failed fetch during revalidation keeps the last good page, decisions/market-look.md):
+    api/revalidate/route.ts      POST from the publication job: drops the cached market pages once the site can read the new row
+                                 (lib/revalidate.ts, Bearer REVALIDATE_SECRET)
+    (landing)/page.tsx           landing, static (revalidate = false: rebuilt at deploy and by /api/revalidate only), this week's
+                                 count read from the database on the server (lib/landing/look-server.ts, lib/published.ts;
+                                 a failed read during revalidation keeps the last good page, decisions/market-look.md):
                                  "Look around first" (components/landing), metadata from its copy, WebSite/Organization JSON-LD
-    market/[page]                the five market pages, one editorial template (ISR, 5 min, keeps the last good page; any other
+    market/[page]                the five market pages, one editorial template (static like the landing, keeps the last good page; any other
                                  name is a 404): question, dek, byline, one square per job, findings at a glance with copy
                                  links, finding sections the data supports, the CV ask (one sheet per page), how we counted, the rail; Article and
                                  BreadcrumbList JSON-LD; title, description and opengraph-image.tsx from the data
@@ -30,7 +32,7 @@ src/
                                  `experience` counts (lib/years-answer.ts); any other page name is a 404
     market/page.tsx              /market, the hub: each page with its job count and first finding, and its own share image
     (public)/method              how Glassbox counts, written from the code (components/site/Explainer.tsx, lib/method-copy.ts)
-    (public)/product, about      long explainers (components/site/Explainer.tsx, ISR); words in lib/site-copy.ts;
+    (public)/product, about      long explainers (components/site/Explainer.tsx, static like the landing); words in lib/site-copy.ts;
                                  screenshots in public/product (docs/local/render/product-shots.mjs)
     (auth)/sign-in/page.tsx      layout.tsx only gives it a title (the page is a client component)
     (product)/
@@ -98,9 +100,10 @@ src/
     landing/look.ts              GET /market/look and the count's helpers (squares, wall, asks);
                                  look.fixture.json for tests and renders only
     landing/ad.ts                POST /market/ad: a pasted ad or link, read on the server
-    landing/look-server.ts       builtForPage(): a built body for a server render (the count, a market page), ISR rule
+    landing/look-server.ts       lookForPage(), marketForPage(), allMarkets(): a published body for a server render; keeps the last page
+    published.ts                 server only: the latest published row from market_publications (MARKET_DATABASE_URL, read only login)
     market-names.ts              the market pages' names, with no imports (analytics checks page names against it)
-    market-pages.ts              which market pages exist, what each counts, GET /market/page/{name} and its types
+    market-pages.ts              which market pages exist, what each counts, and the page body's types
     market-story.ts              every sentence on a market page, templates over the counts (tested on market-story.fixture.json)
     market-page.ts               numbers, dates, copied facts' links, title level chips
     market-faq.ts                a market page's questions, each answered with this week's count (and FAQPage markup)
@@ -219,7 +222,9 @@ have local edits.
 
 ## Backend connection
 
-`src/lib/api.ts` is the only place the backend is called. `API_BASE_URL` comes
+`src/lib/api.ts` is the only place the backend is called. Public pages never call it on the
+server: they read the published week from the database (`lib/published.ts`, GitHub issue #5).
+`API_BASE_URL` comes
 from `NEXT_PUBLIC_API_BASE_URL`. Signed-in calls go through `authed()`, which
 fetches a 15-minute token from `/api/token`. Timeouts are 60s for ordinary
 calls, long enough to outlast a cold start, and longer for analysis. A response

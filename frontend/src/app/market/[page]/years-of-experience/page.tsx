@@ -4,7 +4,7 @@ import {notFound} from "next/navigation";
 import YearsArticle from "@/components/market-page/YearsArticle";
 import {fmt} from "@/lib/market-page";
 import {YEARS_PATH} from "@/lib/market-names";
-import {marketForPage} from "@/lib/market-pages";
+import {marketForPage} from "@/lib/landing/look-server";
 import {publicPage} from "@/lib/seo";
 import {TOPIC, yearsAnswer, yearsCounts, yearsHeadline} from "@/lib/years-answer";
 
@@ -13,10 +13,10 @@ import {TOPIC, yearsAnswer, yearsCounts, yearsHeadline} from "@/lib/years-answer
  * entry level page's weekly count (docs/decisions/market-pages.md, "Years of
  * experience"). Under /market/[page], so it is served for that one page only;
  * every other name is a 404 from notFound(). Static and rebuilt like the market
- * pages (ISR), and like them without `dynamicParams = false` (see ../page.tsx).
+ * pages, and like them without `dynamicParams = false` (see ../page.tsx).
  */
 
-export const revalidate = 86400;
+export const revalidate = false;
 
 const PAGE = "entry-level-software";
 

@@ -1,12 +1,14 @@
 import type {MetadataRoute} from "next";
 
-import {allMarkets, MARKET_NAMES, marketPath} from "@/lib/market-pages";
+import {allMarkets} from "@/lib/landing/look-server";
+import {MARKET_NAMES, marketPath} from "@/lib/market-pages";
 import {YEARS_PATH} from "@/lib/market-names";
 import {sitemapEntries} from "@/lib/seo";
 
 // The public pages (lib/seo.ts PUBLIC_PATHS). Only the market pages carry a
 // lastmod: the day their numbers were counted. The build time is not when a page changed.
-export const revalidate = 86400;
+// Rebuilt with the market pages (lib/revalidate.ts), never on a timer.
+export const revalidate = false;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const pages = await allMarkets();

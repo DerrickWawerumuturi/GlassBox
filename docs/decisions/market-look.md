@@ -117,6 +117,15 @@ page against it. Since 2026-10-12 (GitHub issue #4) every page's `revalidate`
 and the fetch's `next.revalidate` are a day; the publication's revalidation is
 what shows a new week (`deployment.md`, "What wakes the API").
 
+Since 2026-10-12 (GitHub issue #5) the pages read the publication from the
+database, not the API (`lib/published.ts`), with `revalidate = false`: built at
+deploy, rebuilt only after `/api/revalidate`. The table above holds for a
+failed read: a revalidation throws and keeps the last good page, dev renders
+without the count, and `next build` now fails rather than prerender without it.
+After `revalidatePath` a failed render answers 500 rather than the old page,
+so `/api/revalidate` drops nothing until the site has read the new row itself
+(`market-publication.md`, "The frontend").
+
 ### Market pages from the same build (2026-10-07)
 
 `compute()` now reads the pool once and builds both this count and every
@@ -124,7 +133,7 @@ public market page (`market_pages.py`, `GET /market/page/{name}`), cached
 together as `{"look", "pages"}`. `look()` and `page(name)` read that one
 cache, so a page and the landing count always share `taken_at` and rules.
 The definitions and the 100 job rule: `market-pages.md`. On the frontend,
-`builtForPage` in `look-server.ts` is the one ISR fetch for both.
+`builtForPage` in `look-server.ts` is the one server read for both (from the database since issue #5).
 
 ## POST /market/ad
 
