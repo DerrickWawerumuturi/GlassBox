@@ -115,7 +115,7 @@ export const COPY = {
         jobs: "Jobs from this week's count that ask for what the example CV has.",
         jobHave: (have: number, n: number) => `${have} of the ${n} required skills are on the CV.`,
         applications: "Every job applied to, in one list, with its stage.",
-        lead: "Free. One PDF. No account needed.",
+        lead: "",
         cta: "Add your CV",
         signUp: "Sign up",
     },
