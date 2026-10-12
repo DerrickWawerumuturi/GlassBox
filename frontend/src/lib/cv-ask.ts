@@ -1,15 +1,15 @@
-import {TRUST} from "@/components/landing/copy";
+import type {FailReason, REFUSALS} from "@/lib/analytics";
 import {ApiError} from "@/lib/api";
 import {type LookFamily, normSkill} from "@/lib/landing/look";
 import type {MarketBody} from "@/lib/market-pages";
 
 /*
- * The CV ask as a question (docs/decisions/cv-ask.md; the founder's pick,
- * docs/local/cv-ask-prototype.html, 7 Oct 2026): "How many of these are on
- * your CV?" over the skills a page just showed, then a sheet that reads the
- * CV and answers "9 of 15". Everything here is pure, so it is tested
- * (cv-ask.test.ts): the words, which skills are asked about, the count, the
- * one ask on screen rule, and the scan's states and steps.
+ * The CV ask (docs/decisions/cv-ask.md): one "Compare your CV" button per
+ * page (founder, 12 Oct 2026; the question with a blank count is gone),
+ * a sheet that reads the CV and answers "9 of 15" about the skills the page
+ * showed, and the page lit up with the answer. Everything here is pure, so it
+ * is tested (cv-ask.test.ts): the words, which skills are compared, the count,
+ * and the scan's states and steps.
  */
 
 export interface AskSkill {key: string; name: string}
@@ -18,7 +18,7 @@ export interface AskSkill {key: string; name: string}
 export interface Ask {
     skills: AskSkill[];
     what: string;
-    /** The jobs the skills were counted from, for "compare them with 135 entry level software jobs". */
+    /** The jobs the skills were counted from: those whose ads we could read, not every job counted. */
     jobs: number;
     subject: string;
 }
@@ -26,38 +26,46 @@ export interface Ask {
 export const MAX_BYTES = 10 * 1024 * 1024;
 const fmt = (n: number) => n.toLocaleString("en");
 
+const EXAMPLE_CHIPS = [["Python", true], ["React", true], ["Go", false], ["SQL", true], ["Kubernetes", false]] as const;
+const EXAMPLE = {have: EXAMPLE_CHIPS.filter(([, have]) => have).length, of: EXAMPLE_CHIPS.length, line: "skills on your CV", chips: EXAMPLE_CHIPS};
+
 export const ASK = {
-    question: "How many of these are on your CV?",
+    compare: "Compare your CV",
+    /** Under the button. True signed in or not: the PDF is never kept. */
+    compareSmall: "Free. No account needed. Your PDF is deleted after reading.",
     sub: (ask: Ask) => `The ${ask.skills.length} ${ask.what}.`,
     count: "on your CV",
-    cta: "Find out",
-    small: "About a minute. No account.",
     reading: "Reading your CV. About a minute.",
     done: (k: number) => `${k} of these ${k === 1 ? "is" : "are"} on your CV`,
     doneLink: "See the jobs that ask for them",
     doneNote: "The charts above now mark yours in green.",
-    /** The landing page's count card: one line, following the job type picked. */
-    line: (ask: Ask) => `of the ${ask.skills.length} ${ask.what} are on your CV.`,
     sheet: {
         title: (ask: Ask | null) => (ask ? "How many are on your CV?" : "See where you stand"),
         line: (ask: Ask | null) => ask
-            ? `We read your CV for skills and compare them with ${fmt(ask.jobs)} ${ask.subject} jobs.`
+            // The count beside it counts every job; the skills come only from the ads we could read, so this says which.
+            ? `We read your CV for skills and compare them with the ${fmt(ask.jobs)} ${ask.subject} jobs whose ads we could read.`
             : "We read your CV for skills and compare them with today's jobs.",
         exampleKick: "You'll see",
         exampleTag: "example",
-        /**
-         * Made up numbers, always labelled "example": never the visitor's. Out of
-         * the same total as the ask that opened the sheet ("? of 10" shows "6 of 10").
-         */
-        example: (of = 15) => ({have: Math.round(of * 0.6), of, line: "skills on your CV",
-            chips: [["Python", true], ["React", true], ["Go", false], ["SQL", true], ["Kubernetes", false]] as const}),
+        /** A made up result, always labelled "example": never the visitor's. The count is the chips' own, so it adds up. */
+        example: EXAMPLE,
         choosePhone: "Choose your CV",
         drop: "Drop your CV here",
         or: "or",
         chooseDesk: "Choose a file",
         reuse: "Use last CV",
         orNew: "or choose a new one",
-        trust: TRUST,
+        /**
+         * What happens to the CV, true for who is reading it (app/(public)/your-cv):
+         * without an account nothing is kept on our servers; with one, the skills
+         * read from the latest CV are, never the file.
+         */
+        trust: (signedIn: boolean) => [
+            "Your PDF is deleted after reading.",
+            "Its text goes to Groq, a US service, to read the skills.",
+            signedIn ? "We keep the skills read from your latest CV, never the file. Delete them any time."
+                : "Without an account, we keep nothing about you on our servers.",
+        ],
         fine: "PDF, up to 10 MB",
         fineDesk: "PDF, up to 10 MB · about a minute",
         what: {href: "/your-cv", label: "What happens to your CV"},
@@ -68,6 +76,8 @@ export const ASK = {
         now: "now",
         doneStep: "done",
         deleted: "The file is deleted once it's read.",
+        /** Past the promised minute, one plain line. It says what is true, not why: the wait can be the API waking or a slow job board. */
+        waitLong: "Still reading. This one is taking more than a minute.",
         result: (k: number, n: number) => `${k} of ${n}`,
         resultLine: (ask: Ask) => `of the ${ask.what} are on your CV.`,
         seeThem: "See them",
@@ -82,17 +92,13 @@ export const ASK = {
     },
 } as const;
 
-export type StickyContext = {kind: "page"; n: number} | {kind: "count"; ask: Ask} | {kind: "ad"; n: number};
+/** When the reading steps add the line about a long wait: once the promised minute has passed. */
+export const WAIT_LINE_SECONDS = 60;
 
-/**
- * The sticky line, as its bold lead and the rest: a market page's skills
- * ("? of 15 skills here on your CV"), or on the landing page what the visitor
- * last looked at, the count's job type or an ad.
- */
-export function stickyLine(ctx: StickyContext): [string, string] {
-    if (ctx.kind === "page") return [`? of ${ctx.n}`, "skills here on your CV"];
-    if (ctx.kind === "ad") return [`? of the ${ctx.n}`, "asks in this ad are on your CV"];
-    return [`? of the ${ctx.ask.skills.length}`, `${ctx.ask.what} are on your CV`];
+/** Calls `onLong` once the wait passes WAIT_LINE_SECONDS. Returns the cancel, for when the scan ends first. */
+export function waitClock(onLong: () => void, seconds = WAIT_LINE_SECONDS): () => void {
+    const timer = setTimeout(onLong, seconds * 1000);
+    return () => clearTimeout(timer);
 }
 
 // ------------------------------------------------------------ which skills
@@ -118,19 +124,6 @@ export function familyAskSkills(data: LookFamily, names: Record<string, string>,
 export function askCount(skills: AskSkill[], have: Set<string> | null): {k: number | null; n: number; mine: boolean[]} {
     const mine = skills.map((s) => Boolean(have && (have.has(normSkill(s.key)) || have.has(normSkill(s.name)))));
     return {k: have ? mine.filter(Boolean).length : null, n: skills.length, mine};
-}
-
-// ------------------------------------------------------------ one ask at a time
-
-/**
- * The sticky line shows only when nothing else is asking: the page's own ask
- * is out of view, the sheet is closed, no scan is running, and there is no
- * answer yet. After a scan it hides rather than repeating the result: the
- * answer sits where the question was asked and in the figures, and a bar
- * that stays after the question is answered is pressure without a purpose.
- */
-export function stickyShows(s: {past: boolean; askInView: boolean; sheetOpen: boolean; scanning: boolean; answered: boolean}): boolean {
-    return s.past && !s.askInView && !s.sheetOpen && !s.scanning && !s.answered;
 }
 
 // ------------------------------------------------------------ the scan
@@ -175,12 +168,38 @@ export function readingSteps(state: ScanState, ask: Ask | null): Array<{label: s
     ];
 }
 
-/** Why a chosen file can't be read, before anything is sent; null when it can. */
-export function checkFile(file: {name: string; type: string; size: number}): string | null {
+type Refusal = (typeof REFUSALS)[number];
+
+/** Why a chosen file is refused before anything is sent, as a kind; null when it can be read. */
+export function fileProblem(file: {name: string; type: string; size: number}): Refusal | null {
     const pdf = file.type === "application/pdf" || (!file.type && /\.pdf$/i.test(file.name));
-    if (!pdf) return ASK.errors.notPdf;
-    if (file.size > MAX_BYTES) return ASK.errors.tooBig;
+    if (!pdf) return "not_pdf";
+    if (file.size > MAX_BYTES) return "too_big";
     return null;
+}
+
+/** Why a chosen file can't be read, in plain words; null when it can. */
+export function checkFile(file: {name: string; type: string; size: number}): string | null {
+    const problem = fileProblem(file);
+    return problem === "not_pdf" ? ASK.errors.notPdf : problem === "too_big" ? ASK.errors.tooBig : null;
+}
+
+/**
+ * Why a scan failed, as a kind for analytics: never the error's text. The
+ * server answers an unreadable PDF and its own fault with the same 500, so
+ * both are "server".
+ */
+export function failReason(error: unknown): FailReason {
+    if (error instanceof ApiError) {
+        if (error.status === 413) return "too_big";
+        if (error.status === 415) return "not_pdf";
+        if (error.status === 404 || error.status === 409) return "not_kept";
+        return error.status >= 500 ? "server" : "other";
+    }
+    if (error instanceof Error && /timed out/i.test(error.message)) return "timeout";
+    // fetch rejects with a TypeError when the request never reached the API.
+    if (error instanceof TypeError) return "network";
+    return "other";
 }
 
 /** A failed scan in plain words. */
@@ -192,18 +211,19 @@ export function scanError(error: unknown): string {
 }
 
 /**
- * One upload scan: the file checked first (nothing is sent when it fails),
+ * One upload scan: the file checked first (nothing is sent when it fails;
+ * `onRefused` says why, for analytics),
  * then both requests at once. The skills (`parse`) tick the first two steps;
  * the comparison (`analyze`) ends the scan. A failed `parse` only loses its
  * tick: the comparison alone decides whether the scan worked.
  */
 export async function runUpload<A, C>(file: File, d: {
     analyze: (f: File) => Promise<A>; parse: (f: File) => Promise<C>;
-    onStart: () => void; onParsed: (c: C) => void; onResult: (a: A) => void; onFailed: (message: string) => void;
-    dispatch: (e: ScanEvent) => void;
+    onStart: () => void; onParsed: (c: C) => void; onResult: (a: A) => void; onFailed: (message: string, reason: FailReason) => void;
+    onRefused?: (reason: Refusal) => void; dispatch: (e: ScanEvent) => void;
 }): Promise<void> {
-    const invalid = checkFile(file);
-    if (invalid) { d.dispatch({type: "failed", error: invalid}); return; }
+    const problem = fileProblem(file);
+    if (problem) { d.onRefused?.(problem); d.dispatch({type: "failed", error: checkFile(file)!}); return; }
     d.dispatch({type: "start", kind: "upload", file: file.name});
     d.onStart();
     try {
@@ -215,7 +235,7 @@ export async function runUpload<A, C>(file: File, d: {
         d.dispatch({type: "done"});
     } catch (e) {
         const message = scanError(e);
-        d.onFailed(message);
+        d.onFailed(message, failReason(e));
         d.dispatch({type: "failed", error: message});
     }
 }

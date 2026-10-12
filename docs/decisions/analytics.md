@@ -30,10 +30,11 @@ changed with `NEXT_PUBLIC_POSTHOG_HOST`.
 | `scan_started` | `from`: the market page the scan started on (`entry-level-software`), else nothing |
 | `cv_uploaded`, `cv_reused` | none |
 | `scan_finished` | `duration_s`, `jobs` (jobs found), `from` as on `scan_started` |
-| `scan_failed` | `stage`: `upload` or `reuse` |
+| `scan_failed` | `stage`: `upload` or `reuse`; `reason` (since 2026-10-12): `timeout`, `too_big`, `not_pdf`, `server` (a 500: the server's fault or a PDF it couldn't read, which it answers the same way), `network` (the request never reached the API), `not_kept` (a rescan with nothing kept) or `other`. A kind from `failReason` in `lib/cv-ask.ts`, never the error's text |
+| `file_refused` | `reason`: `not_pdf` or `too_big`. A chosen file the sheet refuses before anything is sent (since 2026-10-12; before, these visitors looked like they closed the sheet). Never the file's name, type or size |
 | `view_opened` | `page` (overview, market, skills, opportunities, applications), `view` (a Market view) |
 | `ad_pasted` | `kind`: `text` or `url` (never the ad itself) |
-| `cta_clicked` | `where`: `count`, `inside`, `closing` or `sticky` (the landing page's CV asks; the hero has none since 5 Oct), or `product` (/product), or a market page's name (`entry-level-software`); `ask`: `card` or `sticky`, which of a market page's two asks (since 2026-10-07, `decisions/cv-ask.md`) |
+| `cta_clicked` | `where`: `hero`, `inside` or `closing` (the landing page's CV asks; `hero` since 2026-10-12), `header` (Try it out in the desktop Product menu) or `menu` (the same in the phone menu; both since 2026-10-12), `product` (/product), a market page's name (`entry-level-software`), or `years` (the years of experience page, since 2026-10-12). Retired 12 Oct with the question ask: `count`, `sticky`, and the `ask` property (`card` or `sticky`) |
 | `fact_copied` | `page`: the market page whose fact was copied (`entry-level-software`); never the sentence |
 | `signed_up` | none; sent once, on the response that created the account (see below) |
 

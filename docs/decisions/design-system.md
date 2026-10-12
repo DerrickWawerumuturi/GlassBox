@@ -194,3 +194,12 @@ Outstanding visual checks: the hero image against the near-black card (a
 light-toned illustration may fight it), the donut's centred label, legend
 placement on the landscape chart, and the 375px breakpoint where the compact
 axis engages.
+
+## The CV button (2026-10-12)
+
+"Compare your CV" (`components/cv-ask/CompareCv.tsx`), the one CV action on
+the landing hero, a market page and the years page, is the shadcn button at
+its own radius, `rounded-lg` (`--radius-lg`, 8px), 44px tall, 16px text,
+orange (it acts). Not the pill (`rounded-full`) the older CV buttons use:
+founder, 12 Oct 2026. Not a new token. Under it, one line of 12px mono in the
+muted colour. The older pill buttons stay as they are.

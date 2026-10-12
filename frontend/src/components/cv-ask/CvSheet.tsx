@@ -1,6 +1,6 @@
 'use client'
 
-import React from "react";
+import React, {useEffect, useState} from "react";
 import Link from "next/link";
 import {XIcon} from "lucide-react";
 import {Dialog as D} from "@base-ui/react/dialog";
@@ -9,7 +9,7 @@ import {Button} from "@/components/ui/button";
 import Chip from "@/components/cv-ask/Chip";
 import CvPicker from "@/components/cv-ask/CvPicker";
 import {useHave} from "@/components/landing/useHave";
-import {Ask, ASK, askCount, readingSteps, ScanState, StepMark} from "@/lib/cv-ask";
+import {Ask, ASK, askCount, readingSteps, ScanState, StepMark, waitClock} from "@/lib/cv-ask";
 import {LatestCV} from "@/lib/api";
 import {readOnLabel, skillsLabel} from "@/lib/latest-cv";
 import {cn} from "@/lib/utils";
@@ -18,9 +18,9 @@ const S = ASK.sheet;
 const TITLE = "m-0 pr-10 font-heading text-[20px] leading-[1.2] font-bold sm:text-[28px]";
 const LINE = "mt-1 mb-4 text-[16px] leading-[1.5] text-foreground/85";
 
-/** A made up result, labelled as one, out of the same total as the ask. */
-function Example({ask}: {ask: Ask | null}) {
-    const e = S.example(ask?.skills.length || undefined);
+/** A made up result, labelled as one. Its count is its own chips'. */
+function Example() {
+    const e = S.example;
     return (
         <div className={"mb-4 rounded-xl border border-border bg-background p-3"}>
             <div className={"mb-2 flex justify-between font-mono text-[12px] font-medium tracking-[0.08em] text-muted-foreground uppercase"}>
@@ -32,11 +32,11 @@ function Example({ask}: {ask: Ask | null}) {
     );
 }
 
-function Trust() {
+function Trust({signedIn}: {signedIn: boolean}) {
     return (
         <>
             <ul className={"m-0 mt-3.5 grid list-none gap-1.5 p-0 font-mono text-[12px] text-muted-foreground"}>
-                {S.trust.map((t) => <li key={t} className={"flex items-center gap-2 before:size-1.5 before:shrink-0 before:rounded-full before:bg-chart-have before:content-['']"}>{t}</li>)}
+                {S.trust(signedIn).map((t) => <li key={t} className={"flex items-center gap-2 before:size-1.5 before:shrink-0 before:rounded-full before:bg-chart-have before:content-['']"}>{t}</li>)}
             </ul>
             <div className={"mt-3 flex flex-wrap justify-between gap-x-4 gap-y-1 font-mono text-[12px] text-muted-foreground"}>
                 <span><span className={"sm:hidden"}>{S.fine}</span><span className={"hidden sm:inline"}>{S.fineDesk}</span></span>
@@ -53,6 +53,9 @@ const DOT: Record<StepMark, string> = {
 };
 
 function Reading({state, ask}: {state: ScanState; ask: Ask | null}) {
+    // Mounted for one scan: the line shows once the promised minute has passed.
+    const [long, setLong] = useState(false);
+    useEffect(() => waitClock(() => setLong(true)), []);
     return (
         <>
             <D.Title className={TITLE}>{state.kind === "reuse" ? S.comparing : S.reading}</D.Title>
@@ -69,6 +72,7 @@ function Reading({state, ask}: {state: ScanState; ask: Ask | null}) {
                     </li>
                 ))}
             </ol>
+            {long && <p role={"status"} className={"m-0 mb-1.5 text-[14px]"}>{S.waitLong}</p>}
             {state.kind === "upload" && <p className={"m-0 text-[14px] text-muted-foreground"}>{S.deleted}</p>}
         </>
     );
@@ -120,7 +124,7 @@ export default function CvSheet({open, onOpenChange, ask, state, latest, signedI
                                 <>
                                     <D.Title className={TITLE}>{S.title(ask)}</D.Title>
                                     <D.Description className={LINE}>{S.line(ask)}</D.Description>
-                                    <Example ask={ask} />
+                                    <Example />
                                     {state.phase === "error" && state.error && (
                                         <p role={"alert"} className={"mt-0 mb-3 rounded-lg border border-border bg-foreground/[0.04] px-3 py-2.5 text-[14px]"}>{state.error}</p>
                                     )}
@@ -134,7 +138,7 @@ export default function CvSheet({open, onOpenChange, ask, state, latest, signedI
                                         </div>
                                     )}
                                     <CvPicker onFile={onFile} secondary={Boolean(reuse)} />
-                                    <Trust />
+                                    <Trust signedIn={signedIn} />
                                 </>
                             )}
                 </D.Popup>

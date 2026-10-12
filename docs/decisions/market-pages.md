@@ -150,13 +150,13 @@ revalidation keeps the last good page, `builtForPage`). In reading order:
    - *Levels* (role pages): junior, mid, senior, not stated.
    - *Who is hiring, and where*: employers, the largest one, US / elsewhere /
      no country (hatched), internships, remote.
-7. **The CV ask**, as a question (`MarketCvAsk` on `AskCard`, since
-   2026-10-07; `decisions/cv-ask.md`): "How many of these are on your CV?",
-   "? of 15" over the 15 broad skills the page's jobs name most, "Find out".
-   One sheet per page (`MarketAskProvider`) also serves the sticky line in the
-   title bar ("? of 15 skills here on your CV"; at the foot on a phone),
-   which hides while the card is in view and after a scan. After a scan the
-   card answers ("9 of these are on your CV"), every skill in the figures
+7. **The CV ask** (`MarketCvAsk`, `decisions/cv-ask.md`): since 2026-10-12 one
+   "Compare your CV" button (`CompareCv`, the hero's) with "Free. No account
+   needed. Your PDF is deleted after reading." under it; the question with a
+   blank count and its sticky line in the title bar are gone (founder). One
+   sheet per page (`MarketAskProvider`) compares with the 15 broad skills the
+   page's jobs name most. After a scan the answer takes the button's place
+   ("9 of these are on your CV", `AskCard`), every skill in the figures
    carries the visitor's mark, green on the CV or grey dashed not yet, and a
    line counts them (`SkillName`, `ScanStatus`).
 8. **How we counted**, the jobs in a `<details>` fold, a cite line.
@@ -370,7 +370,7 @@ sitemap entry has no lastmod.
 
 ### Analytics
 
-`cta_clicked {where, ask}` (`ask`: `card` or `sticky`), `fact_copied {page}` and `scan_started` /
+`cta_clicked {where}` (the page's name; `years` for the years page; `ask` retired 12 Oct 2026), `fact_copied {page}` and `scan_started` /
 `scan_finished {from}` carry the page's name; a name that is not one of the
 five (`lib/market-names.ts`) is dropped before sending, so no free text rides
 in on it.

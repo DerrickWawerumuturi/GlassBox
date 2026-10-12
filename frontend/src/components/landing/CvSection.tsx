@@ -26,7 +26,7 @@ export default function CvSection({asks, data, have, scanning, onCv}: {
     const list = [...asks.slice(0, 8)].sort((a, b) => Number(mine(b)) - Number(mine(a)));
     const haveN = list.filter(mine).length;
     return (
-        <section className={"cvhero"} id={"cv"} data-cv-ask aria-labelledby={"cv-h"}>
+        <section className={"cvhero"} id={"cv"} aria-labelledby={"cv-h"}>
             <div className={"cv-copy"}>
                 <h2 id={"cv-h"}>{V.title}</h2>
                 <p className={"line"}>{scanning ? V.reading : have ? V.done : V.line}</p>

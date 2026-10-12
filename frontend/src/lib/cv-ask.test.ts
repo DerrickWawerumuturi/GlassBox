@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 
 import {ApiError} from "@/lib/api";
-import {Ask, ASK, askCount, checkFile, familyAskSkills, IDLE, MAX_BYTES, marketAskSkills, readingSteps, runUpload, scanError, ScanEvent, scanStep, ScanState, stickyShows} from "@/lib/cv-ask";
+import {Ask, ASK, askCount, checkFile, failReason, familyAskSkills, fileProblem, IDLE, MAX_BYTES, marketAskSkills, readingSteps, runUpload, scanError, ScanEvent, scanStep, ScanState, waitClock, WAIT_LINE_SECONDS} from "@/lib/cv-ask";
 import {haveSet, Look} from "@/lib/landing/look";
 import fixture from "@/lib/landing/look.fixture.json";
 import {MarketBody} from "@/lib/market-pages";
@@ -55,25 +55,6 @@ describe("the count: k of N", () => {
 
     it("is zero of N, not a question mark, for a scan with none of them", () => {
         expect(askCount(ask().skills, haveSet(["Cobol"])).k).toBe(0);
-    });
-});
-
-describe("one ask on screen at a time", () => {
-    const base = {past: true, askInView: false, sheetOpen: false, scanning: false, answered: false};
-
-    it("shows the sticky line once past the top, while nothing else asks", () => {
-        expect(stickyShows(base)).toBe(true);
-        expect(stickyShows({...base, past: false})).toBe(false);
-    });
-
-    it("steps aside for the page's own ask, the sheet and a running scan", () => {
-        expect(stickyShows({...base, askInView: true})).toBe(false);
-        expect(stickyShows({...base, sheetOpen: true})).toBe(false);
-        expect(stickyShows({...base, scanning: true})).toBe(false);
-    });
-
-    it("hides once the question is answered", () => {
-        expect(stickyShows({...base, answered: true})).toBe(false);
     });
 });
 
@@ -144,7 +125,7 @@ describe("one upload scan, with a mocked API", () => {
     const deps = (analyze: () => Promise<unknown>, parse: () => Promise<unknown>) => {
         const events: ScanEvent[] = [];
         const d = {analyze, parse, dispatch: (e: ScanEvent) => events.push(e),
-            onStart: vi.fn(), onParsed: vi.fn(), onResult: vi.fn(), onFailed: vi.fn()};
+            onStart: vi.fn(), onParsed: vi.fn(), onResult: vi.fn(), onFailed: vi.fn(), onRefused: vi.fn()};
         return {d, events};
     };
 
@@ -162,7 +143,7 @@ describe("one upload scan, with a mocked API", () => {
         const {d, events} = deps(() => Promise.reject(new ApiError("boom", 500)), () => new Promise(() => {}));
         await runUpload(pdf, d);
         expect(events.reduce(scanStep, IDLE)).toMatchObject({phase: "error", error: "We couldn't read this PDF. Try exporting it again."});
-        expect(d.onFailed).toHaveBeenCalledOnce();
+        expect(d.onFailed).toHaveBeenCalledWith("We couldn't read this PDF. Try exporting it again.", "server");
         expect(d.onResult).not.toHaveBeenCalled();
     });
 
@@ -173,14 +154,84 @@ describe("one upload scan, with a mocked API", () => {
         expect(analyze).not.toHaveBeenCalled();
         expect(parse).not.toHaveBeenCalled();
         expect(d.onStart).not.toHaveBeenCalled();
+        expect(d.onRefused).toHaveBeenCalledWith("not_pdf");
         expect(events).toEqual([{type: "failed", error: "That file isn't a PDF. Choose the PDF of your CV."}]);
     });
 });
 
 describe("the sheet's example", () => {
-    it("counts out of the same total as the ask that opened it", () => {
-        expect(ASK.sheet.example(10)).toMatchObject({have: 6, of: 10});
-        expect(ASK.sheet.example(15)).toMatchObject({have: 9, of: 15});
-        expect(ASK.sheet.example()).toMatchObject({have: 9, of: 15});     // no ask: the sheet opened from the header
+    it("adds up: its count is the chips it shows", () => {
+        const e = ASK.sheet.example;
+        expect(e.of).toBe(e.chips.length);
+        expect(e.have).toBe(e.chips.filter(([, have]) => have).length);
+        expect(`${e.have} of ${e.of}`).toBe("3 of 5");
+    });
+});
+
+describe("the sheet's words", () => {
+    it("names which jobs the skills were counted from", () => {
+        expect(ASK.sheet.line(ask())).toBe(`We read your CV for skills and compare them with the ${entry.readable} entry level software jobs whose ads we could read.`);
+    });
+
+    it("says nothing is kept to someone without an account", () => {
+        const lines = ASK.sheet.trust(false).join(" ");
+        expect(lines).toContain("Your PDF is deleted after reading.");
+        expect(lines).toContain("Groq, a US service");
+        expect(lines).toContain("Without an account, we keep nothing about you on our servers.");
+        expect(lines).not.toMatch(/we keep the skills/i);
+    });
+
+    it("says what is kept to someone signed in: the skills, never the file", () => {
+        const lines = ASK.sheet.trust(true).join(" ");
+        expect(lines).toContain("Your PDF is deleted after reading.");
+        expect(lines).toContain("We keep the skills read from your latest CV, never the file. Delete them any time.");
+        expect(lines).not.toMatch(/keep nothing/i);
+    });
+});
+
+describe("the long wait line", () => {
+    it("shows once the promised minute has passed, and never after the scan ended", () => {
+        vi.useFakeTimers();
+        try {
+            const onLong = vi.fn();
+            waitClock(onLong);
+            vi.advanceTimersByTime(WAIT_LINE_SECONDS * 1000 - 1);
+            expect(onLong).not.toHaveBeenCalled();
+            vi.advanceTimersByTime(1);
+            expect(onLong).toHaveBeenCalledOnce();
+
+            const ended = vi.fn();
+            const cancel = waitClock(ended);
+            vi.advanceTimersByTime(30_000);
+            cancel();
+            vi.advanceTimersByTime(60_000);
+            expect(ended).not.toHaveBeenCalled();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("waits for the minute the sheet promises", () => {
+        expect(WAIT_LINE_SECONDS).toBe(60);
+        expect(ASK.sheet.fineDesk).toMatch(/about a minute/);
+        expect(ASK.sheet.waitLong).toBe("Still reading. This one is taking more than a minute.");
+    });
+});
+
+describe("why a file or a scan failed, as a kind", () => {
+    it("a refused file says which rule it broke", () => {
+        expect(fileProblem({name: "cv.docx", type: "application/msword", size: 9})).toBe("not_pdf");
+        expect(fileProblem({name: "cv.pdf", type: "application/pdf", size: MAX_BYTES + 1})).toBe("too_big");
+        expect(fileProblem({name: "cv.pdf", type: "application/pdf", size: 9})).toBeNull();
+    });
+
+    it("a failed scan is a timeout, the server, the network or the file", () => {
+        expect(failReason(new Error("Analysis timed out. The API may be starting up, try again."))).toBe("timeout");
+        expect(failReason(new ApiError("Something went wrong", 500))).toBe("server");
+        expect(failReason(new ApiError("too big", 413))).toBe("too_big");
+        expect(failReason(new ApiError("not a PDF", 415))).toBe("not_pdf");
+        expect(failReason(new ApiError("No CV kept yet", 404))).toBe("not_kept");
+        expect(failReason(new TypeError("Failed to fetch"))).toBe("network");
+        expect(failReason("??")).toBe("other");
     });
 });

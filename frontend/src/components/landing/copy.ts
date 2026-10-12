@@ -12,8 +12,12 @@
 
 import type {Level} from "@/lib/landing/look";
 
-/** The three trust lines: fixed text, used everywhere a CV is asked for. */
-export const TRUST = ["We read your CV for the skills.", "We keep the skills, not the file.", "Delete them any time."] as const;
+/**
+ * The three trust lines where a CV is asked for without knowing who is
+ * reading: true with or without an account (app/(public)/your-cv). The sheet
+ * says it for the reader's own case (lib/cv-ask.ts ASK.sheet.trust).
+ */
+export const TRUST = ["We read your CV for the skills.", "With an account, we keep the skills, never the file.", "Delete them any time."] as const;
 
 const LEVEL_PLURAL: Record<Level, string> = {junior: "are junior roles", mid: "are mid level", senior: "are senior or above"};
 const LEVEL_ONE: Record<Level, string> = {junior: "is a junior role", mid: "is mid level", senior: "is senior or above"};
@@ -28,7 +32,8 @@ export const COPY = {
     hero: {
         eyebrow: (total: string | null) => (total ? `${total} tech jobs counted this week` : "Tech jobs counted this week"),
         title: "The list is shorter than it looks.",
-        lede: "Job ads list everything. We count what this week's jobs really ask for, and show you where you stand.",
+        /** One subtitle (founder, 12 Oct 2026). The button and its small line are the CV ask's: lib/cv-ask.ts ASK.compare. */
+        lede: "We count the skills tech jobs ask for each week and mark the ones on your CV.",
     },
     hiring: {
         title: "Who they're hiring.",
@@ -112,12 +117,6 @@ export const COPY = {
         applications: "Every job applied to, in one list, with its stage.",
         lead: "Free. One PDF. No account needed.",
         cta: "Add your CV",
-        signUp: "Sign up",
-    },
-    sticky: {
-        /** The line itself follows what the visitor last looked at: lib/cv-ask.ts stickyLine. */
-        small: "About a minute. No account.",
-        cta: "Find out",
         signUp: "Sign up",
     },
     cv: {

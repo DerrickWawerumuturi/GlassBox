@@ -3,10 +3,10 @@
 import React, {useCallback, useReducer, useState} from "react";
 
 import CvSheet from "@/components/cv-ask/CvSheet";
-import Analyze, {AnalyzeReuse, ProcessCv} from "@/lib/api";
-import {MarketPage, scanEvents} from "@/lib/analytics";
+import Analyze, {AnalyzeReuse, ProcessCv, wakeApi} from "@/lib/api";
+import {MarketPage, scanEvents, track} from "@/lib/analytics";
 import {useAnalysis} from "@/lib/analysis-store";
-import {Ask, IDLE, runUpload, scanStep} from "@/lib/cv-ask";
+import {Ask, failReason, IDLE, runUpload, scanStep} from "@/lib/cv-ask";
 import {useCv} from "@/lib/cv-store";
 import {reuseError, useLatestCV} from "@/lib/latest-cv";
 
@@ -37,7 +37,8 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPag
             onStart: () => { setStatus("analyzing"); events = scanEvents("upload", from); },
             onParsed: saveCv,
             onResult: (result) => { save(result, file.name); events?.finished(result.market?.jobs_analyzed ?? 0); finish(Boolean(ask)); },
-            onFailed: () => { events?.failed(); setStatus("error"); },
+            onFailed: (_message, reason) => { events?.failed(reason); setStatus("error"); },
+            onRefused: (reason) => track("file_refused", {reason}),
         });
     };
 
@@ -54,7 +55,7 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPag
             finish(Boolean(ask));
         } catch (e) {
             console.error("Rescan error:", e);
-            events.failed();
+            events.failed(failReason(e));
             setStatus("error");
             forget();
             dispatch({type: "failed", error: reuseError(e)});
@@ -62,6 +63,8 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPag
     };
 
     const show = (next: Ask | null = null) => {
+        // Choosing a file takes a few seconds: time a sleeping API can use to wake.
+        wakeApi();
         // A finished or failed scan starts over; one still reading stays on its steps.
         if (state.phase !== "reading") { dispatch({type: "reset"}); setAsk(next && next.skills.length ? next : null); }
         setOpen(true);

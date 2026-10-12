@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 
-import {Ask, ASK, stickyLine} from "@/lib/cv-ask";
+import {Ask, ASK} from "@/lib/cv-ask";
 import {pasteBody} from "@/lib/landing/ad";
 import {ABOUT_PAGE, FEATURES, NAV, PRODUCT_PAGE} from "@/lib/site-copy";
 import {COPY, TRUST} from "./copy";
@@ -16,19 +16,29 @@ const strings = (v: unknown): string[] => typeof v === "string" ? [v]
 const ask: Ask = {skills: [{key: "python", name: "Python"}, {key: "go", name: "Go"}], what: "skills entry level software jobs name most", jobs: 135, subject: "entry level software"};
 const S = ASK.sheet;
 const askCopy = [
-    ...strings({...ASK, sub: ASK.sub(ask), line: ASK.line(ask), done: [ASK.done(1), ASK.done(9)], sheet: null, errors: ASK.errors}),
+    ...strings({...ASK, sub: ASK.sub(ask), done: [ASK.done(1), ASK.done(9)], sheet: null, errors: ASK.errors}),
     ...strings({...S, title: [S.title(ask), S.title(null)], line: [S.line(ask), S.line(null)], steps: [S.steps(ask), S.steps(null)],
-        reuseStep: [S.reuseStep(ask), S.reuseStep(null)], result: S.result(9, 15), resultLine: S.resultLine(ask), example: S.example(10).line}),
-    ...[stickyLine({kind: "page", n: 15}), stickyLine({kind: "count", ask}), stickyLine({kind: "ad", n: 5})].map((l) => l.join(" ")),
+        reuseStep: [S.reuseStep(ask), S.reuseStep(null)], result: S.result(9, 15), resultLine: S.resultLine(ask), example: S.example.line, trust: [S.trust(false), S.trust(true)]}),
 ];
 const all = [...strings(COPY), ...strings(FEATURES.map(({title, nav, body}) => ({title, nav, body}))), ...strings(NAV), ...strings(PRODUCT_PAGE), ...strings(ABOUT_PAGE), ...askCopy];
 
 describe("landing copy", () => {
-    it("keeps the trust line word for word where the CV is asked for", () => {
-        const line = "We read your CV for the skills. We keep the skills, not the file. Delete them any time.";
+    it("keeps the trust line word for word where the CV is asked for, true with or without an account", () => {
+        const line = "We read your CV for the skills. With an account, we keep the skills, never the file. Delete them any time.";
         expect(TRUST.join(" ")).toBe(line);
         expect(COPY.cv.trust.map((t) => t.body).join(" ")).toBe(line);
-        expect(ASK.sheet.trust.join(" ")).toBe(line);
+        // "We keep the skills" said to everyone was untrue without an account (docs/local/home-audit.html, E4).
+        expect(TRUST.join(" ")).not.toMatch(/^We keep|\. We keep/);
+    });
+
+    it("puts the founder's words on the first screen: one subtitle, one button, the three facts", () => {
+        expect(COPY.hero.lede).toBe("We count the skills tech jobs ask for each week and mark the ones on your CV.");
+        expect(ASK.compare).toBe("Compare your CV");
+        expect(ASK.compareSmall).toBe("Free. No account needed. Your PDF is deleted after reading.");
+    });
+
+    it("never asks \"? of N\" before a scan (founder, 12 Oct 2026: it means nothing to someone new)", () => {
+        for (const s of all) expect(s).not.toMatch(/\?\s*of\b/);
     });
 
     it("makes no unmeasured claims", () => {
@@ -53,24 +63,14 @@ describe("landing copy", () => {
         for (const p of COPY.lower.get.points) expect(p.body.split(" ").length).toBeLessThanOrEqual(9);
     });
 
-    it("keeps button labels short and the sticky button fixed", () => {
-        for (const label of [COPY.sticky.cta, COPY.sticky.signUp, COPY.cv.cta, COPY.cv.signUp, ASK.cta, S.choosePhone, S.chooseDesk, S.reuse, S.seeThem, S.keep]) {
+    it("keeps button labels short", () => {
+        for (const label of [COPY.cv.cta, COPY.cv.signUp, ASK.compare, S.choosePhone, S.chooseDesk, S.reuse, S.seeThem, S.keep]) {
             expect(label.split(" ").length).toBeLessThanOrEqual(3);
         }
-        expect(COPY.sticky.cta).toBe(COPY.cv.cta);
-        expect(COPY.cv.cta).toBe(ASK.cta);
-    });
-
-    it("asks about what the visitor just looked at, as a question mark over a count", () => {
-        expect(stickyLine({kind: "page", n: 15}).join(" ")).toBe("? of 15 skills here on your CV");
-        expect(stickyLine({kind: "count", ask: {...ask, what: "skills backend jobs ask for most"}}).join(" "))
-            .toBe("? of the 2 skills backend jobs ask for most are on your CV");
-        expect(stickyLine({kind: "ad", n: 5}).join(" ")).toBe("? of the 5 asks in this ad are on your CV");
     });
 
     it("asks for a CV by what the visitor gains, never as data collection", () => {
         for (const s of askCopy) expect(s).not.toMatch(/\b(upload|submit|data|join|sign up now)\b/i);
-        expect(ASK.question).toBe("How many of these are on your CV?");
         expect(S.result(9, 15)).toBe("9 of 15");
         expect(S.resultLine(ask)).toBe("of the skills entry level software jobs name most are on your CV.");
     });

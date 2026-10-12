@@ -93,6 +93,20 @@ async function request<T>(path: string, init: RequestInit, timeoutMs: number, la
     }
 }
 
+let woke = false;
+
+/**
+ * Wakes the API before a scan needs it: one GET /health per page load, fire
+ * and forget, no retry. While the container scales to zero
+ * (decisions/deployment.md) a cold start takes about 43 s; choosing a file
+ * pays for part of that. Against a warm API it is one tiny request.
+ */
+export function wakeApi(): void {
+    if (woke || typeof fetch === "undefined") return;
+    woke = true;
+    fetch(`${API_BASE_URL}/health`, {cache: "no-store"}).catch(() => {});
+}
+
 function postFile<T>(path: string, file: File, timeoutMs: number, label: string, headers?: HeadersInit): Promise<T> {
     const formData = new FormData();
     formData.append("file", file);

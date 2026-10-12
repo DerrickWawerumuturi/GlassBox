@@ -1,0 +1,69 @@
+import {readdirSync, readFileSync, statSync} from "node:fs";
+import {join} from "node:path";
+import {createElement} from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {describe, expect, it, vi} from "vitest";
+
+// Before a scan: the visitor has no skills yet (the real hook reads the app's scan store).
+vi.mock("@/components/landing/useHave", () => ({useHave: () => null}));
+// The market page's sheet and scan need the app's stores; the button is what is tested here.
+vi.mock("@/components/cv-ask/useCvScan", () => ({useCvScan: () => ({open: vi.fn(), isOpen: false, scanning: false, sheet: null})}));
+
+import MarketCvAsk, {MarketAskProvider} from "@/components/market-page/MarketCvAsk";
+import {Ask, ASK} from "@/lib/cv-ask";
+import {COPY} from "./copy";
+import Hero from "./Hero";
+
+const ask: Ask = {skills: Array.from({length: 10}, (_, i) => ({key: `s${i}`, name: `S${i}`})), what: "skills backend jobs ask for most", jobs: 304, subject: "backend"};
+const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el).replace(/<!-- -->/g, "").replace(/&#x27;/g, "'");
+const hero = (a: Ask | null) => html(createElement(Hero, {total: "9,722", ask: a, scanning: false, onFind: () => {}}));
+const buttons = (h: string) => [...h.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]);
+
+describe("the hero", () => {
+    it("is the headline, one subtitle and one button, with the three facts under it", () => {
+        const h = hero(ask);
+        expect(h).toContain(COPY.hero.title);
+        expect(h).toContain("We count the skills tech jobs ask for each week and mark the ones on your CV.");
+        expect(buttons(h)).toEqual(["Compare your CV"]);
+        expect(h).toContain("Free. No account needed. Your PDF is deleted after reading.");
+        // The facts sit under the button, never inside it.
+        expect(h.indexOf("Compare your CV</button>")).toBeLessThan(h.indexOf("Free. No account needed."));
+        expect(h).not.toMatch(/\?\s*of\b/);
+        expect(h).not.toContain("Find out");
+    });
+
+    it("writes the button in white on the orange, past the landing's inherited colour (founder, 12 Oct)", () => {
+        expect(hero(ask)).toMatch(/<button[^>]*class="[^"]*\bcv-compare\b[^"]*\btext-white\b[^"]*"[^>]*>Compare your CV</);
+        const css = readFileSync(join(__dirname, "landing.css"), "utf8");
+        expect(css).toMatch(/\.la button\.cv-compare\s*\{\s*color:\s*#fff;/);
+    });
+
+    it("without this week's count has nothing to compare with, so shows only the words", () => {
+        const h = hero(null);
+        expect(h).toContain(COPY.hero.title);
+        expect(buttons(h)).toEqual([]);
+    });
+});
+
+describe("a market page before a scan", () => {
+    it("shows the same button and line in place of the old question", () => {
+        const h = html(createElement(MarketAskProvider, {ask, page: "entry-level-software", children: createElement(MarketCvAsk)}));
+        expect(buttons(h)).toEqual([ASK.compare]);
+        expect(h).toContain(ASK.compareSmall);
+        expect(h).not.toMatch(/\?\s*of\b/);
+        expect(h).not.toContain("How many of these are on your CV?");
+    });
+});
+
+describe("no page asks \"? of N\" before a scan", () => {
+    // Founder, 12 Oct 2026: the question means nothing to someone who hasn't used the app.
+    const files = (dir: string): string[] => readdirSync(dir).flatMap((f) => {
+        const p = join(dir, f);
+        return statSync(p).isDirectory() ? files(p) : /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f) ? [p] : [];
+    });
+    it("no component or page writes it", () => {
+        const src = join(__dirname, "..", "..");
+        const hits = files(src).filter((f) => /[`"'>]\?\s*of\b|\?\? "\?"/.test(readFileSync(f, "utf8")));
+        expect(hits).toEqual([]);
+    });
+});

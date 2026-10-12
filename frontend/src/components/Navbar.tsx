@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import {FEATURES, NAV} from "@/lib/site-copy";
 import {useCvScan} from "@/components/cv-ask/useCvScan";
+import {track} from "@/lib/analytics";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -86,7 +87,7 @@ const Navbar = () => {
         )} />
     );
     const withCv = (close?: () => void) => (
-        <Button variant={"ghost"} onClick={() => { close?.(); scan.open(); }}
+        <Button variant={"ghost"} onClick={() => { close?.(); track("cta_clicked", {where: "header"}); scan.open(); }}
                 className={"m-1 h-auto w-fit justify-start gap-2 rounded-md border border-primary/45 px-3 py-2 font-mono text-xs font-normal uppercase tracking-[0.12em] text-primary hover:border-primary hover:bg-primary/[0.06] hover:text-primary"}>
             <span>{NAV.withCv}</span><CornerDownLeftIcon className={"size-4"} />
         </Button>
@@ -156,7 +157,7 @@ const Navbar = () => {
                         {/* Dashboard first when signed in, then the one action (founder, 2026-10-08). */}
                         {session?.user && menuLink("/dashboard", <LayoutGridIcon className={"size-4 opacity-70"} />, NAV.dashboard)}
                         {/* Try it out: orange capitals in a thin orange outline, so it reads as a button, with a return key mark. */}
-                        <DropdownMenuItem onClick={() => scan.open()}
+                        <DropdownMenuItem onClick={() => { track("cta_clicked", {where: "menu"}); scan.open(); }}
                                           className={"m-1 w-fit cursor-pointer gap-2 rounded-md border border-primary/45 px-3 py-2 font-mono text-xs uppercase tracking-[0.12em] text-primary focus:border-primary focus:bg-primary/[0.06] focus:text-primary"}>
                             {NAV.withCv}<CornerDownLeftIcon className={"size-4 text-primary"} />
                         </DropdownMenuItem>

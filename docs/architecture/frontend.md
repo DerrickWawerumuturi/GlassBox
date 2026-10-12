@@ -63,14 +63,15 @@ src/
                                  MarketParts.tsx the Market tab's chart chrome (panel, tooltip,
                                  table twin, stat tiles), DemandBars / GapTally its hand-built
                                  SVG charts, Bridges.tsx the skills page's chart
-    landing/                     the landing page: LookAround.tsx runs it; CountCard (job types,
+    landing/                     the landing page: LookAround.tsx runs it; Hero (headline, one subtitle,
+                                 "Compare your CV"); CountCard (job types,
                                  levels, the squares), Wall (titles behind the count), GlassSection
-                                 (an ad on the glass, paste your own), CvSection, LowerSections,
-                                 StickyCta (the sticky line); useStepper.ts the shared 4.6s timer;
+                                 (an ad on the glass, paste your own), CvSection, LowerSections;
+                                 useStepper.ts the shared 4.6s timer;
                                  copy.ts every word on the page; landing.css scoped `.la`
-    cv-ask/                      the CV ask as a question (decisions/cv-ask.md): AskCard ("? of 15",
-                                 the skills as chips; AskInline for the count card), StickyAsk (the
-                                 phone sticky line, AskLine, useAskInView for one ask at a time),
+    cv-ask/                      the CV ask (decisions/cv-ask.md): CompareCv (the one "Compare your CV"
+                                 button and its small line, per page), AskCard (the answer after a
+                                 scan, "9 of 15", the skills as chips),
                                  CvSheet (bottom sheet on a phone, panel from 640px: idle, reading,
                                  result, error), CvPicker (choose or drop a PDF; it starts the scan;
                                  also on /dashboard/scan), useCvScan.tsx (the sheet and the scan, for

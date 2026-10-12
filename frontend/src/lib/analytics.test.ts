@@ -74,21 +74,49 @@ describe("analytics with a key", () => {
         }
         (a.track as (e: string, p: object) => void)("fact_copied", {page: "Python appears in 68 jobs"});
         expect(posthog.capture).toHaveBeenCalledWith("fact_copied", {});
-        a.track("cta_clicked", {where: "sticky"});
-        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "sticky"});
+        a.track("cta_clicked", {where: "years"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "years"});
     });
 
-    it("the CV ask says which ask was used, by a known name only", async () => {
+    it("the CV button says where it was, by a known name only", async () => {
         const a = await load();
         a.initAnalytics("phc_test");
-        a.track("cta_clicked", {where: "entry-level-software", ask: "card"});
-        a.track("cta_clicked", {where: "ai", ask: "sticky"});
-        a.track("cta_clicked", {where: "count"});
-        (a.track as (e: string, p: object) => void)("cta_clicked", {where: "devops", ask: "Python, Go", file_name: "cv.pdf"});
-        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "entry-level-software", ask: "card"});
-        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "ai", ask: "sticky"});
-        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "count"});
+        a.track("cta_clicked", {where: "entry-level-software"});
+        a.track("cta_clicked", {where: "hero"});
+        a.track("cta_clicked", {where: "years"});
+        const loose = a.track as (e: string, p: object) => void;
+        loose("cta_clicked", {where: "devops", ask: "Python, Go", file_name: "cv.pdf"});
+        loose("cta_clicked", {where: "sticky"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "entry-level-software"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "hero"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "years"});
         expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "devops"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {});   // the sticky line is gone, and so is its name
+    });
+
+    it("the header's Try it out says which menu it was in", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.track("cta_clicked", {where: "header"});
+        a.track("cta_clicked", {where: "menu"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "header"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "menu"});
+    });
+
+    it("a refused file and a failed scan say why, as a known kind, never the file or the error", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        const loose = a.track as (e: string, p: object) => void;
+        loose("file_refused", {reason: "not_pdf", file_name: "CV_Amara.docx", size: 9});
+        a.scanEvents("upload").failed("timeout");
+        loose("scan_failed", {stage: "upload", reason: "Groq said: Amara Okafor, Python", error: "x"});
+        loose("file_refused", {reason: "amara@example.com"});
+        expect(posthog.capture).toHaveBeenCalledWith("file_refused", {reason: "not_pdf"});
+        expect(posthog.capture).toHaveBeenCalledWith("scan_failed", {stage: "upload", reason: "timeout"});
+        expect(posthog.capture).toHaveBeenCalledWith("scan_failed", {stage: "upload"});
+        expect(posthog.capture).toHaveBeenCalledWith("file_refused", {});
+        const out = a.scrub({event: "file_refused", properties: {reason: "too_big", name: "cv.pdf", token: "t", distinct_id: "d"}} as never);
+        expect(out?.properties).toEqual({reason: "too_big", token: "t", distinct_id: "d"});
     });
 
     it("a scan from anywhere else says nothing about where it started", async () => {

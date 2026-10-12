@@ -111,5 +111,5 @@ export default function YearsArticle({c}: {c: YearsCounts | null}) {
     );
     if (!c) return body;
     const ask = {skills: marketAskSkills(c.page), what: `skills ${INFO.subject} jobs name most`, jobs: c.page.readable, subject: INFO.subject};
-    return <MarketAskProvider ask={ask} page={INFO.name}>{body}</MarketAskProvider>;
+    return <MarketAskProvider ask={ask} page={INFO.name} where={"years"}>{body}</MarketAskProvider>;
 }

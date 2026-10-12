@@ -16,31 +16,38 @@ import {MARKET_NAMES, MarketName} from "@/lib/market-names";
 export type Page = "overview" | "market" | "skills" | "opportunities" | "applications";
 /** The public market pages, by name (lib/market-pages.ts): where a CTA, a copied fact or a scan came from. */
 export type MarketPage = MarketName;
-const CTA_PLACES = ["sticky", "closing", "inside", "count", "product"] as const;
-/** Which ask on a page was used: the ask card, or the sticky line. */
-const ASKS = ["card", "sticky"] as const;
+// "hero": the landing page's first screen. "header": Try it out in the desktop Product menu; "menu": the same in the
+// phone menu. "years": the years of experience page. A market page's button says the page's name.
+const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years"] as const;
+/** Why a chosen file was refused before anything was sent. */
+export const REFUSALS = ["not_pdf", "too_big"] as const;
+/** Why a scan failed, as a kind, never the error's own text. */
+export const FAIL_REASONS = ["timeout", "too_big", "not_pdf", "server", "network", "not_kept", "other"] as const;
+export type FailReason = (typeof FAIL_REASONS)[number];
 
 type Events = {
     scan_started: {from?: MarketPage};
     cv_uploaded: Record<string, never>;
     cv_reused: Record<string, never>;
     scan_finished: {duration_s: number; jobs: number; from?: MarketPage};
-    scan_failed: {stage: "upload" | "reuse"};
+    scan_failed: {stage: "upload" | "reuse"; reason?: FailReason};
+    file_refused: {reason: (typeof REFUSALS)[number]};
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
     ad_pasted: {kind: "text" | "url"};
-    cta_clicked: {where: (typeof CTA_PLACES)[number] | MarketPage; ask?: (typeof ASKS)[number]};
+    cta_clicked: {where: (typeof CTA_PLACES)[number] | MarketPage};
     fact_copied: {page: MarketPage};
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
     scan_started: ["from"], cv_uploaded: [], cv_reused: [],
     scan_finished: ["duration_s", "jobs", "from"],
-    scan_failed: ["stage"],
+    scan_failed: ["stage", "reason"],
+    file_refused: ["reason"],
     view_opened: ["page", "view"],
     signed_up: [],
     ad_pasted: ["kind"],
-    cta_clicked: ["where", "ask"],
+    cta_clicked: ["where"],
     fact_copied: ["page"],
 };
 
@@ -48,10 +55,11 @@ export const DEFAULT_HOST = "https://us.i.posthog.com";
 /** Same-origin path that next.config.ts rewrites to the PostHog host, so blockers of *.posthog.com don't drop events. */
 export const PROXY_PATH = "/ingest";
 
-// Properties that name a place on the site take only known names, so no free text rides in on them.
+// Properties that name a place or a kind take only known names, so no free text rides in on them.
 const NAMED: Partial<Record<keyof Events, Record<string, readonly string[]>>> = {
     fact_copied: {page: MARKET_NAMES}, scan_started: {from: MARKET_NAMES}, scan_finished: {from: MARKET_NAMES},
-    cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES], ask: ASKS},
+    cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES]},
+    scan_failed: {stage: ["upload", "reuse"], reason: FAIL_REASONS}, file_refused: {reason: REFUSALS},
 };
 
 /** Only an event's allowed properties survive, and a page name only when it is one we know; anything else is dropped. */
@@ -204,7 +212,8 @@ export function forgetUser() {
 
 /**
  * A scan's events in one place: scan_started plus cv_uploaded or cv_reused
- * now, then scan_finished (seconds, jobs found) or scan_failed (which kind).
+ * now, then scan_finished (seconds, jobs found) or scan_failed (which kind,
+ * and why: lib/cv-ask.ts failReason).
  * `from` names the market page a scan started on, so its visits can be
  * counted through to a finished scan.
  */
@@ -214,6 +223,6 @@ export function scanEvents(kind: "upload" | "reuse", from?: MarketPage) {
     if (kind === "upload") track("cv_uploaded"); else track("cv_reused");
     return {
         finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from}),
-        failed: () => track("scan_failed", {stage: kind}),
+        failed: (reason?: FailReason) => track("scan_failed", {stage: kind, reason}),
     };
 }

@@ -27,3 +27,18 @@ describe("signed_up", () => {
         expect(track).not.toHaveBeenCalled();
     });
 });
+
+describe("wakeApi", () => {
+    it("sends one GET /health per page load, however often the sheet opens, and never throws", async () => {
+        vi.resetModules();
+        const fetch = vi.fn(() => Promise.reject(new TypeError("Failed to fetch")));
+        vi.stubGlobal("fetch", fetch);
+        const {wakeApi, API_BASE_URL} = await import("./api");
+        wakeApi();
+        wakeApi();
+        wakeApi();
+        await Promise.resolve();
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(fetch).toHaveBeenCalledWith(`${API_BASE_URL}/health`, {cache: "no-store"});
+    });
+});
