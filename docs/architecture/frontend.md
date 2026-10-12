@@ -15,6 +15,7 @@ src/
     auth.ts, proxy.ts            NextAuth (Google); the token subject is Google's account id
     api/token/route.ts           mints the short-lived JWT the backend verifies
     api/logo/route.ts            same-origin company-logo proxy
+    api/revalidate/route.ts      POST from the publication job: drops the cached market pages (lib/revalidate.ts, Bearer REVALIDATE_SECRET)
     (landing)/page.tsx           landing, static with ISR (5 min), today's count fetched on the server (lib/landing/look-server.ts;
                                  a failed fetch during revalidation keeps the last good page, decisions/market-look.md):
                                  "Look around first" (components/landing), metadata from its copy, WebSite/Organization JSON-LD

@@ -35,6 +35,8 @@ src/jobpool/                         jobs from outside an analysis
   sources.py                         every daily-fetch board adapter, fetch_all, pool windows
   posting.py                         provider fields -> clean values: HTML, dates, display
   daily.py                           the scheduled pool refresh and profiling
+  publish.py                         the weekly market publication and its gates
+  refresh_site.py                    after a publication: wake the API, POST the site's /api/revalidate, open each page
   snapshot.py                        the day's market snapshot: what the live pool asks for, per family
   market_look.py                     the same count live, for the landing page (GET /market/look)
   market_pages.py                    public market pages from the same read (GET /market/page/{entry-level-software, software-engineering, ai, machine-learning, devops})
@@ -221,7 +223,10 @@ stores nothing.
 A source failing costs nothing: its jobs stay as they were. The run fails (red
 in Actions) only when most sources fail or nothing could be saved. After the
 snapshot, `publish.run()` publishes the week's market if it is due and passes
-its gates (`decisions/market-publication.md`).
+its gates (`decisions/market-publication.md`). A publication then refreshes
+the site at once (`refresh_site.refresh()`: wake the API, POST
+`${SITE_URL}/api/revalidate` with `REVALIDATE_SECRET`, open each market page
+and share image); a failure there is a warning and never changes the publication.
 
 Last, `snapshot.take()` counts the profiled live pool into `market_snapshots`:
 one row per role family per day, with postings, readable postings, seniority mix

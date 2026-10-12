@@ -13,14 +13,15 @@ the week builds a candidate from the pool it just refreshed. The candidate is
 checked by GATES; if every one passes it is published, if not the rejection is
 stored with its reasons, last week's market stays up, and the next run tries
 again. A swing past SWING (a batch of new boards, say) waits for the founder:
-`--accept <week>` publishes it with that one check waived and recorded.
+`--accept <week>` publishes it with that one check waived and recorded. Every
+publication then refreshes the site at once (refresh_site.py).
 """
 import sys
 from datetime import date, datetime, timedelta, timezone
 
 from src.database.repositories import profile_repository, publication_repository
 from src.database.session import connection, is_configured
-from src.jobpool import market_look, market_pages, snapshot
+from src.jobpool import market_look, market_pages, refresh_site, snapshot
 from src.jobpool.sources import MIN_HEALTHY_SOURCES
 from src.matching.requirements import PROFILER_VERSION
 
@@ -114,6 +115,8 @@ def run(now: datetime | None = None, force: bool = False, accept: date | None = 
         kept = status == "published"
         row_id = publication_repository.insert(conn, week, cand["as_of"], status, PROFILER_VERSION, cand["jobs"],
                                                checks, cand["look"] if kept else None, cand["pages"] if kept else None)
+    if kept:
+        refresh_site.refresh()      # the site shows it now, not on its next visit (refresh_site.py)
     return {"id": row_id, "status": status, "week": week, "jobs": cand["jobs"], "gates": checks}
 
 

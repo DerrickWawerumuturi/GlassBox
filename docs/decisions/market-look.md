@@ -106,6 +106,11 @@ the API stopped and the fetch cache cleared, `/` kept its count after the
 revalidate window (`x-nextjs-cache: STALE`, then `HIT`, the error in the log;
 after a failure Next retries within 30 s). Tests: `look-server.test.ts`.
 
+Keeping the last page has a cost on a quiet site: a visit's rebuild gets 4 s
+and a sleeping API needs about 43, so the old week stayed for 11 hours on
+12 Oct 2026. Since then the publication job revalidates the pages itself and
+opens each one with the API awake (`market-publication.md`, "The frontend").
+
 ### Market pages from the same build (2026-10-07)
 
 `compute()` now reads the pool once and builds both this count and every

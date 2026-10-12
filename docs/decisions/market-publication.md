@@ -74,6 +74,27 @@ The CV scan and Opportunities still read the live pool and keep "today's jobs".
   waited for.
 - In a running server a failed revalidation still throws, so Next keeps the
   last good page (`market-look.md`).
+- A publication refreshes the site at once (2026-10-12, GitHub issue #1). ISR
+  only rebuilds a page on a visit, and that rebuild gives the API 4 s, while a
+  sleeping API takes about 43 s to wake. On 12 Oct the week was published at
+  06:02 UTC and seeglassbox.com served the 5 October week for 11 more hours
+  (`x-vercel-cache: STALE`, `age: 41580`). Now `publish.run()` calls
+  `refresh_site.refresh()` after every publication (scheduled, `--now`,
+  `--accept`): it wakes the API (`GET /market/look`, retries for up to 90 s),
+  then `POST ${SITE_URL}/api/revalidate` with `Authorization: Bearer
+  REVALIDATE_SECRET`, then opens `/`, `/about`, `/product`, `/market`, each
+  market page and each share image once, so they are rebuilt before the next
+  visitor. If the API never wakes it doesn't revalidate (a rebuild against a
+  sleeping API would only keep the old pages). No secret: one log line, no
+  calls. Any failure: one `::warning` line; the publication stands.
+- `/api/revalidate` (`lib/revalidate.ts`): POST only, no body read, the header
+  capped at 512 characters and compared with the secret in constant time
+  (SHA-256 digests, `timingSafeEqual`); 503 when the secret isn't set, 401
+  otherwise, 10 calls a minute per server instance (429). It calls
+  `revalidatePath` for each of those pages and `revalidatePath("/market",
+  "layout")` for the share images. `revalidatePath` also expires the API
+  fetches those pages made: they carry the page's implicit cache tags (Next 16
+  `revalidatePath` docs, "What can be invalidated"), so no fetch tags were added.
 
 ### Workflows
 
@@ -81,8 +102,9 @@ The CV scan and Opportunities still read the live pool and keep "today's jobs".
 its job shares the concurrency group `pool-and-deploy` with `job-pool.yml`
 (queued, never cancelled), so a collector on the old image can't undo the
 deploy's re-profile. `job-pool.yml` logs in with `AZURE_CREDENTIALS`, pulls
-`:live` and runs `python -m src.jobpool.daily` with only `DATABASE_URL` passed
-(by name; its parts masked as before). No package list to drift.
+`:live` and runs `python -m src.jobpool.daily` with `DATABASE_URL`,
+`REVALIDATE_SECRET` (repository secret) and `SITE_URL` (`https://seeglassbox.com`)
+passed by name (the database URL's parts masked as before). No package list to drift.
 
 ### Daily snapshots
 
@@ -106,12 +128,18 @@ unchanged. Public week on week comparisons should come from publications.
 
 - `python -m src.jobpool.publish --status` lists the row: `published`, week of 2026-10-05, about 17,000 to 20,000 jobs, as of the run's time.
 - `curl -s https://jobradar-backend.agreeabledune-79b95957.southafricanorth.azurecontainerapps.io/market/look | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['week'], d['taken_at'])"` prints `2026-10-05` and the run's time (within 10 minutes of publishing; the API checks every 10).
-- seeglassbox.com/market says "Counted in the week of 5 October 2026 · Updated every Monday" after the next revalidation (5 minutes).
+- seeglassbox.com/market says "Counted in the week of 5 October 2026 · Updated every Monday" right after the run (the run's log says "site refreshed: N pages rebuilt"). Without `REVALIDATE_SECRET` it waits for visits that reach an awake API.
+
+**Site refresh setup (once, 2026-10-12):** generate a secret yourself, for example
+`openssl rand -hex 32`, and set the same value in two places: GitHub, the repository's
+Settings, Secrets and variables, Actions, secret `REVALIDATE_SECRET`; and Vercel, the
+project's Settings, Environment Variables, `REVALIDATE_SECRET` for Production, then
+redeploy so the site reads it. Nothing on Azure: the job runs in GitHub Actions.
 - Collector health: `select source, ok, jobs, whole, closed, retired, error from source_runs where run_at = (select max(run_at) from source_runs) order by ok, jobs desc;`
 
 ## Not done (parked in the design)
 
 ATS webhooks, Google's Indexing API, deleting old jobs, email alerts, keeping the
-API awake, an Azure scheduled job instead of GitHub Actions. A profiler version
+API awake (the site refresh wakes it once instead), an Azure scheduled job instead of GitHub Actions. A profiler version
 change mid week doesn't trigger a new publication: the published skill keys can
 differ from a fresh CV scan's until the next Monday.

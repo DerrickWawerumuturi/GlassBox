@@ -28,9 +28,16 @@ LIVE = "jobradarregistry.azurecr.io/jobradar:live"
 
 def test_the_collector_runs_the_deployed_image_every_six_hours():
     assert f"docker pull {LIVE}" in POOL
-    assert re.search(rf"docker run --rm -e DATABASE_URL {re.escape(LIVE)} python -m src\.jobpool\.daily\n", POOL)
+    assert re.search(rf"docker run --rm -e DATABASE_URL -e REVALIDATE_SECRET -e SITE_URL \\\n\s+{re.escape(LIVE)} "
+                     r"python -m src\.jobpool\.daily\n", POOL)
     assert "pip install" not in POOL                                  # no second dependency list to drift
     assert re.search(r'cron: "\d+ \*/6 \* \* \*"', POOL)
+
+
+def test_a_publication_can_refresh_the_site():
+    # Issue #1: the job passes the site's revalidation secret by name, from a repository secret.
+    assert "REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}" in POOL
+    assert "SITE_URL: https://seeglassbox.com" in POOL
 
 
 def test_deploy_moves_live_only_after_the_container_app_runs_the_new_image():
@@ -45,7 +52,7 @@ def test_a_deploy_and_a_collection_never_run_at_once():
 
 
 def test_the_entry_points_start_with_only_the_database_url():
-    # `docker run -e DATABASE_URL` passes nothing else: no Groq key, no token secret. Set
+    # `docker run` passes the database and the site refresh only: no Groq key, no token secret. Set
     # empty rather than unset, so a local .env can't fill them in (dotenv never overrides).
     env = {**os.environ, "DATABASE_URL": "", "DATABASE_URL_DIRECT": "", "GROQ_API_KEY": "", "API_JWT_SECRET": ""}
     code = "import src.jobpool.daily, src.jobpool.publish\n"

@@ -40,10 +40,14 @@ jobs:
       # The only step that sees the database. GitHub masks the secret as a whole
       # string; its parts are masked too, because a driver error can quote the
       # host or user on their own. `-e DATABASE_URL` passes it by name: its value
-      # is never on a command line.
+      # is never on a command line. After a publication the job refreshes the
+      # site (src/jobpool/refresh_site.py): REVALIDATE_SECRET is the one Vercel
+      # holds for /api/revalidate. Unset, the refresh is skipped with a line in the log.
       - name: Collect, count and publish
         env:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          SITE_URL: https://seeglassbox.com
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "JOBRADAR_DATABASE_URL is not set on this repository"; exit 1
@@ -54,4 +58,5 @@ jobs:
           for part in (p.username, p.password, p.hostname):
               if part: print('::add-mask::' + part)
           "
-          docker run --rm -e DATABASE_URL jobradarregistry.azurecr.io/jobradar:live python -m src.jobpool.daily
+          docker run --rm -e DATABASE_URL -e REVALIDATE_SECRET -e SITE_URL \
+            jobradarregistry.azurecr.io/jobradar:live python -m src.jobpool.daily
