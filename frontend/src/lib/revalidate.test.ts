@@ -37,7 +37,8 @@ describe("POST /api/revalidate", () => {
         vi.unstubAllEnvs();
         expect(response.status).toBe(200);
         const paths = vi.mocked(revalidatePath).mock.calls.map(([path]) => path);
-        expect(paths).toEqual(expect.arrayContaining(["/", "/market", ...MARKET_NAMES.map((name) => `/market/${name}`)]));
+        expect(paths).toEqual(expect.arrayContaining(["/", "/market", ...MARKET_NAMES.map((name) => `/market/${name}`),
+            "/market/entry-level-software/years-of-experience"]));
         expect(revalidatePath).toHaveBeenCalledWith("/market", "layout");    // the share images under /market
         expect((await response.json()).revalidated).toEqual(MARKET_PATHS);
     });

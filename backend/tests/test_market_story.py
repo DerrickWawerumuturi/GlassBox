@@ -179,8 +179,11 @@ def test_two_close_skills_near_half_each_appear_in_nearly_or_about_half():
 
 
 def test_half_from_45_to_55_percent_else_the_lead_with_its_count():
-    assert ms.finding(lead(55, 20), 100, NO_YEARS)["kind"] == "half"
-    assert ms.finding(lead(45, 20), 100, NO_YEARS)["kind"] == "half"
+    assert ms.finding(lead(55, 20), 100, NO_YEARS)["approx"] == "about"
+    assert ms.finding(lead(45, 20), 100, NO_YEARS)["approx"] == "nearly"
+    # 276 of 560 (49.3%) is nearly half, never plain "half": the same words as a pair.
+    assert ms.finding(lead(276, 20), 560, NO_YEARS) == {"kind": "half", "skills": ["s0"], "jobs": [276], "of": 560, "approx": "nearly"}
+    assert ms.finding(lead(280, 20), 560, NO_YEARS)["approx"] == "about"
     assert ms.finding(lead(44, 20), 100, NO_YEARS) == {"kind": "leads", "skills": ["s0"], "jobs": [44], "of": 100}
     assert ms.finding(lead(56), 100, NO_YEARS)["kind"] == "leads"
 

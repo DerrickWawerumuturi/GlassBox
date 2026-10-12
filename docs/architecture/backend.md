@@ -39,7 +39,8 @@ src/jobpool/                         jobs from outside an analysis
   refresh_site.py                    after a publication: wake the API, POST the site's /api/revalidate, open each page
   snapshot.py                        the day's market snapshot: what the live pool asks for, per family
   market_look.py                     the same count live, for the landing page (GET /market/look)
-  market_pages.py                    public market pages from the same read (GET /market/page/{entry-level-software, software-engineering, ai, machine-learning, devops})
+  market_pages.py                    public market pages from the same read (GET /market/page/{entry-level-software, software-engineering, ai, machine-learning, devops});
+                                     the entry level page also carries `experience`, the years software jobs require
   market_story.py                    each page's `story`: what its editorial sections are written from, the breadth rule, the thresholds
   ad_reader.py                       a pasted ad or link -> its asks (POST /market/ad)
   safe_fetch.py                      SSRF-guarded fetch for public routes: pinned IP, 8 s, 2 MB, 3 hops

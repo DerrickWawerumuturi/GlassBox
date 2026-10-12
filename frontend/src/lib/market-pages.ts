@@ -22,28 +22,35 @@ export interface MarketInfo {
     compare: string;
     /** What this page counts, for the framing paragraph and "How we counted". */
     counts: string;
+    /** The question people search, in their words, for the page's title: "AI engineer skills". */
+    search: string;
     kind: "entry" | "role";
 }
 
 export const MARKET_PAGES: Record<MarketName, MarketInfo> = {
     "entry-level-software": {
         name: "entry-level-software", subject: "entry level software", label: "Entry level software", compare: "senior software", kind: "entry",
+        search: "Entry level software engineer skills",
         counts: "This page counts the ones meant for people early in their career: internships, graduate and junior roles, and jobs that require two years or less.",
     },
     "software-engineering": {
         name: "software-engineering", subject: "software engineering", label: "Software engineering", compare: "senior software engineering", kind: "role",
+        search: "Software engineering skills in demand",
         counts: "This page counts the software engineering jobs: titles like software engineer, developer or programmer. Backend, frontend, full stack and mobile jobs are job types of their own.",
     },
     ai: {
         name: "ai", subject: "AI", label: "AI", compare: "senior AI", kind: "role",
+        search: "AI engineer skills",
         counts: "This page counts the AI jobs: titles that name AI, LLMs or generative AI. Titles that name machine learning have their own page.",
     },
     "machine-learning": {
         name: "machine-learning", subject: "machine learning", label: "Machine learning", compare: "senior machine learning", kind: "role",
+        search: "Machine learning engineer skills",
         counts: "This page counts the machine learning jobs: titles that name machine learning, deep learning, computer vision, NLP, or applied or research science.",
     },
     devops: {
         name: "devops", subject: "DevOps", label: "DevOps", compare: "senior DevOps", kind: "role",
+        search: "DevOps engineer skills",
         counts: "This page counts the DevOps jobs: titles that name DevOps, site reliability, platform, infrastructure, cloud or systems engineering.",
     },
 };
@@ -80,7 +87,8 @@ export type LeadFinding =
     | {kind: "share"; skills: [string]; jobs: [number]; of: number; fraction: [number, number] | null}
     | {kind: "tied"; skills: [string, string]; jobs: [number, number]; of: number}
     | {kind: "pair"; skills: [string, string]; jobs: [number, number]; of: number; approx: "nearly" | "about"}
-    | {kind: "half" | "leads"; skills: [string]; jobs: [number]; of: number};
+    | {kind: "half"; skills: [string]; jobs: [number]; of: number; approx: "nearly" | "about"}
+    | {kind: "leads"; skills: [string]; jobs: [number]; of: number};
 
 export interface Story {
     compare: {jobs: number; readable: number};
@@ -101,6 +109,9 @@ export interface Story {
     sections: SectionName[];
 }
 
+/** Jobs by the years they require (market_story.buckets): 0, 1, 2, 3, 4, then 5 or more. */
+export interface YearsCount {buckets: Array<{from: number; to: number | null; jobs: number}>; stated: number; unstated: number}
+
 export interface MarketBody {
     /** When the jobs were collected (the publication's as_of). */
     taken_at: string;
@@ -120,6 +131,11 @@ export interface MarketBody {
     levels?: {junior: number; mid: number; senior: number; unstated: number};
     /** [title, company, level, required years] */
     titles: Array<[string, string, string, number | null]>;
+    /**
+     * The entry level page only, from the 19 Oct 2026 publication: years required by software jobs
+     * with an early career title, and by every software job (market_pages.experience).
+     */
+    experience?: {titled: YearsCount; software: YearsCount};
     names: Record<string, string>;
     /** Names that read differently mid sentence ("distributed systems"); the rest read as `names`. */
     inline_names?: Record<string, string>;

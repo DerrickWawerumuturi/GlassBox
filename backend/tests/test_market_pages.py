@@ -159,10 +159,43 @@ def test_publishable_only_from_100_readable_jobs():
     assert mp.entry_level_software(jobs(100), TAKEN)["publishable"] is True
 
 
+def test_years_of_experience_read_without_the_page_own_rule():
+    # The page's entry level set takes in any job requiring two years or less, so the years
+    # page reads early career titles and every software job instead (12 Oct 2026: 153 of the
+    # 156 entry level jobs asking two years were there only for asking it).
+    rows = [row("A", "Junior Developer", years=1, years_kind="required"),
+            row("B", "Software Engineering Intern"),                                  # states none
+            row("C", "Graduate Engineer", years=2, years_kind="preferred"),           # preferred is not required
+            row("D", "Backend Engineer", seniority="junior", years=2, years_kind="required"),  # entry by years only
+            row("E", "Senior Engineer", seniority="senior", years=7, years_kind="required"),
+            row("F", "Junior Data Analyst", family="data_science", years=0, years_kind="required")]  # not software
+    years = mp.entry_level_software(rows, TAKEN)["experience"]
+    assert years["titled"]["stated"] == 1 and years["titled"]["unstated"] == 2
+    assert [b["jobs"] for b in years["titled"]["buckets"]] == [0, 1, 0, 0, 0, 0]
+    assert [b["jobs"] for b in years["software"]["buckets"]] == [0, 1, 1, 0, 0, 1]   # 7 years in "5 or more"
+    assert years["software"]["buckets"][-1] == {"from": 5, "to": None, "jobs": 1}
+    assert (years["software"]["stated"], years["software"]["unstated"]) == (3, 2)
+
+
+def test_the_entry_level_page_never_leads_with_its_own_years():
+    # Every job here asks for two years, which is what makes most of them entry level: a years
+    # finding would be the definition answering itself ("“Entry level” usually means two years",
+    # 156 of 225 on 12 Oct 2026). The page leads with a skill and shows no years section.
+    rows = [row(f"C{i}", "Backend Engineer", years=2, years_kind="required") for i in range(120)]
+    story = mp.entry_level_software(rows, TAKEN)["story"]
+    assert story["years"]["stated"] == 120                     # the counts are still there
+    assert story["finding"]["kind"] != "years" and story["finding"]["skills"] == ["python"]
+    assert "years" not in story["sections"]
+    # A role page's set is not chosen by its years, so it keeps its years section.
+    assert "years" in mp.role("backend", rows, TAKEN)["story"]["sections"]
+
+
 def test_an_empty_pool():
     out = mp.entry_level_software([], TAKEN)
     assert (out["jobs"], out["publishable"], out["largest_employer"], out["contrast"]) == (0, False, None, [])
     assert out["required_median"] == {"entry": None, "senior": None}
+    assert out["experience"]["titled"] == {"buckets": [{"from": y, "to": None if y == 5 else y, "jobs": 0} for y in range(6)],
+                                           "stated": 0, "unstated": 0}
 
 
 # ------------------------------------------------------------ role pages

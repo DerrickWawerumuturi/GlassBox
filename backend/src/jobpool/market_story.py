@@ -4,6 +4,7 @@ built by market_pages from the page's jobs and its comparison set (senior jobs
 in the same families).
 
     story(jobs, compare, year_buckets)   the counts every section needs, and which sections the data supports
+    buckets(rows, edges)                 jobs by the years they require, and the jobs that state none
     broad(skill)                         the breadth rule: may a skill be highlighted or named in a finding?
     finding(skills, readable, years)     the page's lead finding, its H1: which pattern, which skills, which counts
 
@@ -57,7 +58,7 @@ TIED_POINTS = 2.0
 # 50%) or "in about half" (both within HALF). Anything else never says "half".
 PAIR_POINTS = 5.0
 PAIR_FROM = 40.0
-# the lead skill's share that reads as "half".
+# the lead skill's share that reads as "nearly half" (under 50%) or "about half" (_half, as for a pair).
 HALF = (45.0, 55.0)
 
 ENTRY_YEARS = (0, 1, 2, 3)        # 0, 1, 2, 3 or more
@@ -75,13 +76,18 @@ def fraction(share: float) -> list[int] | None:
     return list(near) if abs(100 * near[0] / near[1] - share) <= FRACTION_POINTS else None
 
 
+def _half(*shares: float) -> str | None:
+    """The one "half" rule: "nearly" half (every share under 50%), "about" half (every share within HALF), or not at all."""
+    if max(shares) < 50:
+        return "nearly"
+    return "about" if HALF[0] <= min(shares) and max(shares) <= HALF[1] else None
+
+
 def _pair(a: float, b: float) -> str | None:
-    """How a headline may say two close shares: "nearly" half (both under 50%), "about" half, or not at all."""
+    """How a headline may say two close shares near half, or None."""
     if abs(a - b) > PAIR_POINTS or min(a, b) < PAIR_FROM:
         return None
-    if max(a, b) < 50:
-        return "nearly"
-    return "about" if HALF[0] <= min(a, b) and max(a, b) <= HALF[1] else None
+    return _half(a, b)
 
 
 def _years_lead(years: dict) -> dict | None:
@@ -94,14 +100,14 @@ def _years_lead(years: dict) -> dict | None:
     return None
 
 
-def finding(skills: list[dict], readable: int, years: dict) -> dict | None:
+def finding(skills: list[dict], readable: int, years: dict | None) -> dict | None:
     """
     The page's lead finding, the first pattern that applies. `skills` are the
     ones that may lead (broad, not the page's defining skill), most named
     first. The frontend writes the words (lib/market-story.ts, `headline`).
     decisions/market-pages.md, "Finding headlines".
     """
-    lead = _years_lead(years)
+    lead = _years_lead(years) if years else None
     if lead or not skills or not readable:
         return lead
     share = [100 * s["any"] / readable for s in skills[:2]]
@@ -114,7 +120,8 @@ def finding(skills: list[dict], readable: int, years: dict) -> dict | None:
     if len(share) == 2 and (approx := _pair(*share)):
         return {"kind": "pair", **two, "approx": approx}
     if HALF[0] <= share[0] <= HALF[1]:
-        return {"kind": "half", **one}
+        # 49.3% is "nearly half", never "half" (276 of 560 entry level jobs naming Python, 12 Oct 2026).
+        return {"kind": "half", **one, "approx": _half(share[0])}
     return {"kind": "leads", **one}
 
 
@@ -127,7 +134,7 @@ def _required_years(row: dict) -> int | None:
     return profile.get("years") if profile.get("years_kind") == "required" else None
 
 
-def _buckets(rows: list[dict], edges: tuple[int, ...]) -> dict:
+def buckets(rows: list[dict], edges: tuple[int, ...]) -> dict:
     """Jobs by the years they require: one bucket per edge (the last open ended), and the jobs that state none."""
     counts, unstated = [0] * len(edges), 0
     for row in rows:
@@ -186,7 +193,7 @@ def _categories(skills: list[dict], readable: list[dict]) -> list[dict]:
 
 
 def story(jobs: list[dict], compare: list[dict], employer, internship, year_edges: tuple[int, ...],
-          min_readable: int, levels: dict | None = None, defining: tuple[str, ...] = ()) -> dict:
+          min_readable: int, levels: dict | None = None, defining: tuple[str, ...] = (), own_years: bool = True) -> dict:
     """
     One page's editorial counts. `jobs` are the page's counted jobs, `compare`
     the comparison set's; skills are read over the readable ones only.
@@ -194,7 +201,9 @@ def story(jobs: list[dict], compare: list[dict], employer, internship, year_edge
     rule is copied. `defining` are the skills that name the job type itself
     (machine learning on the machine learning page): they never lead. Under
     `min_readable` readable jobs no section is written: the page shows its
-    counts and says why (the 100 rule).
+    counts and says why (the 100 rule). `own_years` False: the page's set is
+    partly chosen by its years (entry level takes in jobs requiring two years
+    or less), so its years never lead it and get no section.
     """
     readable = [row for row in jobs if not row["profile"].get("thin")]
     compare_read = [row for row in compare if not row["profile"].get("thin")]
@@ -210,7 +219,7 @@ def story(jobs: list[dict], compare: list[dict], employer, internship, year_edge
                        internship(row)) for row in jobs)
     contrast = _contrast(skills, len(readable), len(compare_read))
     categories = _categories(skills, readable)
-    years = _buckets(jobs, year_edges)
+    years = buckets(jobs, year_edges)
     stated_levels = sum(v for k, v in (levels or {}).items() if k != "unstated")
 
     publishable = len(readable) >= min_readable
@@ -218,7 +227,7 @@ def story(jobs: list[dict], compare: list[dict], employer, internship, year_edge
         ("languages", len(language_bars) >= MIN_LANGUAGES),
         ("contrast", bool(contrast)),
         ("categories", bool(categories)),
-        ("years", years["stated"] >= MIN_YEARS_STATED),
+        ("years", own_years and years["stated"] >= MIN_YEARS_STATED),
         ("levels", levels is not None and stated_levels >= MIN_LEVELS_STATED),
     ) if ok and publishable]
     return {
@@ -226,7 +235,7 @@ def story(jobs: list[dict], compare: list[dict], employer, internship, year_edge
         "breadth": BREADTH_EMPLOYERS,
         "skills": [{**s, "broad": broad(s)} for s in skills],
         "headline": headline if publishable else None,
-        "finding": finding(leads, len(readable), years) if publishable else None,
+        "finding": finding(leads, len(readable), years if own_years else None) if publishable else None,
         "squares": {"skill": squares[(True, False)], "both": squares[(True, True)],
                     "internship": squares[(False, True)], "neither": squares[(False, False)]},
         "languages": {"per_job": [per_job[n] for n in range(4)], "bars": language_bars},

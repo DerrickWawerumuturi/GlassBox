@@ -102,7 +102,10 @@ level and 4 to senior, at least 3 points apart, from the top 40 of either),
 `senior {jobs, readable}`, `required_median {entry, senior}`, `titles` (up to
 40, `[title, company, level, required years]`, one employer at a time) and
 `names` (display names) and `inline_names` (the names that read differently
-mid sentence). Never a job's text.
+mid sentence). Never a job's text. `required_median` is the median number of
+**required skills** per readable job (entry and senior), not years. Since
+2026-10-12 also `experience {titled, software}`: years required by software
+jobs with an early career title, and by every software job (below).
 
 Since the editorial template every page also returns `story`
 (`market_story.py`): `compare {jobs, readable}`, `breadth`, `skills` (the 40
@@ -118,8 +121,7 @@ template, `components/market-page/MarketArticle.tsx`, serves all five pages,
 server rendered at `/market/{name}` (ISR, 5 minutes; a failed fetch during a
 revalidation keeps the last good page, `builtForPage`). In reading order:
 
-1. **Kicker** "Market / {page}" (the breadcrumb), the **question** above the
-   headline ("What are AI jobs actually asking for?"), the **lead finding** as
+1. **Kicker** "Market / {page}" (the breadcrumb), the **lead finding** as
    the H1 ("Two in three AI jobs name LLMs"; since 2026-10-08, rules below),
    and a **dek**: "We counted {n} {page} jobs at {e} employers on {date}.",
    then the count behind the finding ("191 of the 287 we could read name LLMs.").
@@ -206,11 +208,18 @@ About 11 KB a page.
 
 ### Finding headlines (2026-10-08)
 
+The line above the H1 ("The skills AI jobs name, counted") was removed on
+12 Oct (founder): the breadcrumb sits directly above the H1 on the five pages
+and the years page. The searched question stays in the title, the meta
+description and the question blocks; `topic` remains the H1 when there is no
+finding, the rail's link text, a hub card's fallback title, the Article
+headline's fallback and the share image's fallback line.
+
 Each page's H1 is its lead finding, chosen by `market_story.finding` (one
 place, so the page, the hub card, the share image, the Article markup, the
 cite line and "At a glance" agree) and worded by `headline` in
 `lib/market-story.ts`. The question stays in the `<title>`, the meta
-description (first) and the kicker line: that is what people search for.
+description and the question blocks: that is what people search for.
 
 Which skills may lead: broad ones (the breadth rule), never the skill that
 names the job type itself (`market_pages.DEFINING`, next to `ROLES`:
@@ -221,11 +230,11 @@ The first pattern that applies (thresholds are named constants):
 
 | Pattern | When | Words |
 |---|---|---|
-| years | one number of years is asked by 60% or more of the jobs that state years (`YEARS_USUALLY`; a range like "3 or more" never counts) | “Entry level” usually means two years |
+| years | one number of years is asked by 60% or more of the jobs that state years (`YEARS_USUALLY`; a range like "3 or more" never counts); never on the entry level page (12 Oct, below) | Most DevOps jobs that state years ask for 5 years |
 | share | the lead skill is named by 60% or more (`FRACTION_FROM`) | Two in three AI jobs name LLMs; a fraction from `FRACTIONS` only within 2 points (`FRACTION_POINTS`), else "63% of …" |
 | tied | the top two within 2 points (`TIED_POINTS`) | Python and distributed systems are almost tied at the top of software engineering jobs |
 | pair | the top two within 5 points, both 40% or more (`PAIR_POINTS`, `PAIR_FROM`) | … each appear in **nearly** half (both under 50%) or **about** half (both 45 to 55%) of … jobs; otherwise this pattern doesn't apply |
-| half | the lead skill at 45 to 55% (`HALF`) | Half of DevOps jobs name incident response |
+| half | the lead skill at 45 to 55% (`HALF`); the pair's words by one rule (`_half`, 12 Oct): under 50% "nearly", else "about" | Nearly half of entry level software jobs name Python (276 of 560, 49.3%) |
 | leads | anything else | Python leads DevOps jobs, named in 79 of 199 |
 
 Why "pair" says "about" as well as "nearly": the machine learning page (8 Oct)
@@ -275,10 +284,89 @@ brackets (`chartName`: "AI assistants", the full name as the label's title).
 - Article JSON-LD (headline, `datePublished` = `FIRST_PUBLISHED` 2026-10-07,
   `dateModified` = the count's `taken_at`, author and publisher Organization
   Glassbox, image) and a BreadcrumbList matching "Market / {page}".
-- Sitemap: the hub and five pages, `lastmod` = the day counted.
+- Sitemap: the hub, five pages and the years page, `lastmod` = the day counted.
 - Links: the rail, the hub, the footer ("Market"), the header's Resources menu
   (Market and How it works), /product, /method, and the home count card links
   to a role page when its job type has one.
+
+### Searched questions (2026-10-12, GitHub issue #2)
+
+Strangers find the pages through search and AI answers, which quote counted
+sentences with a date, a sample and a method. So:
+
+- **Title** = the question people search, in their words, then the sample:
+  "AI engineer skills, counted from 288 jobs" (`MarketInfo.search`). The
+  software engineering page says "Software engineering skills in demand".
+- **Description** answers it with a count and the week: "What AI jobs ask for
+  most, counted in the week of 12 October 2026: 191 of the 287 we could read
+  name LLMs and 120 name Python." Skills from `leadSkills`: broad ones from
+  the headline skill on (a broad skill above it names the job type itself).
+- **Dek**: unchanged where the finding is a skill. Where it is years (the
+  entry level page) it adds the most named skill's count, so the page answers
+  "entry level software engineer requirements" in its first lines.
+- **Questions this count answers** (`lib/market-faq.ts`), before the CV ask,
+  and as FAQPage JSON-LD in the same graph as the Article: up to 4 of skills
+  asked most, years (role pages: the most common bucket; entry level page:
+  the early career titles' answer below, never the page's own years), two
+  or more languages, remote (the board's flag). A question appears only when
+  its count exists that week; no answer gives advice.
+
+No new page repeats an existing one: 20 excellent pages beat 500 thin ones.
+
+### Years of experience (2026-10-12)
+
+`/market/entry-level-software/years-of-experience` answers "how many years
+of experience do entry level software jobs ask for". Under `[page]` because
+it is written from that page's body and its breadcrumb is "Market / Entry
+level software / Years of experience"; any other page name is a 404. Its own
+share image, canonical, Article + BreadcrumbList + FAQPage markup, sitemap
+entry, and the weekly refresh (`lib/revalidate.ts` `MARKET_PATHS`, backend
+`refresh_site.pages()` via `market_pages.ANSWERS`).
+
+**Why not the entry level page's own years.** That page counts a job as
+entry level when it requires two years or less, and a job with no level in
+its title or board gets its level from its years (1 or 2 years reads as
+junior, 3 or 4 as mid). So its years answer themselves. Checked read only on
+the 12 Oct 2026 pool: of the 156 entry level jobs asking two years, 153 had
+no early career title; of the 225 that state years, about 190 were on the page
+only because of them. "“Entry level” usually means two years" (156 of 225 on
+12 Oct; 136 of 199 the week before) is true of that set and says little about
+the market. **Founder, 12 Oct: the entry level page never leads with its own years.**
+`market_story.story(..., own_years=False)` for the entry level page: no years
+finding and no years section, so it leads with its next finding by the same
+rules (12 Oct pool: "Nearly half of entry level software jobs name Python",
+276 of 560). The frontend drops a years finding and the years section for the entry
+level page too (`finding`, `has` in `lib/market-story.ts`), so a publication
+built before the rule (the 12 Oct one) shows no circular sentence either: its
+H1 is the page's topic and the dek gives the most named skill, until the next
+publication carries the skill finding. "At a glance" points to the years page
+with the early career titles' count. Role pages keep their years: their sets
+aren't chosen by years.
+
+**What the page reads instead** (`market_pages.experience`, buckets 0, 1, 2,
+3, 4, 5 or more by `market_story.buckets`):
+
+- `titled`: software jobs whose title says intern, graduate, new grad, entry
+  level, early career or junior (`entry_title`). 12 Oct pool: 328 jobs, 306
+  state no required number, 22 do (0: 5, 1: 10, 2: 2, 3: 2, 4: 2, 5+: 1).
+  299 of the 306 have no years figure anywhere in the ad.
+- `software`: every counted software job. 12 Oct pool: 3,596 jobs, 2,052
+  state a number; 254 ask for two years or less, 1,420 for five or more.
+
+Years are the profiler's: the highest required figure, a range from its low
+end, "preferred" counts as not stated, and more than 3 years in an intern or
+graduate title reads as not stated (`requirements._experience`).
+
+The page: the breadcrumb, the H1 answers ("Most entry level
+software jobs don't ask for a number of years" when most state none), the
+dek gives the count, the week and the sample, a pull stat, one figure (two
+split bars, lime = two years or less, hatched = none stated, table twin), a
+counted line for all software jobs, three questions, the CV ask, the method.
+
+**Data.** Publications store their page bodies, so `experience` arrives with
+the first publication after the push (19 Oct), or a `publish --now` for the
+current week. Until then the page says the count isn't here yet and the
+sitemap entry has no lastmod.
 
 ### Analytics
 

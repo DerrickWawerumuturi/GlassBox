@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import BylineActions from "@/components/market-page/BylineActions";
 import CopyFact from "@/components/market-page/CopyFact";
+import Faq from "@/components/market-page/Faq";
 import LeadSquares from "@/components/market-page/LeadSquares";
 import MarketCvAsk, {MarketAskProvider} from "@/components/market-page/MarketCvAsk";
 import {ScanStatus} from "@/components/market-page/SkillName";
@@ -13,6 +14,7 @@ import {Ask, marketAskSkills} from "@/lib/cv-ask";
 import {weekDate, weekStart} from "@/lib/market-page";
 import {MarketBody, MarketInfo, MarketName, absoluteMarket, marketPath} from "@/lib/market-pages";
 import {citeLine, Ctx, dek, findingText, framing, glance, has, headline, skillName, thin, topic, UNAVAILABLE} from "@/lib/market-story";
+import {marketFaq} from "@/lib/market-faq";
 import {marketStructuredData} from "@/lib/seo";
 import {SITE_URL} from "@/lib/site";
 
@@ -27,14 +29,13 @@ import {SITE_URL} from "@/lib/site";
 const WRAP = "mx-auto w-full max-w-[1120px] px-4 sm:px-6";
 
 function Head({info, page, c}: {info: MarketInfo; page: MarketBody | null; c: Ctx | null}) {
-    // The headline is the finding; what the page counts sits above it.
+    // The headline is the finding; what the page counts is its title when there is none.
     const q = topic({info}), h = c ? headline(c) : null;
     return (
         <>
             <nav aria-label={"Breadcrumb"} className={"mb-3.5 font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground"}>
                 <Link href={"/market"} className={"no-underline hover:text-foreground"}>Market</Link> / <span aria-current={"page"}>{info.label}</span>
             </nav>
-            {h && <p className={"m-0 mb-3 max-w-[920px] font-heading text-[20px] font-bold leading-[1.25] text-muted-foreground"}>{q}</p>}
             <h1 className={"m-0 max-w-[920px] font-heading text-[36px] font-bold leading-[1.02] tracking-[-0.025em] sm:text-[56px]"}>{h ?? q}</h1>
             <p className={"mt-[26px] max-w-[800px] font-read text-[20px] leading-[1.45] sm:text-[23px]"}>{c ? dek(c) : UNAVAILABLE}</p>
             {page && c && (
@@ -56,7 +57,7 @@ export default function MarketArticle({info, page, others}: {
     info: MarketInfo; page: MarketBody | null; others: Partial<Record<MarketName, MarketBody | null>>;
 }) {
     const c: Ctx | null = page ? {info, page} : null;
-    const findings = c ? glance(c) : [];
+    const findings = c ? glance(c) : [], faq = c ? marketFaq(c) : [];
     // The skills the figures show, for the line a scan adds: "8 of the 19 skills in these charts are on your CV".
     const story = c?.page.story;
     const figureSkills = c && story ? [...new Set([
@@ -67,7 +68,7 @@ export default function MarketArticle({info, page, others}: {
     const ask: Ask | null = c ? {skills: marketAskSkills(c.page), what: `skills ${info.subject} jobs name most`, jobs: c.page.readable, subject: info.subject} : null;
     const body = (
         <div className={"pb-24"}>
-            {c && <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(marketStructuredData(info, c.page, dek(c), headline(c)))}} />}
+            {c && <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(marketStructuredData(info, c.page, dek(c), headline(c), faq))}} />}
             {c && <TitleBar title={headline(c) ?? topic({info})} />}
             <section className={`${WRAP} pt-11`}>
                 <Head info={info} page={page} c={c} />
@@ -95,7 +96,7 @@ export default function MarketArticle({info, page, others}: {
                                             <span aria-hidden className={"pt-0.5 font-mono text-[13px] font-semibold text-muted-foreground"}>{i + 1}</span>
                                             <span className={"font-read"}>{f.text.split(f.bold).map((part, j, all) => (
                                                 <React.Fragment key={j}>{part}{j < all.length - 1 && <b className={"font-heading"}>{f.bold}</b>}</React.Fragment>
-                                            ))}</span>
+                                            ))}{f.href && <>{" "}<Link href={f.href} className={"text-primary underline-offset-4 hover:underline"}>Years of experience</Link></>}</span>
                                             <span className={"col-start-2 sm:col-start-3"}>
                                                 <CopyFact fact={findingText(f)} page={info.name} path={marketPath(info.name)} hash={f.id} />
                                             </span>
@@ -108,6 +109,7 @@ export default function MarketArticle({info, page, others}: {
                         )}
                         <ScanStatus skills={figureSkills} />
                         <StorySections c={c} />
+                        <Faq items={faq} />
                         <MarketCvAsk />
                         <Method c={c} />
                     </article>

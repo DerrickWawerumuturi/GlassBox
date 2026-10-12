@@ -1,7 +1,7 @@
 import {createHash, timingSafeEqual} from "node:crypto";
 import {revalidatePath} from "next/cache";
 
-import {MARKET_NAMES} from "@/lib/market-names";
+import {MARKET_NAMES, YEARS_PATH} from "@/lib/market-names";
 
 /*
  * POST /api/revalidate: the weekly publication job asks the site to drop its
@@ -17,7 +17,7 @@ import {MARKET_NAMES} from "@/lib/market-names";
  */
 
 /** Every page that shows the published market. The /market layout covers both share images. */
-export const MARKET_PATHS = ["/", "/about", "/product", "/market", ...MARKET_NAMES.map((name) => `/market/${name}`)];
+export const MARKET_PATHS = ["/", "/about", "/product", "/market", ...MARKET_NAMES.map((name) => `/market/${name}`), YEARS_PATH];
 
 const MAX_HEADER = 512;
 /** The job calls once a week; a few retries fit, guessing doesn't. Per server instance. */

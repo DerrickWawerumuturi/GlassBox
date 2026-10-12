@@ -6,6 +6,7 @@ Public market pages: one question each, answered from the live pool.
     role(family, rows, ...)          GET /market/page/{software-engineering, ai, machine-learning, devops}
                                      (each page's `story`, the editorial sections' counts: market_story.py)
     is_entry_level(row)              the page's definition of entry level
+    experience(software)             years required, for /market/entry-level-software/years-of-experience
     place(location)                  "us", "elsewhere" or "unknown" for a job's location text
 
 Counted exactly as the landing count and the daily snapshot count
@@ -34,6 +35,8 @@ SOFTWARE = ("software_engineering", "backend", "frontend", "full_stack", "mobile
 # about the market, so the page shows counts and says so instead.
 MIN_READABLE = 100
 ENTRY_YEARS = 2
+# Years of experience: 0, 1, 2, 3, 4, 5 or more (experience()).
+EXPERIENCE_YEARS = (0, 1, 2, 3, 4, 5)
 TOP_SKILLS = 15
 TITLES = 40
 # A role page: one job family each, by page name.
@@ -105,6 +108,18 @@ def place(location: str | None) -> str:
 def employer(company: str | None) -> str:
     """One employer however it is spelt ("Shift" and "Shift Ltd"), as the duplicate rule sees it."""
     return duplicate_key(company, "").split("|")[0]
+
+
+def experience(software: list[dict]) -> dict:
+    """
+    Software jobs by the years they require: those with an early career title
+    (entry_title), and every software job. Not the page's entry level set:
+    it takes in any job that requires two years or less, so its years would
+    answer themselves (decisions/market-pages.md, "Years of experience").
+    """
+    titled = [row for row in software if entry_title(row.get("title"))]
+    return {"titled": market_story.buckets(titled, EXPERIENCE_YEARS),
+            "software": market_story.buckets(software, EXPERIENCE_YEARS)}
 
 
 def _skill_counts(rows: list[dict]) -> tuple[Counter, Counter, list[int]]:
@@ -204,8 +219,10 @@ def entry_level_software(rows: list[dict], taken_at: datetime | None = None) -> 
         "senior": {"jobs": len(senior), "readable": len(senior_read)},
         "required_median": {"entry": _median(entry_per_job), "senior": _median(senior_per_job)},
         "titles": _titles(entry),
+        "experience": experience(software),
+        # Its own years are circular (is_entry_level takes in jobs requiring two years or less): never a finding.
         "story": (story := market_story.story(entry, senior, employer, is_internship, market_story.ENTRY_YEARS,
-                                              MIN_READABLE)),
+                                              MIN_READABLE, own_years=False)),
         "names": (names := _names(keys, story)),
         "inline_names": _inline(names),
     }
@@ -272,6 +289,9 @@ def role(family: str, rows: list[dict], taken_at: datetime | None = None, defini
         "inline_names": _inline(names),
     }
 
+
+# Pages that answer one question from a page's body, at /market/{page}/{answer} (the site's routes).
+ANSWERS = {"entry-level-software": ("years-of-experience",)}
 
 PAGES = {"entry-level-software": entry_level_software,
          **{name: partial(role, family, defining=DEFINING.get(name, ())) for name, family in ROLES.items()}}

@@ -81,6 +81,9 @@ def test_it_wakes_the_api_then_revalidates_then_opens_every_page(capsys):
     assert http.calls[3][2] == {"Authorization": "Bearer test-secret"}
     assert urls[4:] == [("GET", f"https://site.test{path}") for path in refresh_site.pages()]
     assert {"/", "/market", "/market/devops", "/market/devops/opengraph-image"} <= set(refresh_site.pages())
+    # The page that answers how many years entry level software jobs ask for, and its share image.
+    assert {"/market/entry-level-software/years-of-experience",
+            "/market/entry-level-software/years-of-experience/opengraph-image"} <= set(refresh_site.pages())
     assert "site refreshed" in capsys.readouterr().out
 
 

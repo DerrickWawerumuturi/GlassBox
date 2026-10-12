@@ -32,7 +32,8 @@ TIMEOUT = 30.0
 
 def pages() -> list[str]:
     """Every page and share image that shows the published market: what /api/revalidate drops."""
-    market = ["/market", *(f"/market/{name}" for name in market_pages.PAGES)]
+    market = ["/market", *(f"/market/{name}" for name in market_pages.PAGES),
+              *(f"/market/{name}/{answer}" for name, answers in market_pages.ANSWERS.items() for answer in answers)]
     return ["/", "/about", "/product", *market, *(f"{path}/opengraph-image" for path in market)]
 
 

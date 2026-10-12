@@ -26,6 +26,8 @@ src/
                                  (components/market-page, lib/market-pages.ts, lib/market-story.ts, decisions/market-pages.md).
                                  Outside the (public) group so share images keep plain addresses; layout.tsx adds the footer
                                  and Source Serif 4 (font-read), loaded on these pages only
+    market/[page]/years-of-experience  how many years entry level software jobs ask for, from the entry level page's
+                                 `experience` counts (lib/years-answer.ts); any other page name is a 404
     market/page.tsx              /market, the hub: each page with its job count and first finding, and its own share image
     (public)/method              how Glassbox counts, written from the code (components/site/Explainer.tsx, lib/method-copy.ts)
     (public)/product, about      long explainers (components/site/Explainer.tsx, ISR); words in lib/site-copy.ts;
@@ -100,6 +102,8 @@ src/
     market-pages.ts              which market pages exist, what each counts, GET /market/page/{name} and its types
     market-story.ts              every sentence on a market page, templates over the counts (tested on market-story.fixture.json)
     market-page.ts               numbers, dates, copied facts' links, title level chips
+    market-faq.ts                a market page's questions, each answered with this week's count (and FAQPage markup)
+    years-answer.ts              the years of experience page's sentences, chart rows and questions
     method-copy.ts               /method's words, each section naming the code it describes
     dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract

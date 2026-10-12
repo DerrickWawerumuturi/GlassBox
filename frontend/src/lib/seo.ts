@@ -2,6 +2,7 @@ import type {Metadata, MetadataRoute} from "next";
 
 import {SITE_URL} from "@/lib/site";
 import {FIRST_PUBLISHED, MARKET_NAMES, MarketBody, MarketInfo, marketPath} from "@/lib/market-pages";
+import {YEARS_PATH} from "@/lib/market-names";
 
 /*
  * What search engines and share previews read: the site's metadata, each
@@ -13,7 +14,7 @@ import {FIRST_PUBLISHED, MARKET_NAMES, MarketBody, MarketInfo, marketPath} from 
 
 /** The pages search should list, in sitemap order. Each /market page goes here too. */
 export const PUBLIC_PATHS = ["/", "/product", "/about", "/privacy", "/your-cv", "/market", "/market/entry-level-software",
-    "/market/software-engineering", "/market/ai", "/market/machine-learning", "/market/devops", "/method"] as const;
+    YEARS_PATH, "/market/software-engineering", "/market/ai", "/market/machine-learning", "/market/devops", "/method"] as const;
 
 /** A path as an absolute address on this site ("/" is the bare origin). */
 export function absolute(path: string): string {
@@ -80,30 +81,40 @@ export function sitemapEntries(paths: readonly string[] = PUBLIC_PATHS, counted:
 
 const ORG = {"@type": "Organization", name: "Glassbox", url: SITE_URL, logo: absolute("/icons/icon-512.png")};
 
+/** Questions answered on the page, as FAQPage markup; nothing when there are none. */
+export function faqStructuredData(faq: Array<{q: string; a: string}>) {
+    return faq.length ? [{"@type": "FAQPage", mainEntity: faq.map(({q, a}) => ({"@type": "Question", name: q, acceptedAnswer: {"@type": "Answer", text: a}}))}] : [];
+}
+
 /**
- * A market page's structured data: an Article written and published by
- * Glassbox, changed on the day it was counted, and its breadcrumbs, matching
- * the visible "Market / {page}".
+ * A page of the count as structured data: an Article written and published
+ * by Glassbox, changed on the day it was counted, its breadcrumbs (matching
+ * the visible ones, `crumbs` after "Market") and its questions as FAQPage.
  */
-/** `headline` is the page's H1, its lead finding; what the page counts stands in when there is none. */
-export function marketStructuredData(info: MarketInfo, page: MarketBody, description: string, headline?: string | null) {
-    const path = marketPath(info.name);
+export function articleStructuredData(path: string, crumbs: Array<[string, string]>, page: MarketBody, headline: string,
+                                      description: string, faq: Array<{q: string; a: string}> = []) {
     return {
         "@context": "https://schema.org",
         "@graph": [
             {
-                "@type": "Article", headline: headline ?? `The skills ${info.subject} jobs name, counted`, description,
+                "@type": "Article", headline, description,
                 datePublished: FIRST_PUBLISHED, dateModified: page.taken_at, author: ORG, publisher: ORG,
                 image: [absolute(`${path}/opengraph-image`)], mainEntityOfPage: absolute(path),
             },
             {
-                "@type": "BreadcrumbList", itemListElement: [
-                    {"@type": "ListItem", position: 1, name: "Market", item: absolute("/market")},
-                    {"@type": "ListItem", position: 2, name: info.label, item: absolute(path)},
-                ],
+                "@type": "BreadcrumbList", itemListElement: [["Market", "/market"], ...crumbs].map(([name, at], i) => (
+                    {"@type": "ListItem", position: i + 1, name, item: absolute(at)})),
             },
+            ...faqStructuredData(faq),
         ],
     };
+}
+
+/** A market page's: `headline` is its H1, the lead finding; what the page counts stands in when there is none. */
+export function marketStructuredData(info: MarketInfo, page: MarketBody, description: string, headline?: string | null,
+                                     faq: Array<{q: string; a: string}> = []) {
+    const path = marketPath(info.name);
+    return articleStructuredData(path, [[info.label, path]], page, headline ?? `The skills ${info.subject} jobs name, counted`, description, faq);
 }
 
 export const MARKET_PATHS = MARKET_NAMES.map(marketPath);

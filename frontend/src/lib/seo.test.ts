@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 
 import FIXTURE from "./market-story.fixture.json";
 import {FIRST_PUBLISHED, MARKET_PAGES, MarketBody} from "./market-pages";
-import {homeStructuredData, marketStructuredData, PUBLIC_PATHS, publicPage, rootMetadata, sitemapEntries} from "./seo";
+import {articleStructuredData, homeStructuredData, marketStructuredData, PUBLIC_PATHS, publicPage, rootMetadata, sitemapEntries} from "./seo";
 import {SITE_URL} from "./site";
 
 describe("canonicals", () => {
@@ -40,7 +40,8 @@ describe("sitemap", () => {
     it("lists the public pages only, with no invented dates or priorities", () => {
         const urls = sitemapEntries().map((e) => e.url);
         expect(urls).toEqual([SITE_URL, `${SITE_URL}/product`, `${SITE_URL}/about`, `${SITE_URL}/privacy`, `${SITE_URL}/your-cv`,
-            `${SITE_URL}/market`, `${SITE_URL}/market/entry-level-software`, `${SITE_URL}/market/software-engineering`,
+            `${SITE_URL}/market`, `${SITE_URL}/market/entry-level-software`, `${SITE_URL}/market/entry-level-software/years-of-experience`,
+            `${SITE_URL}/market/software-engineering`,
             `${SITE_URL}/market/ai`, `${SITE_URL}/market/machine-learning`, `${SITE_URL}/market/devops`, `${SITE_URL}/method`]);
         for (const entry of sitemapEntries()) expect(Object.keys(entry)).toEqual(["url"]);
     });
@@ -73,6 +74,22 @@ describe("market page structured data", () => {
     it("has breadcrumbs that match the visible Market / AI", () => {
         const crumbs = graph.find((n) => n["@type"] === "BreadcrumbList")!.itemListElement as Array<Record<string, unknown>>;
         expect(crumbs.map((c) => [c.position, c.name, c.item])).toEqual([[1, "Market", `${SITE_URL}/market`], [2, "AI", `${SITE_URL}/market/ai`]]);
+    });
+
+    it("carries the page's questions as FAQPage, and none when there are none", () => {
+        const faq = [{q: "How many AI jobs are remote?", a: "40 of the 288 AI jobs counted in the week of 5 October 2026 are marked remote by their job board."}];
+        const nodes = marketStructuredData(MARKET_PAGES.ai, page, "D", "H", faq)["@graph"] as Array<Record<string, unknown>>;
+        expect(nodes.find((n) => n["@type"] === "FAQPage")).toEqual({"@type": "FAQPage", mainEntity: [
+            {"@type": "Question", name: faq[0].q, acceptedAnswer: {"@type": "Answer", text: faq[0].a}}]});
+        expect(graph.find((n) => n["@type"] === "FAQPage")).toBeUndefined();
+    });
+
+    it("gives the years page its own address, image and three breadcrumbs", () => {
+        const path = "/market/entry-level-software/years-of-experience";
+        const nodes = articleStructuredData(path, [["Entry level software", "/market/entry-level-software"], ["Years of experience", path]],
+            page, "H", "D")["@graph"] as Array<Record<string, unknown>>;
+        expect(nodes[0]).toMatchObject({headline: "H", image: [`${SITE_URL}${path}/opengraph-image`], mainEntityOfPage: `${SITE_URL}${path}`});
+        expect((nodes[1].itemListElement as Array<Record<string, unknown>>).map((c) => c.name)).toEqual(["Market", "Entry level software", "Years of experience"]);
     });
 
     it("lets search show a market page's share image large", () => {
