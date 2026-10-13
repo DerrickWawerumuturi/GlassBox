@@ -96,6 +96,38 @@ touches another's jobs. The run is red only when most sources fail or nothing
 could be saved. The collector runs in the API's own image
 (`market-publication.md`).
 
+## robots.txt and credits (2026-10-13, issue #8)
+
+We read only addresses a site's robots.txt allows for every user agent, read
+by the longest match rule (Google's and RFC 9309's; Python's `robotparser`
+takes the first match and gets Summit wrong).
+
+- **Summit Recruitment** (`summitrecruitment-search.com`) has `Allow: /` and
+  `Disallow: /feed/`, and `/feed/` is what we read. It is no longer fetched
+  (`KENYAN_BOARDS`). Its provider stays in `DAILY_PROVIDERS` through
+  `RETIRED_FEEDS`, so its jobs already in the pool keep counting and leave by
+  the window feeds' rule, 30 days after they were last seen. No source_runs rows
+  come for it any more, so the 7 day retirement (which closes every job at
+  once) never fires, and the run's health share (`MIN_HEALTHY_SOURCES`) is
+  simply one source fewer. For a week the publication's coverage check counts
+  Summit's last good fetch as a source that didn't answer: one short RSS feed
+  against about 17,000 jobs, far inside the 90% floor.
+- **Remotive** has `Disallow: /api/*`, which covers the public API its own docs
+  offer (`remotive.com/api/remote-jobs`, documented at
+  remotive.com/remote-jobs/api, with a credit asked for). Still read; the
+  founder decides whether to ask.
+- Everything else read is allowed: Remote OK (`Crawl-delay: 1`, one request a
+  run), Arbeitnow, Jobicy, Himalayas (no robots.txt), We Work Remotely, MyJobMag
+  (`Disallow: /*?`; the feed has no query), Corporate Staffing, Career Point
+  Kenya, Jobweb Kenya (`Crawl-delay: 60`, one request a run), Jobs in Kenya,
+  and the ATS hosts (Greenhouse disallows only `/embed/`; Lever asks for
+  `Crawl-delay: 1`; Ashby's API host has no robots.txt; Workable allows all).
+
+Credits: Remote OK, Remotive, Arbeitnow, Jobicy, Himalayas and We Work Remotely
+ask to be named and linked (terms quoted in `open-data.md`; Remote OK asks for
+a followed link). Each is a plain followed link on /method
+(`frontend/src/lib/method-copy.ts`, `JOB_SITES`).
+
 ## Budget
 
 The 7 Oct run fetched 16,992 jobs from 194 sources in 28 s and profiled 1,584

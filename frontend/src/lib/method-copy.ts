@@ -6,11 +6,20 @@ import type {ExplainerSection} from "@/lib/site-copy";
  * code does. Rules: CLAUDE.md section 2.
  */
 
-/** The job sites the daily read takes jobs from (sources.py AGGREGATORS and KENYAN_BOARDS). Arbeitnow asks for a link back. */
+/*
+ * The job sites the daily read takes jobs from (sources.py AGGREGATORS and KENYAN_BOARDS).
+ * `href` is the credit a site's terms ask for (docs/decisions/open-data.md): Remote OK wants a
+ * followed link, so no rel="nofollow" on these. Remotive, Arbeitnow, Jobicy, Himalayas and
+ * We Work Remotely ask to be named and linked.
+ */
 export const JOB_SITES: Array<{name: string; href?: string}> = [
-    {name: "RemoteOK"}, {name: "Remotive"}, {name: "Arbeitnow", href: "https://www.arbeitnow.com"}, {name: "Jobicy"},
-    {name: "Himalayas"}, {name: "We Work Remotely"},
-    {name: "Six Kenyan job feeds: MyJobMag, Corporate Staffing, Career Point Kenya, Jobweb Kenya, Summit Recruitment and Jobs in Kenya"},
+    {name: "Remote OK", href: "https://remoteok.com"},
+    {name: "Remotive", href: "https://remotive.com"},
+    {name: "Arbeitnow", href: "https://www.arbeitnow.com"},
+    {name: "Jobicy", href: "https://jobicy.com"},
+    {name: "Himalayas", href: "https://himalayas.app"},
+    {name: "We Work Remotely", href: "https://weworkremotely.com"},
+    {name: "Five Kenyan job feeds: MyJobMag, Corporate Staffing, Career Point Kenya, Jobweb Kenya and Jobs in Kenya"},
 ];
 
 export const METHOD_PAGE = {

@@ -10,7 +10,7 @@ export const metadata = publicPage("/method", {
     share: {title: `${M.title} · Glassbox`, description: M.description},
 });
 
-/** The job sites, by name. Arbeitnow's free API asks for a plain link back, so it has one. */
+/** The job sites, each linked where its terms ask for a credit. Followed links: Remote OK asks for no nofollow. */
 function JobSites() {
     return (
         <div className={"flex max-w-[62ch] flex-col gap-2"}>

@@ -80,10 +80,10 @@ would have to leave that source out, on the site too. Note the site already
 shows these same numbers in public; the dataset adds a CC BY licence and a
 machine readable form.
 
-Two things outside this change, for the founder: the method page links only
-Arbeitnow, while Remote OK, Remotive, Jobicy and Himalayas also ask for a link
-(`frontend/src/lib/method-copy.ts`, `JOB_SITES`); and Summit's robots.txt
-disallows the feed we read every six hours (ask, or drop the feed, `sources.py`).
+Both follow ups were done on 13 Oct 2026 (GitHub issue #8): the method page now
+credits every site that asks, and the Summit Recruitment feed is no longer read
+(its robots.txt disallows it; its jobs leave by the 30 day feed rule), so the
+dataset's sources no longer name it (docs/decisions/job-sources.md).
 
 ## The automation (built, off)
 

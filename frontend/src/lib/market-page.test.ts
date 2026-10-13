@@ -1,3 +1,6 @@
+import {readFileSync} from "node:fs";
+import {join} from "node:path";
+
 import {describe, expect, it} from "vitest";
 
 import FIXTURE from "./market-story.fixture.json";
@@ -185,8 +188,23 @@ describe("the helpers", () => {
 });
 
 describe("/method", () => {
-    it("links back to Arbeitnow, as its free API asks", () => {
-        expect(JOB_SITES.find((s) => s.name === "Arbeitnow")?.href).toBe("https://www.arbeitnow.com");
+    it("credits every job site whose terms ask for it, with a followed link", () => {
+        // docs/decisions/open-data.md, terms checked 13 Oct 2026.
+        const credits = {
+            "Remote OK": "https://remoteok.com", "Remotive": "https://remotive.com",
+            "Arbeitnow": "https://www.arbeitnow.com", "Jobicy": "https://jobicy.com",
+            "Himalayas": "https://himalayas.app", "We Work Remotely": "https://weworkremotely.com",
+        };
+        for (const [name, href] of Object.entries(credits)) {
+            expect(JOB_SITES.find((s) => s.name === name)?.href, name).toBe(href);
+        }
+        expect(readFileSync(join(__dirname, "../app/(public)/method/page.tsx"), "utf8")).not.toMatch(/\brel=/);
         expect(METHOD_PAGE.back.map((l) => l.href)).toContain("/market");
+    });
+
+    it("names only the feeds the collector reads", () => {
+        // Summit Recruitment's robots.txt disallows /feed/: it is no longer read (sources.py).
+        expect(JSON.stringify(JOB_SITES)).not.toMatch(/Summit/);
+        expect(JOB_SITES.at(-1)?.name).toMatch(/^Five Kenyan job feeds/);
     });
 });

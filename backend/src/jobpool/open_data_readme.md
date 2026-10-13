@@ -78,8 +78,7 @@ is published once a week.
 - Kenyan job feeds: [MyJobMag](https://www.myjobmag.co.ke),
   [Corporate Staffing](https://www.corporatestaffing.co.ke),
   [Career Point Kenya](https://www.careerpointkenya.co.ke),
-  [Jobweb Kenya](https://jobwebkenya.com),
-  [Summit Recruitment](https://www.summitrecruitment-search.com) and
+  [Jobweb Kenya](https://jobwebkenya.com) and
   [Jobs in Kenya](https://www.jobsinkenya.co.ke).
 
 This dataset holds counts only. It reproduces no job ad, title, link or

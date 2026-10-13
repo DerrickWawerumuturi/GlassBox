@@ -119,6 +119,21 @@ def test_which_sources_close_by_absence():
                    ("remoteok", "remotive", "jobicy", "himalayas", "himalayas_regional", "weworkremotely", "ke:myjobmag"))
 
 
+def test_summit_recruitment_feed_is_not_fetched_but_its_jobs_still_count(monkeypatch):
+    # Its robots.txt disallows /feed/ (checked 2026-10-13). Its jobs already in
+    # the pool keep counting and leave by the window feeds' age rule.
+    from src.jobpool import snapshot
+    monkeypatch.setattr(sources, "load_boards", lambda: [])
+    monkeypatch.setattr(sources, "AGGREGATORS", [])
+    monkeypatch.setattr(sources, "kenyan_board", lambda name: [])
+    fetched = {name for name, _, _ in sources.fetch_all(2)}
+    assert fetched == {f"ke:{name}" for name in sources.KENYAN_BOARDS}
+    assert "ke:summitrecruitment" not in fetched
+    assert not any("summitrecruitment" in url for url in sources.KENYAN_BOARDS.values())
+    assert "summitrecruitment" in snapshot.DAILY_SOURCES
+    assert not sources.closes_by_absence("ke:summitrecruitment")
+
+
 def test_fetch_all_names_each_source_and_reports_failures(monkeypatch):
     def remoteok():
         return [job(1)]

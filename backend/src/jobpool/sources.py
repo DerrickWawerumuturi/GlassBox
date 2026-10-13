@@ -291,13 +291,14 @@ def weworkremotely():
 # Local coverage for a market the global boards barely carry: Kenyan job boards'
 # RSS feeds, published for syndication (proven in jobhunt). Mixed industries, so
 # matching does the filtering, and summaries are short (100-500 bytes), so
-# profiles mark them thin. More countries' boards slot in the same way.
+# profiles mark them thin. More countries' boards slot in the same way. Only
+# feeds the site's robots.txt allows: Summit Recruitment's disallows /feed/, so
+# it left on 2026-10-13 (RETIRED_FEEDS).
 KENYAN_BOARDS = {
     "myjobmag": "https://www.myjobmag.co.ke/jobsxml.xml",
     "corporatestaffing": "https://www.corporatestaffing.co.ke/feed/",
     "careerpointkenya": "https://www.careerpointkenya.co.ke/feed/",
     "jobwebkenya": "https://jobwebkenya.com/feed/",
-    "summitrecruitment": "https://www.summitrecruitment-search.com/feed/",
     "jobsinkenya": "https://www.jobsinkenya.co.ke/feed/",
 }
 # Kenyan boards title their items "Role at Employer".
@@ -357,10 +358,14 @@ ARBEITNOW_PAGES = int(os.getenv("JOBRADAR_POOL_ARBEITNOW_PAGES", "40"))
 AGGREGATORS = [remoteok, remotive, arbeitnow, jobicy, himalayas, himalayas_regional, weworkremotely]
 ATS = {"greenhouse": greenhouse, "ashby": ashby, "lever": lever, "workable": workable}
 
+# Feeds no longer read whose jobs are still in the pool. They stay daily
+# providers so those jobs keep counting and leave by the window feeds' age
+# rule (seen in the last 30 days), not all at once. Removable once none is live.
+RETIRED_FEEDS = ("summitrecruitment",)
 # Every provider the collector stores. Anything else in `jobs` came from a
 # user: a scan's providers or a pasted link ("url").
 DAILY_PROVIDERS = (*ATS, "remoteok", "remotive", "arbeitnow", "jobicy", "himalayas", "weworkremotely",
-                   *KENYAN_BOARDS)
+                   *KENYAN_BOARDS, *RETIRED_FEEDS)
 # Complete boards: each fetch lists every open job, so a job missing from two
 # full fetches of its source in a row has closed (jobs.closed_at; the rule is
 # in ingestion.persist_source). The window feeds (RemoteOK, Remotive, Jobicy,
