@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import {ArchiveIcon, ArrowRightIcon, ScanTextIcon, Trash2Icon} from "lucide-react";
 
+import {PeekGlyph} from "@/components/brand/Peek";
 import {Button} from "@/components/ui/button";
 import {LookFamily, normSkill} from "@/lib/landing/look";
 import {COPY} from "./copy";
@@ -35,7 +36,8 @@ export default function CvSection({asks, data, have, scanning, onCv}: {
                         <Button className={"btn"} nativeButton={false} render={<Link href={"/analysis"} />}>{V.seeResults} <ArrowRightIcon className={"size-3.5"} /></Button>
                     ) : (
                         <>
-                            <Button className={"btn"} onClick={onCv} disabled={scanning}>{V.cta} <ArrowRightIcon className={"size-3.5"} /></Button>
+                            {/* Takes a CV, so the peek; "See your results" above goes somewhere, so it keeps its arrow. */}
+                            <Button className={"peek peek-button"} onClick={onCv} disabled={scanning}><PeekGlyph />{V.cta}</Button>
                             <Button variant={"link"} className={"textlink"} nativeButton={false} render={<Link href={"/sign-in"} />}>{V.signUp}</Button>
                         </>
                     )}

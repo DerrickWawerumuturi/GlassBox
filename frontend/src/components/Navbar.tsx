@@ -28,23 +28,7 @@ import {
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {initials} from "@/lib/utils";
 import {GlassboxWordmark} from "@/components/brand/Logo";
-import {GlassboxWordmarkIdea} from "@/components/brand/WordmarkIdeas";
 import AccountMenuItems from "@/components/AccountMenuItems";
-
-/*
- * TEMPORARY (founder, 13 Oct 2026): two ideas for a small moment in the
- * wordmark, picked on localhost with ?mark=1 or ?mark=2; no parameter keeps
- * today's mark. Read after mount, so the server render never depends on the
- * address. Goes once he picks (see brand/WordmarkIdeas.tsx).
- */
-function useMark(): 0 | 1 | 2 {
-    const [mark, setMark] = useState<0 | 1 | 2>(0);
-    React.useEffect(() => {
-        const m = new URLSearchParams(window.location.search).get("mark");
-        if (m === "1" || m === "2") setMark(Number(m) as 1 | 2);
-    }, []);
-    return mark;
-}
 
 const ICONS: Record<string, LucideIcon> = {
     market: ActivityIcon, "your-skills": TrendingUpIcon, opportunities: RadarIcon, applications: ClipboardListIcon,
@@ -72,7 +56,6 @@ const Navbar = () => {
     const pathname = usePathname();
     const router = useRouter();
     const scan = useCvScan({onDone: () => router.push("/analysis")});
-    const mark = useMark();
     const [pill, setPill] = useState<{left: number; width: number} | null>(null);
     const pillTo = (e: React.PointerEvent<HTMLElement>) => {
         const el = e.currentTarget, nav = el.closest("nav")!;
@@ -103,6 +86,7 @@ const Navbar = () => {
             <Link {...props} href={href} className={cn(props.className, "cursor-pointer")}>{icon} {label}</Link>
         )} />
     );
+    // In the header's mono language, not the peek family (founder, 8 Oct: orange capitals in a thin outline, a return key mark).
     const withCv = (close?: () => void) => (
         <Button variant={"ghost"} onClick={() => { close?.(); track("cta_clicked", {where: "header"}); scan.open(); }}
                 className={"m-1 h-auto w-fit justify-start gap-2 rounded-md border border-primary/45 px-3 py-2 font-mono text-xs font-normal uppercase tracking-[0.12em] text-primary hover:border-primary hover:bg-primary/[0.06] hover:text-primary"}>
@@ -114,8 +98,8 @@ const Navbar = () => {
         <header className={"flex items-center justify-between gap-4 px-5 py-5 lg:px-8"}>
             <div className={"flex items-center gap-8"}>
                 <Link href={"/"} aria-label={"Glassbox home"} className={"block w-fit"}>
-                    {/* Logo exception: the size of the old 24px text wordmark's capitals. */}
-                    {mark ? <GlassboxWordmarkIdea mark={mark} className={"h-[17px] w-auto"} /> : <GlassboxWordmark className={"h-[17px] w-auto"} />}
+                    {/* Logo exception: the size of the old 24px text wordmark's capitals. The dot peeks here only (founder, 13 Oct 2026). */}
+                    <GlassboxWordmark peek className={"h-[17px] w-auto"} />
                 </Link>
                 <nav aria-label={"Main"} className={"relative hidden items-center gap-5 md:flex"} onPointerLeave={() => setPill(null)}>
                     {/* A soft pill that slides to the item under the pointer (Supabase's top level indicator). */}

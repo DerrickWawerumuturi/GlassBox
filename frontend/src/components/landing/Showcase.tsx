@@ -2,7 +2,7 @@
 
 import React, {useMemo, useState} from "react";
 import Link from "next/link";
-import {ArrowRightIcon} from "lucide-react";
+import {PeekGlyph} from "@/components/brand/Peek";
 
 import {Button} from "@/components/ui/button";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
@@ -121,7 +121,7 @@ export default function Showcase({look, reduce, onCv}: {look: Look; reduce: bool
                 </div>
                 <div className={"inside-ask"}>
                     <div className={"acts"}>
-                        <Button className={"btn"} onClick={onCv}>{I.cta} <ArrowRightIcon className={"size-3.5"} /></Button>
+                        <Button className={"peek peek-button"} onClick={onCv}><PeekGlyph />{I.cta}</Button>
                         <Button variant={"link"} className={"textlink"} nativeButton={false} render={<Link href={"/sign-in"} />}>{I.signUp}</Button>
                     </div>
                 </div>

@@ -2,8 +2,8 @@
 
 import React from "react";
 import {useRouter} from "next/navigation";
-import {ArrowRightIcon} from "lucide-react";
 
+import {PeekGlyph} from "@/components/brand/Peek";
 import {Button} from "@/components/ui/button";
 import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {track} from "@/lib/analytics";
@@ -17,8 +17,8 @@ export default function AddCvButton({label, reading}: {label: string; reading: s
     const scan = useCvScan({onDone: () => router.push("/analysis")});
     return (
         <>
-            <Button onClick={() => { track("cta_clicked", {where: "product"}); scan.open(); }} disabled={scan.scanning}>
-                {label} <ArrowRightIcon className={"size-3.5"} />
+            <Button className={"peek peek-button"} onClick={() => { track("cta_clicked", {where: "product"}); scan.open(); }} disabled={scan.scanning}>
+                <PeekGlyph />{label}
             </Button>
             {scan.scanning && <span className={"font-mono text-[12px] text-muted-foreground"} role={"status"}>{reading}</span>}
             {scan.sheet}

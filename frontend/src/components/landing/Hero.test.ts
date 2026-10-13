@@ -17,9 +17,12 @@ import Hero from "./Hero";
 const ask: Ask = {skills: Array.from({length: 10}, (_, i) => ({key: `s${i}`, name: `S${i}`})), what: "skills backend jobs ask for most", jobs: 304, subject: "backend"};
 const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el).replace(/<!-- -->/g, "").replace(/&#x27;/g, "'");
 const hero = (a: Ask | null) => html(createElement(Hero, {total: "9,722", ask: a, scanning: false, onFind: () => {}}));
-const buttons = (h: string) => [...h.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]);
+// A button's label, past the peek glyph that may sit before it.
+const buttons = (h: string) => [...h.matchAll(/<button[^>]*>(?:<svg[^>]*>[\s\S]*?<\/svg>)?([^<]*)<\/button>/g)].map((m) => m[1]);
 // The button closes its wrapper: no line, not even an empty one, after it.
 const nothingUnder = (h: string) => /Compare your CV<\/button><\/div>/.test(h);
+// Founder's pick, 13 Oct 2026 (issue #6): the box O glyph before the label, the dot under the rim, in a `peek` button.
+const peeks = (h: string) => /<button[^>]*class="[^"]*\bpeek\b[^"]*"[^>]*><svg class="peek-glyph[^"]*"[^>]*><circle class="peek-dot"[^>]*><\/circle><rect[^>]*><\/rect><\/svg>Compare your CV<\/button>/.test(h);
 
 describe("the hero", () => {
     it("is the headline, one subtitle and one button, with nothing under it (founder, 13 Oct)", () => {
@@ -28,13 +31,14 @@ describe("the hero", () => {
         expect(h).toContain("We count the skills tech jobs ask for each week and mark the ones on your CV.");
         expect(buttons(h)).toEqual(["Compare your CV"]);
         expect(nothingUnder(h)).toBe(true);
+        expect(peeks(h)).toBe(true);
         expect(h).not.toContain("Free. No account needed.");
         expect(h).not.toMatch(/\?\s*of\b/);
         expect(h).not.toContain("Find out");
     });
 
     it("writes the button in white on the orange, past the landing's inherited colour (founder, 12 Oct)", () => {
-        expect(hero(ask)).toMatch(/<button[^>]*class="[^"]*\bcv-compare\b[^"]*\btext-white\b[^"]*"[^>]*>Compare your CV</);
+        expect(hero(ask)).toMatch(/<button[^>]*class="[^"]*\bcv-compare\b[^"]*\btext-white\b[^"]*"[^>]*>(?:<svg[^>]*>[\s\S]*?<\/svg>)?Compare your CV</);
         const css = readFileSync(join(__dirname, "landing.css"), "utf8");
         expect(css).toMatch(/\.la button\.cv-compare\s*\{\s*color:\s*#fff;/);
     });
@@ -56,6 +60,7 @@ describe("a market page before a scan", () => {
         const h = html(createElement(MarketAskProvider, {ask, page: "entry-level-software", children: createElement(MarketCvAsk)}));
         expect(buttons(h)).toEqual([ASK.compare]);
         expect(nothingUnder(h)).toBe(true);
+        expect(peeks(h)).toBe(true);
         expect(h).not.toMatch(/\?\s*of\b/);
         expect(h).not.toContain("How many of these are on your CV?");
     });

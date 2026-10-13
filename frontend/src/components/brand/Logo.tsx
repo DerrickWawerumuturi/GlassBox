@@ -1,5 +1,9 @@
 import React from "react";
 
+import {cn} from "@/lib/utils";
+
+import "./logo.css";
+
 /*
  * The Glassbox logo, drawn from docs/brand/assets/logo (logo round 3): the
  * wordmark GLASSBOX with the O drawn as the box, and the symbol. Letters and
@@ -7,8 +11,8 @@ import React from "react";
  * the only orange (--logo-dot: #f5532a on dark, #b83a18 on paper). No full stop.
  */
 
-/** The letters in order, G L A S S B then the box O (index 6) and X. Exported for the temporary wordmark ideas. */
-export const WORDMARK_PATHS = [
+/** The letters in order: G L A S S B, the box O, X. */
+const WORDMARK_PATHS = [
     "M308.0 714Q236.0 714 177.5 681.5Q119.0 649 84.5 586.5Q50.0 524 50.0 434V266Q50.0 131 126.0 58.5Q202.0 -14 332.0 -14Q461.0 -14 531.5 54.5Q602.0 123 602.0 240V244H472.0V236Q472.0 199 456.5 169.0Q441.0 139 410.0 121.5Q379.0 104 332.0 104Q262.0 104 222.0 147.0Q182.0 190 182.0 264V436Q182.0 509 222.0 553.5Q262.0 598 334.0 598Q406.0 598 439.0 560.0Q472.0 522 472.0 464V454H306.0V342H602.0V700H480.0V633H462.0Q455.0 650 439.5 669.0Q424.0 688 393.0 701.0Q362.0 714 308.0 714Z",
     "M718.0 700V0H850.0V580H1170.0V700Z",
     "M1202.0 700 1386.0 0H1616.0L1800.0 700H1664.0L1626.0 546H1376.0L1338.0 700ZM1407.0 424H1595.0L1510.0 83H1492.0Z",
@@ -19,12 +23,23 @@ export const WORDMARK_PATHS = [
     "M4447.0 700 4652.0 347 4449.0 0H4599.0L4738.0 253H4756.0L4895.0 0H5045.0L4842.0 347L5047.0 700H4897.0L4756.0 441H4738.0L4597.0 700Z",
 ];
 
-/** GLASSBOX. Height sets the size; the width follows (about 6.85 times the height). */
-export function GlassboxWordmark({className, title = "Glassbox"}: {className?: string; title?: string}) {
+/** The box O's index in WORDMARK_PATHS: two rounded squares, one inside the other. */
+const BOX_O = 6;
+
+/**
+ * GLASSBOX. Height sets the size; the width follows (about 6.85 times the
+ * height). The O is a rim with the dot inside: its path holds the outer and
+ * the inner square, and only the evenodd rule leaves the inside open, as the
+ * outlined file does (before 13 Oct 2026 it rendered as a solid block). The
+ * dot is drawn under the O. With `peek`, the header's moment: the dot hops
+ * up and looks over the rim (logo.css).
+ */
+export function GlassboxWordmark({className, title = "Glassbox", peek = false}: {className?: string; title?: string; peek?: boolean}) {
     return (
-        <svg viewBox={"0 -20 5069 740"} className={className} role={"img"} aria-label={title} fill={"currentColor"}>
-            {WORDMARK_PATHS.map((d) => <path key={d.slice(0, 24)} d={d} />)}
-            <circle cx={4047.5} cy={350} r={108.5} fill={"var(--logo-dot)"} />
+        <svg viewBox={"0 -20 5069 740"} className={cn(peek && "wm-peek", className)} role={"img"} aria-label={title} fill={"currentColor"} overflow={peek ? "visible" : undefined}>
+            {WORDMARK_PATHS.map((d, i) => i !== BOX_O && <path key={d.slice(0, 24)} d={d} />)}
+            <circle className={"wm-dot"} cx={4047.5} cy={350} r={108.5} fill={"var(--logo-dot)"} />
+            <path d={WORDMARK_PATHS[BOX_O]} fillRule={"evenodd"} />
         </svg>
     );
 }

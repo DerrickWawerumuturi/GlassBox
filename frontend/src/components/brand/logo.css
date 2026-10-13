@@ -1,0 +1,22 @@
+/*
+ * The header wordmark's moment (founder's pick, 13 Oct 2026, issue #6): the
+ * dot hops up, looks over the rim of the box O, and settles back. Once about
+ * a second after the page loads, then on hover or keyboard focus of the link
+ * around it. The hop is in the drawing's own units (px here means user
+ * units). With reduced motion nothing moves: the mark is the mark.
+ */
+.wm-peek .wm-dot {
+    transform-box: view-box;
+    transition: transform .35s cubic-bezier(.34, 1.56, .64, 1);
+    animation: wm-peek 1.3s .9s cubic-bezier(.34, 1.56, .64, 1) 1;
+}
+:is(a:hover, a:focus-visible) > .wm-peek .wm-dot { transform: translateY(-430px); }
+@keyframes wm-peek {
+    0%, 100% { transform: translateY(0); }
+    35%, 65% { transform: translateY(-430px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wm-peek .wm-dot { transition: none; animation: none; }
+    :is(a:hover, a:focus-visible) > .wm-peek .wm-dot { transform: none; }
+}

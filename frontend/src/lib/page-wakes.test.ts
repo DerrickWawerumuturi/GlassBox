@@ -51,7 +51,9 @@ describe("public pages", () => {
     });
 });
 
-describe("rendering a public page", () => {
+// Importing every public page cold takes seconds under the full suite: a longer
+// timeout keeps this check from failing on load rather than on a real API call.
+describe("rendering a public page", {timeout: 30_000}, () => {
     const fetches: string[] = [];
     beforeEach(() => {
         fetches.length = 0;

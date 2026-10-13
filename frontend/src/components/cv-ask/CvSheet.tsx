@@ -5,6 +5,7 @@ import Link from "next/link";
 import {XIcon} from "lucide-react";
 import {Dialog as D} from "@base-ui/react/dialog";
 
+import {PeekGlyph} from "@/components/brand/Peek";
 import {Button} from "@/components/ui/button";
 import Chip from "@/components/cv-ask/Chip";
 import CvPicker from "@/components/cv-ask/CvPicker";
@@ -84,7 +85,7 @@ function Result({ask, signedIn, onSee}: {ask: Ask; signedIn: boolean; onSee: () 
         <div className={"pt-1.5 text-center"}>
             <D.Title className={"m-0 font-heading text-[56px] leading-none font-bold tracking-[-0.03em] text-chart-have"}>{S.result(k ?? 0, n)}</D.Title>
             <D.Description className={"mx-auto mt-1.5 mb-4 max-w-[34ch] text-[16px] leading-[1.5] text-foreground/85"}>{S.resultLine(ask)}</D.Description>
-            <Button className={"h-auto w-full rounded-full py-3.5 text-[16px]"} onClick={onSee} autoFocus>{S.seeThem}</Button>
+            <Button className={"peek peek-button w-full"} onClick={onSee} autoFocus><PeekGlyph />{S.seeThem}</Button>
             {!signedIn && (
                 <p className={"mt-3 mb-0 text-[14px] text-muted-foreground"}>
                     <Link href={"/sign-in"} className={"text-foreground underline underline-offset-[3px]"}>{S.keep}</Link>{S.keepLine}
@@ -130,7 +131,7 @@ export default function CvSheet({open, onOpenChange, ask, state, latest, signedI
                                     )}
                                     {reuse && latest && (
                                         <div className={"mb-3"}>
-                                            <Button className={"h-auto w-full rounded-full py-3.5 text-[16px]"} onClick={onReuse}>{S.reuse}</Button>
+                                            <Button className={"peek peek-button w-full"} onClick={onReuse}><PeekGlyph />{S.reuse}</Button>
                                             <p className={"mt-1.5 mb-0 text-center font-mono text-[12px] text-muted-foreground"}>
                                                 {readOnLabel(latest.parsed_at)} · {skillsLabel(latest.skills.length)}
                                             </p>

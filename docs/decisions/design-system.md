@@ -209,40 +209,57 @@ one 12px mono status line ("Reading your CV. About a minute.") shows. The
 trust facts live in the sheet the button opens. The "Free. One PDF. No account
 needed." line beside "Add your CV" in Inside Glassbox is gone too.
 
-**13 Oct, in review: a new look** (GitHub issue #6). The founder didn't like the
-font, size or shape. The first two candidates, A and B, borrowed his other
-app stash's big button (56 and 52px, the label in the display face, a hard
-offset shadow or a glow). He found both too big and asked for something cosy
-and welcoming with a little personality, pointing at albo.inc's header, where
-a small character peeks out of the A: a small, delightful touch tied to the
-brand mark. A and B are gone. **Proposals, not decisions:** three looks live
-behind a temporary `?btn=c` / `?btn=d` / `?btn=e` switch in `CompareCv.tsx`,
-styled in `components/cv-ask/compare-cv.css`. All three are white on the
-orange, 42 to 44px tall with a 15px label, and show their hover state without
-motion when the visitor asks for less:
+**13 Oct, decided: the peek** (GitHub issue #6, founder's pick). The founder
+didn't like the font, size or shape. Two candidates from his other app stash
+(A pressed and B quiet, 56 and 52px, a hard offset shadow or a glow) were too
+big. He asked for cosy and welcoming with a little personality, pointing at
+albo.inc's header, where a small character peeks out of the A: a small,
+delightful touch tied to the brand mark. Of three smaller looks (C peek, D a
+CV page sliding into a glass box, E a Caveat note beside the button) he
+picked **C**, and asked that its size and type stay exactly as shown. Review
+of the round: `docs/local/cosy-button-review.html`.
 
-- **C, peek:** 44px, radius 12px, Space Grotesk 600 15px, a lit top edge and
-  a soft shadow. The wordmark's box O, drawn in white, sits before the label
-  with its dot inside. On hover the dot hops up and peeks over the rim; a
-  press drops it back in.
-- **D, slide in:** 44px, a pill, Schibsted Grotesk 600 15px, a touch warmer
-  at the top. A small CV page sits above an open box at the right. On hover
-  the page slides into the box and stays in view: the box is glass.
-- **E, note:** 42px, radius 10px, Space Grotesk 600 15px, a thin lit rim and
-  no glyph. On hover a Caveat note in the acting orange appears beside it,
-  "about a minute", with a small hand drawn arrow. Hover only, so phones
-  never see it, and nothing sits under the button.
+**The peek family.** One style, `peek peek-button` in
+`components/brand/peek.css`, with the glyph `PeekGlyph` (`brand/Peek.tsx`)
+as the button's first child:
 
-Two ideas for the header wordmark sit behind a temporary `?mark=1` /
-`?mark=2` switch in `Navbar.tsx` (`components/brand/WordmarkIdeas.tsx`).
-Both redraw only the box O, as a rim with the dot inside, the way the brand
-book's outlined file draws it (`Logo.tsx` fills the O solid because it never
-sets the file's `fill-rule: evenodd`; a decision for the founder). Each plays
-once a moment after the page loads, then on hover or keyboard focus, and not
-at all with reduced motion. **1, peek:** the dot hops up and looks over the
-rim, then settles back. **2, lid:** the top edge is a lid hinged at its left
-corner; it lifts and the dot rises a little. The logo files and the favicon
-are untouched.
+- 44px tall, padding 0 20px 0 15px, radius 12px, Space Grotesk 600 at 15px,
+  tracking -0.005em, white on the orange in both themes, a lit top edge
+  (inset 1px white at 20%) and a soft shadow in the orange. Hover lightens
+  the orange 6%; a press sits it down 1px at 98.5%.
+- The glyph is the wordmark's box O at 20px with its dot inside, in the text
+  colour. On hover or keyboard focus the dot hops up 11 of 20 units and looks
+  over the rim (it is drawn under the rim, so it comes from inside); a press
+  drops it back. With reduced motion the dot still peeks, it just doesn't
+  travel.
+- **Who wears it: every orange button that takes a CV into the box, and only
+  those.** Today: "Compare your CV" in the hero, on a market page and on the
+  years page (`CompareCv`); "Add your CV" on /product (`AddCvButton`); "Add
+  your CV" in Inside Glassbox (`Showcase`); "Find out" in the closing CV
+  section (`CvSection`); in the CV sheet, "See them" and the kept CV button
+  (`CvSheet`, full width). One primary action per screen keeps the moment
+  special.
+- **Who stays quiet, and why:** the header's "Try it out" in the Product menu
+  and the phone menu (the header's mono capitals in a thin outline with a
+  return key mark, founder 8 Oct; a 44px display face button would be a
+  different header); "See your results" in the closing section (it goes
+  somewhere, so it keeps its arrow); the dashboard's example banner button
+  (a slim sticky bar; the dashboard stays quiet); sign in, sign up, the
+  skills form, the dashboard dialogs (admin, not the CV). Secondary, ghost
+  and link buttons, tabs, chips and form controls get shadcn's gentle press
+  and nothing more.
 
-Review: `docs/local/cosy-button-review.html`. Once he picks, the chosen look
-becomes the only one and both switches go.
+**The wordmark's moment** (`brand/Logo.tsx`, `logo.css`): the header passes
+`peek` and the dot hops up and looks over the rim of the box O, once about a
+second after the page loads and then on hover or keyboard focus of the link;
+with reduced motion nothing moves. The footer, the sidebar and the market
+title bar render the same wordmark still. The logo files and the favicon are
+untouched.
+
+**Fixed with it:** `Logo.tsx` had copied the box O's path without the
+outlined file's `fill-rule: evenodd`, so the inner square filled and the
+header, footer, sidebar and title bar showed a solid block with the dot on
+it. The O now renders as the rim with the dot inside, as the brand book
+draws it. The OG and share images read the SVG files in `public/brand`,
+which carry the rule, so they were right all along; the favicon and app
+icons are the symbol, not the wordmark.
