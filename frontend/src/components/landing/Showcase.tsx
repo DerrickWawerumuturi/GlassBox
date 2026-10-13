@@ -124,7 +124,6 @@ export default function Showcase({look, reduce, onCv}: {look: Look; reduce: bool
                         <Button className={"btn"} onClick={onCv}>{I.cta} <ArrowRightIcon className={"size-3.5"} /></Button>
                         <Button variant={"link"} className={"textlink"} nativeButton={false} render={<Link href={"/sign-in"} />}>{I.signUp}</Button>
                     </div>
-                    <p className={"lead"}>{I.lead}</p>
                 </div>
             </div>
             <Tabs className={"app-tokens"} value={TABS[stepper.step]} onValueChange={(v) => stepper.jump(TABS.indexOf(v as typeof TABS[number]))}>

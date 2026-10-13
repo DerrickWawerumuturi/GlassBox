@@ -43,7 +43,9 @@ jobs:
       # is never on a command line. After a publication the job refreshes the
       # site (src/jobpool/refresh_site.py): REVALIDATE_SECRET is the one Vercel
       # holds for /api/revalidate. Unset, the refresh is skipped with a line in the log.
+      # The step's output `published` is the week this run published, if it published one.
       - name: Collect, count and publish
+        id: collect
         env:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
@@ -58,5 +60,38 @@ jobs:
           for part in (p.username, p.password, p.hostname):
               if part: print('::add-mask::' + part)
           "
+          set -o pipefail
           docker run --rm -e DATABASE_URL -e REVALIDATE_SECRET -e SITE_URL \
-            jobradarregistry.azurecr.io/jobradar:live python -m src.jobpool.daily
+            jobradarregistry.azurecr.io/jobradar:live python -m src.jobpool.daily | tee collect.log
+          # The line daily.publish_if_due prints after a publication (test_open_data.py pins it).
+          week=$(sed -n 's/^published the market for the week of \([0-9-]*\):.*/\1/p' collect.log | tail -n 1)
+          echo "published=$week" >> "$GITHUB_OUTPUT"
+
+      # The open dataset (docs/decisions/open-data.md, GitHub issue #7). Only after
+      # this run published a week, so once a week at most, and from the stored
+      # publication, never the API. OPEN_DATA_TOKEN is a fine grained token the
+      # founder made for the dataset repository alone (Contents: read and write).
+      # Unset: one line in the log and nothing else. --all rewrites every published
+      # week, so a week published by hand (publish --now) is added with the next one.
+      - name: Add the week to the open dataset
+        if: steps.collect.outputs.published != ''
+        env:
+          DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
+          OPEN_DATA_TOKEN: ${{ secrets.OPEN_DATA_TOKEN }}
+          OPEN_DATA_REPO: DerrickWawerumuturi/glassbox-job-counts
+          WEEK: ${{ steps.collect.outputs.published }}
+        run: |
+          if [ -z "$OPEN_DATA_TOKEN" ]; then
+            echo "OPEN_DATA_TOKEN is not set: the open dataset is not updated"; exit 0
+          fi
+          git clone --quiet --depth 1 "https://x-access-token:${OPEN_DATA_TOKEN}@github.com/${OPEN_DATA_REPO}.git" open-data
+          docker run --rm --user "$(id -u):$(id -g)" -e DATABASE_URL -v "$PWD/open-data:/data" \
+            jobradarregistry.azurecr.io/jobradar:live python -m src.jobpool.open_data --out /data --all
+          cd open-data
+          git add -A
+          if git diff --cached --quiet; then
+            echo "the open dataset already holds every published week"; exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -m "Week of $WEEK"
+          git push --quiet origin HEAD

@@ -18,16 +18,17 @@ const ask: Ask = {skills: Array.from({length: 10}, (_, i) => ({key: `s${i}`, nam
 const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el).replace(/<!-- -->/g, "").replace(/&#x27;/g, "'");
 const hero = (a: Ask | null) => html(createElement(Hero, {total: "9,722", ask: a, scanning: false, onFind: () => {}}));
 const buttons = (h: string) => [...h.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]);
+// The button closes its wrapper: no line, not even an empty one, after it.
+const nothingUnder = (h: string) => /Compare your CV<\/button><\/div>/.test(h);
 
 describe("the hero", () => {
-    it("is the headline, one subtitle and one button, with the three facts under it", () => {
+    it("is the headline, one subtitle and one button, with nothing under it (founder, 13 Oct)", () => {
         const h = hero(ask);
         expect(h).toContain(COPY.hero.title);
         expect(h).toContain("We count the skills tech jobs ask for each week and mark the ones on your CV.");
         expect(buttons(h)).toEqual(["Compare your CV"]);
-        expect(h).toContain("Free. No account needed. Your PDF is deleted after reading.");
-        // The facts sit under the button, never inside it.
-        expect(h.indexOf("Compare your CV</button>")).toBeLessThan(h.indexOf("Free. No account needed."));
+        expect(nothingUnder(h)).toBe(true);
+        expect(h).not.toContain("Free. No account needed.");
         expect(h).not.toMatch(/\?\s*of\b/);
         expect(h).not.toContain("Find out");
     });
@@ -38,6 +39,11 @@ describe("the hero", () => {
         expect(css).toMatch(/\.la button\.cv-compare\s*\{\s*color:\s*#fff;/);
     });
 
+    it("says only that it is reading while a scan runs", () => {
+        const h = html(createElement(Hero, {total: "9,722", ask, scanning: true, onFind: () => {}}));
+        expect(h).toContain(`<p class="m-0 font-mono text-[12px] text-muted-foreground" role="status">${ASK.reading}</p>`);
+    });
+
     it("without this week's count has nothing to compare with, so shows only the words", () => {
         const h = hero(null);
         expect(h).toContain(COPY.hero.title);
@@ -46,10 +52,10 @@ describe("the hero", () => {
 });
 
 describe("a market page before a scan", () => {
-    it("shows the same button and line in place of the old question", () => {
+    it("shows the same button, with nothing under it, in place of the old question", () => {
         const h = html(createElement(MarketAskProvider, {ask, page: "entry-level-software", children: createElement(MarketCvAsk)}));
         expect(buttons(h)).toEqual([ASK.compare]);
-        expect(h).toContain(ASK.compareSmall);
+        expect(nothingUnder(h)).toBe(true);
         expect(h).not.toMatch(/\?\s*of\b/);
         expect(h).not.toContain("How many of these are on your CV?");
     });

@@ -201,5 +201,48 @@ axis engages.
 the landing hero, a market page and the years page, is the shadcn button at
 its own radius, `rounded-lg` (`--radius-lg`, 8px), 44px tall, 16px text,
 orange (it acts). Not the pill (`rounded-full`) the older CV buttons use:
-founder, 12 Oct 2026. Not a new token. Under it, one line of 12px mono in the
-muted colour. The older pill buttons stay as they are.
+founder, 12 Oct 2026. Not a new token. The older pill buttons stay as they are.
+
+**13 Oct: nothing under it** (founder: the line under it was too much text).
+The component renders no element under the button at rest; while a scan runs,
+one 12px mono status line ("Reading your CV. About a minute.") shows. The
+trust facts live in the sheet the button opens. The "Free. One PDF. No account
+needed." line beside "Add your CV" in Inside Glassbox is gone too.
+
+**13 Oct, in review: a new look** (GitHub issue #6). The founder didn't like the
+font, size or shape. The first two candidates, A and B, borrowed his other
+app stash's big button (56 and 52px, the label in the display face, a hard
+offset shadow or a glow). He found both too big and asked for something cosy
+and welcoming with a little personality, pointing at albo.inc's header, where
+a small character peeks out of the A: a small, delightful touch tied to the
+brand mark. A and B are gone. **Proposals, not decisions:** three looks live
+behind a temporary `?btn=c` / `?btn=d` / `?btn=e` switch in `CompareCv.tsx`,
+styled in `components/cv-ask/compare-cv.css`. All three are white on the
+orange, 42 to 44px tall with a 15px label, and show their hover state without
+motion when the visitor asks for less:
+
+- **C, peek:** 44px, radius 12px, Space Grotesk 600 15px, a lit top edge and
+  a soft shadow. The wordmark's box O, drawn in white, sits before the label
+  with its dot inside. On hover the dot hops up and peeks over the rim; a
+  press drops it back in.
+- **D, slide in:** 44px, a pill, Schibsted Grotesk 600 15px, a touch warmer
+  at the top. A small CV page sits above an open box at the right. On hover
+  the page slides into the box and stays in view: the box is glass.
+- **E, note:** 42px, radius 10px, Space Grotesk 600 15px, a thin lit rim and
+  no glyph. On hover a Caveat note in the acting orange appears beside it,
+  "about a minute", with a small hand drawn arrow. Hover only, so phones
+  never see it, and nothing sits under the button.
+
+Two ideas for the header wordmark sit behind a temporary `?mark=1` /
+`?mark=2` switch in `Navbar.tsx` (`components/brand/WordmarkIdeas.tsx`).
+Both redraw only the box O, as a rim with the dot inside, the way the brand
+book's outlined file draws it (`Logo.tsx` fills the O solid because it never
+sets the file's `fill-rule: evenodd`; a decision for the founder). Each plays
+once a moment after the page loads, then on hover or keyboard focus, and not
+at all with reduced motion. **1, peek:** the dot hops up and looks over the
+rim, then settles back. **2, lid:** the top edge is a lid hinged at its left
+corner; it lifts and the dot rises a little. The logo files and the favicon
+are untouched.
+
+Review: `docs/local/cosy-button-review.html`. Once he picks, the chosen look
+becomes the only one and both switches go.

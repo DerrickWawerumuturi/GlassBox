@@ -20,7 +20,7 @@ page showed the skills.
 
 | Where | Before the scan | After the scan |
 |---|---|---|
-| Landing hero (`Hero`, `CompareCv`) | "Compare your CV", "Free. No account needed. Your PDF is deleted after reading." under it | unchanged; the page lights up with the visitor's skills |
+| Landing hero (`Hero`, `CompareCv`) | "Compare your CV", nothing under it (13 Oct; until then "Free. No account needed. Your PDF is deleted after reading.") | unchanged; the page lights up with the visitor's skills |
 | Market page and the years page, after the figures (`MarketCvAsk`) | the same `CompareCv`, one per page | "9 of these are on your CV" (`AskCard`), the count in green, their skills green, the rest grey dashed (never red); "See the jobs that ask for them"; the figures mark their skills |
 | Landing closing section | "There's more of you in these jobs than you think." with "Find out" and "Sign up" | unchanged ("See your results") |
 
@@ -181,6 +181,9 @@ finished a scan (about 2.4% of visits). The first screen had no CV button, and
   market). The market and years pages get the same `CompareCv` in the card's
   place, one per page, so search visitors can still scan. After a scan the
   answer (`AskCard`) shows there as before.
+- **13 Oct: nothing under the button** (founder: too much text). The trust
+  facts stay in the sheet. A new look for the button is in review
+  (`decisions/design-system.md`, "The CV button"; issue #6).
 - **The button** keeps the design system's radius (`rounded-lg`, 8px), not the
   pill (`decisions/design-system.md`).
 

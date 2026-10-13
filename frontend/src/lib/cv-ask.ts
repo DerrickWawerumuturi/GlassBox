@@ -31,8 +31,6 @@ const EXAMPLE = {have: EXAMPLE_CHIPS.filter(([, have]) => have).length, of: EXAM
 
 export const ASK = {
     compare: "Compare your CV",
-    /** Under the button. True signed in or not: the PDF is never kept. */
-    compareSmall: "",
     sub: (ask: Ask) => `The ${ask.skills.length} ${ask.what}.`,
     count: "on your CV",
     reading: "Reading your CV. About a minute.",

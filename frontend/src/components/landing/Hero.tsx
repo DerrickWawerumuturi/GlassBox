@@ -11,7 +11,7 @@ const H = COPY.hero;
 /**
  * The first screen (founder, 12 Oct 2026, reversing the 5 Oct "headline
  * only" hero; docs/decisions/cv-ask.md): the week's total, the headline, one
- * subtitle and one button, "Compare your CV", with the three facts under it.
+ * subtitle and one button, "Compare your CV", with nothing under it (13 Oct).
  * The sheet it opens compares the CV with the job type on the count below.
  */
 export default function Hero({total, ask, scanning, onFind}: {total: string | null; ask: Ask | null; scanning: boolean; onFind: () => void}) {

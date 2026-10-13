@@ -31,10 +31,12 @@ describe("landing copy", () => {
         expect(TRUST.join(" ")).not.toMatch(/^We keep|\. We keep/);
     });
 
-    it("puts the founder's words on the first screen: one subtitle, one button, the three facts", () => {
+    it("puts the founder's words on the first screen: one subtitle, one button, no line under it", () => {
         expect(COPY.hero.lede).toBe("We count the skills tech jobs ask for each week and mark the ones on your CV.");
         expect(ASK.compare).toBe("Compare your CV");
-        expect(ASK.compareSmall).toBe("Free. No account needed. Your PDF is deleted after reading.");
+        // Founder, 13 Oct: the lines under the CV buttons were too much text. The facts live in the sheet.
+        expect(ASK).not.toHaveProperty("compareSmall");
+        expect(COPY.inside).not.toHaveProperty("lead");
     });
 
     it("never asks \"? of N\" before a scan (founder, 12 Oct 2026: it means nothing to someone new)", () => {

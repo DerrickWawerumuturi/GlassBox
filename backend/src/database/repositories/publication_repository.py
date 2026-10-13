@@ -17,6 +17,14 @@ select id, week, as_of, published_at, created_at, status, profiler_version, jobs
 from market_publications order by id desc limit %s
 """
 
+# One row per published week, the one the site served last (a forced --now
+# can publish a week twice): what the open dataset exports (open_data.py).
+PUBLISHED_WEEKS = """
+select distinct on (week) id, week, as_of, jobs, pages
+from market_publications where status = 'published' and (%(week)s::date is null or week = %(week)s)
+order by week, published_at desc, id desc
+"""
+
 PUBLISHED_FOR = "select 1 from market_publications where status = 'published' and week = %s limit 1"
 
 INSERT = """
@@ -81,6 +89,13 @@ def published_for(conn, week) -> bool:
     with conn.cursor() as cur:
         cur.execute(PUBLISHED_FOR, (week,))
         return cur.fetchone() is not None
+
+
+def published_weeks(conn, week=None) -> list[dict]:
+    """Every published week, oldest first, or only `week`: {id, week, as_of, jobs, pages}."""
+    with conn.cursor() as cur:
+        cur.execute(PUBLISHED_WEEKS, {"week": week})
+        return cur.fetchall()
 
 
 def insert(conn, week, as_of, status: str, profiler_version: str, jobs: int, gates: list[dict],

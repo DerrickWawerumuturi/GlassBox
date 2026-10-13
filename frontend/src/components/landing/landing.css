@@ -308,7 +308,6 @@
 .la .inside { margin-top: var(--sec-gap); }
 .la .inside-hd { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 40px; }
 .la .inside-ask .acts { display: flex; align-items: center; gap: 8px 18px; }
-.la .inside-ask .lead { margin: 10px 0 0; }
 .la .inside-tabs { margin-bottom: 14px; max-width: 100%; overflow-x: auto; }
 .la .inside-window { border: 1px solid var(--line-2); border-radius: 14px; background: var(--card); overflow: hidden; box-shadow: var(--shadow); }
 .la .inside-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); font: 400 12px/1.4 var(--f-mono); color: var(--faint); }

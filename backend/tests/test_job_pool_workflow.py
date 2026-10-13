@@ -29,7 +29,7 @@ LIVE = "jobradarregistry.azurecr.io/jobradar:live"
 def test_the_collector_runs_the_deployed_image_every_six_hours():
     assert f"docker pull {LIVE}" in POOL
     assert re.search(rf"docker run --rm -e DATABASE_URL -e REVALIDATE_SECRET -e SITE_URL \\\n\s+{re.escape(LIVE)} "
-                     r"python -m src\.jobpool\.daily\n", POOL)
+                     r"python -m src\.jobpool\.daily \| tee collect\.log\n", POOL)
     assert "pip install" not in POOL                                  # no second dependency list to drift
     assert re.search(r'cron: "\d+ \*/6 \* \* \*"', POOL)
 

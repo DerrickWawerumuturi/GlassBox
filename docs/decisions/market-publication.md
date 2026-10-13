@@ -135,6 +135,11 @@ deploy's re-profile. `job-pool.yml` logs in with `AZURE_CREDENTIALS`, pulls
 `REVALIDATE_SECRET` (repository secret) and `SITE_URL` (`https://seeglassbox.com`)
 passed by name (the database URL's parts masked as before). No package list to drift.
 
+After a run that published a week (the step reads daily.py's "published the
+market for the week of" line into the output `published`), a second step adds
+the published weeks to the public open dataset repository with the
+`OPEN_DATA_TOKEN` secret, and is one log line without it (`open-data.md`).
+
 ### Daily snapshots
 
 `market_snapshots` stays the internal daily history (`market-snapshots.md`),

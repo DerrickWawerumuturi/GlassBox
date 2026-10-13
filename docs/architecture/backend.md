@@ -37,6 +37,7 @@ src/jobpool/                         jobs from outside an analysis
   daily.py                           the scheduled pool refresh and profiling
   publish.py                         the weekly market publication and its gates
   refresh_site.py                    after a publication: POST the site's /api/revalidate, open each page (never the API)
+  open_data.py                       a published week as open CSV files (job types, skills, years); README from open_data_readme.md
   snapshot.py                        the day's market snapshot: what the live pool asks for, per family
   market_look.py                     the same count live, for the landing page (GET /market/look)
   market_pages.py                    public market pages from the same read (GET /market/page/{entry-level-software, software-engineering, ai, machine-learning, devops});
@@ -229,6 +230,10 @@ the site at once (`refresh_site.refresh()`: POST
 `${SITE_URL}/api/revalidate` with `REVALIDATE_SECRET`, open each market page
 and share image; the pages read the new row from the database, not the API);
 a failure there is a warning and never changes the publication.
+After a run that published, the workflow's next step writes the published
+weeks as open CSV files (`open_data.py`, reading `market_publications` only)
+and pushes them to the public dataset repository when `OPEN_DATA_TOKEN` is set
+(`decisions/open-data.md`).
 
 Last, `snapshot.take()` counts the profiled live pool into `market_snapshots`:
 one row per role family per day, with postings, readable postings, seniority mix
