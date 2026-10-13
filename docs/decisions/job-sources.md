@@ -122,6 +122,16 @@ takes the first match and gets Summit wrong).
   Kenya, Jobweb Kenya (`Crawl-delay: 60`, one request a run), Jobs in Kenya,
   and the ATS hosts (Greenhouse disallows only `/embed/`; Lever asks for
   `Crawl-delay: 1`; Ashby's API host has no robots.txt; Workable allows all).
+- **Lever** (`api.lever.co` and `api.eu.lever.co`, both `Crawl-delay: 1`,
+  checked 2026-10-13) is read one request at a time, each starting at least one
+  second after the previous one ended (`crawl_delay.py`, GitHub issue #9). The
+  pause sits in `sources._json`, so a pasted Lever link (`extract.py`) waits its
+  turn too. In `fetch_all` the Lever boards get one worker of their own, so
+  their waits never hold the shared pool's threads. 9 Lever boards: about 9 x
+  1.5 s = 14 s in their own lane, beside a fetch phase of 37 s (run of
+  2026-10-13 00:38 UTC), so the run should take no longer. Remote OK and Jobweb
+  Kenya also publish a Crawl-delay but are read with one request a run; no
+  other host read publishes one.
 
 Credits: Remote OK, Remotive, Arbeitnow, Jobicy, Himalayas and We Work Remotely
 ask to be named and linked (terms quoted in `open-data.md`; Remote OK asks for

@@ -20,6 +20,7 @@ from email.utils import parsedate_to_datetime
 from html import unescape
 
 from src.Agent.utils.types import Job
+from src.jobpool.crawl_delay import PACER
 from src.jobpool.posting import html_to_text, iso_utc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -29,10 +30,15 @@ TIMEOUT = 25
 DESCRIPTION_LIMIT = 8000
 
 
-def _json(url):
+def _read_json(url):
     req = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         return json.loads(r.read())
+
+
+def _json(url):
+    """Paced for hosts that publish a Crawl-delay (crawl_delay.py)."""
+    return PACER.call(url, _read_json)
 
 
 def _description(value) -> str | None:
@@ -357,6 +363,9 @@ ARBEITNOW_PAGES = int(os.getenv("JOBRADAR_POOL_ARBEITNOW_PAGES", "40"))
 
 AGGREGATORS = [remoteok, remotive, arbeitnow, jobicy, himalayas, himalayas_regional, weworkremotely]
 ATS = {"greenhouse": greenhouse, "ashby": ashby, "lever": lever, "workable": workable}
+# Boards on a paced host (crawl_delay.py) get one worker of their own, so
+# their turns are not spent holding the shared pool's threads.
+PACED_ATS = ("lever",)
 
 # Feeds no longer read whose jobs are still in the pool. They stay daily
 # providers so those jobs keep counting and leave by the window feeds' age
@@ -417,8 +426,9 @@ def fetch_all(workers=24):
     calls += [(f"ke:{name}", kenyan_board, (name,)) for name in KENYAN_BOARDS]
     calls += [(f"{ats}:{slug}", ATS[ats], (slug,)) for ats, slug in load_boards()]
     results = []
-    with cf.ThreadPoolExecutor(workers) as ex:
-        futs = {ex.submit(fn, *args): name for name, fn, args in calls}
+    with cf.ThreadPoolExecutor(workers) as ex, cf.ThreadPoolExecutor(1) as paced:
+        futs = {(paced if name.split(":", 1)[0] in PACED_ATS else ex).submit(fn, *args): name
+                for name, fn, args in calls}
         for fut in cf.as_completed(futs):
             try:
                 results.append((futs[fut], fut.result(), None))
