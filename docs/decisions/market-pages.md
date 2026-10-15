@@ -20,9 +20,9 @@ they are dated by its week: "Counted in the week of 5 October 2026 · Updated
 every Monday" in the byline, "in the week of" in the dek, the squares, the
 figures' source lines, the citation and the rail. A body with 0 jobs is no
 count and never renders. Lines that were questions are statements: above the
-finding, what the page counts ("The skills AI jobs name, counted"); a chart's
-subtitle, what its share is of ("Share of the AI jobs we could read, by
-language", then the job chip); a hub card, the count behind its finding. The
+finding, what the page counts ("What AI jobs ask for", since the copy rewrite
+of 15 Oct 2026); a chart's subtitle, what its share is of ("Share of the 287
+jobs read, by language", then the job chip); a hub card, the count behind its finding. The
 hub cards show only the week, the finding, that count and "Read more" (the 100
 squares didn't fit at phone width); a page with no count has no card. A level
 no job has is left out of the levels sentence instead of written as 0.
@@ -124,8 +124,10 @@ revalidation keeps the last good page, `builtForPage`). In reading order:
 
 1. **Kicker** "Market / {page}" (the breadcrumb), the **lead finding** as
    the H1 ("Two in three AI jobs name LLMs"; since 2026-10-08, rules below),
-   and a **dek**: "We counted {n} {page} jobs at {e} employers on {date}.",
-   then the count behind the finding ("191 of the 287 we could read name LLMs.").
+   and a **dek**: "In the week of {date} we found {n} {page} jobs at {e}
+   employers. {r} had an ad long enough to read for skills, and {k} of those
+   name {skill}." (copy rewrite, 15 Oct 2026: why {r} and not {n} is said where
+   the reader meets it; every later "we read" leans on it).
 2. **Byline**: Counted by Glassbox, `<time>` updated, counted again every day;
    share, copy link and cite buttons.
 3. **Lead visual**: the job count and one square per job. Lime = names the
@@ -161,9 +163,9 @@ revalidation keeps the last good page, `builtForPage`). In reading order:
    carries the visitor's mark, green on the CV or grey dashed not yet, and a
    line counts them (`SkillName`, `ScanStatus`).
 8. **How we counted**, the jobs in a `<details>` fold, a cite line.
-9. **The rail**: In this count (jobs, employers, internships, remote, date) and
-   More from the count (the other pages with their job counts, the hub,
-   /method). Sticky beside the article on a desktop, under it on a phone.
+9. **The rail**: This page counts (jobs, employers, internships, remote, date)
+   and Also this week (the story, the other pages with their job counts, all
+   five pages, /method; "In this count" and "More from the count" until 15 Oct 2026). Sticky beside the article on a desktop, under it on a phone.
 
 A slim title bar with the question and the CV button slides in once the lead
 visual has scrolled away (an instant switch under reduced motion).
@@ -173,6 +175,18 @@ visual has scrolled away (an instant switch under reduced motion).
 data. Headings state what the data shows and never tell anyone what to do.
 Templates avoid verb agreement with skill names ("58 of the 135 jobs name
 Python", not "LLMs appears").
+
+**Words for a first time reader** (founder, 15 Oct 2026; docs/local/copy-rewrite.html).
+A term is explained once, where the reader meets it, then trusted: "had an ad
+long enough to read for skills" in the dek, then "we read"; "senior, meaning a
+senior, lead or principal title" and the breadth rule's reason in the
+languages caption, then "same rule as the languages". The week is said in the
+byline, each figure's source line and once under the questions, not in every
+caption. "Name" leads in headlines and findings; "mention" and "list" take
+turns in prose and captions (a skill counts whether required or optional). The
+method fold says the same sentence on all ten pages (`readLine`: "We look for
+about 250 named skills, by fixed rules, in the {r} ads long enough to read. The
+other {n} were too short.").
 
 **Comparison sets.** Entry level page: senior software jobs (as before). Role
 page: the senior jobs of the same family (the founder's spec), so its contrast
@@ -286,8 +300,9 @@ brackets (`chartName`: "AI assistants", the full name as the label's title).
   `dateModified` = the count's `taken_at`, author and publisher Organization
   Glassbox, image) and a BreadcrumbList matching "Market / {page}".
 - Sitemap: the hub, five pages and the years page, `lastmod` = the day counted.
-- Links: the rail, the hub, the footer ("Market"), the header's Resources menu
-  (Market and How it works), /product, /method, and the home count card links
+- Links: the rail, the hub, the footer ("Market"), the header's Market link
+  (a plain link since 15 Oct 2026; the Resources menu is gone, and /method sits in
+  the footer and on /market), /product, /method, and the home count card links
   to a role page when its job type has one.
 
 ### Searched questions (2026-10-12, GitHub issue #2)
@@ -299,13 +314,15 @@ sentences with a date, a sample and a method. So:
   "AI engineer skills, counted from 288 jobs" (`MarketInfo.search`). The
   software engineering page says "Software engineering skills in demand".
 - **Description** answers it with a count and the week: "What AI jobs ask for
-  most, counted in the week of 12 October 2026: 191 of the 287 we could read
-  name LLMs and 120 name Python." Skills from `leadSkills`: broad ones from
+  most in the week of 12 October 2026: 191 of the 287 ads we read name LLMs
+  and 120 name Python." Skills from `leadSkills`: broad ones from
   the headline skill on (a broad skill above it names the job type itself).
 - **Dek**: unchanged where the finding is a skill. Where it is years (the
   entry level page) it adds the most named skill's count, so the page answers
   "entry level software engineer requirements" in its first lines.
-- **Questions this count answers** (`lib/market-faq.ts`), before the CV ask,
+- **Questions this page answers** (`lib/market-faq.ts`; "Questions this count
+  answers" until 15 Oct 2026), the week said once under the heading, then the
+  CV ask with its question beside the button (founder's yes, 15 Oct 2026),
   and as FAQPage JSON-LD in the same graph as the Article: up to 4 of skills
   asked most, years (role pages: the most common bucket; entry level page:
   the early career titles' answer below, never the page's own years), two
@@ -371,10 +388,52 @@ sitemap entry has no lastmod.
 
 ### Analytics
 
-`cta_clicked {where}` (the page's name; `years` for the years page; `ask` retired 12 Oct 2026), `fact_copied {page}` and `scan_started` /
+`cta_clicked {where}` (the page's name; `years` for the years page; `story_<slug>` for a story and `market` for the
+grid's CV card, both since 15 Oct 2026; `ask` retired 12 Oct 2026), `fact_copied {page}` and `scan_started` /
 `scan_finished {from}` carry the page's name; a name that is not one of the
 five (`lib/market-names.ts`) is dropped before sending, so no free text rides
 in on it.
+
+## Stories (2026-10-15, founder)
+
+Five visual stories, one per market page, each telling one week's count with
+its own object and style (prototypes: `docs/local/editorial-sprint/stories/`):
+"Pick a side" (entry level software), "The lobby is the biggest floor"
+(software engineering), "Contents may vary" (AI), "Peak Python" (machine
+learning), "Within eleven jobs" (DevOps).
+
+- **Dated, like an article.** A story is fixed to one named week. Its numbers
+  are static data in one module per story (`frontend/src/lib/stories/<slug>.ts`),
+  a comment per figure naming its line in the week's data pack; its words are
+  written from those numbers. It says its week near the top ("This story keeps
+  to one week, 12 October 2026. The … page starts a new count every Monday";
+  once more, short, after the CV ask), in every source line, its title and its
+  share image, and links its live page, which recounts every Monday. Moving a
+  story to a new week is a data edit; its tests (`<slug>.test.ts`) check the
+  sums and name each sentence the new numbers must still bear out. Refreshed and
+  re-checked before it ships (the first refresh: the 19 Oct publication).
+- **Addresses.** `/market/<page>/<story>`, a static folder under `app/market/[page]/`
+  per story, as the years page: built for its own page name only, any other is
+  a 404; no publication read, so only a deploy rebuilds it (no Neon or API call
+  on a visit or a build). Each route loads only its own faces.
+- **Each story** has Article and BreadcrumbList markup (Market, its page, the
+  story), its own canonical, title ("Pick a side: entry level software jobs in
+  the week of 12 October 2026"), description (the card line) and a 1200×630
+  share image drawn from its data. It ends with "Curious how many of these
+  skills are already on your CV?", the peek button (the market page's
+  sheet and scan, about the skills the story counts), the week line, and "How we
+  counted": what the page counts, the skills rule, where the jobs come from and
+  what we can't see (from /method's words).
+- **The hub** (`/market`) is a grid of the stories after The Pudding's home:
+  covers, a pill and a date, the finding in one line, a plain link to each live
+  weekly page (so the hub stays search's way into the live counts), the years
+  page's card from the live count, how we count, and the CV card fifth. Filters
+  by kind; the Essays filter appears when an essay joins (the two years essay,
+  after its recount). The hub still reads the publication for the live links,
+  the years card and the week, rebuilt as before.
+- **The weekly page** lists its story first under "Also this week". The hub
+  pills say "Story" and the filter "Stories"; each card links "Latest count:
+  {page} jobs" ("Live count" read as real time; copy rewrite, 15 Oct 2026).
 
 ## Two misreads fixed (requirements-v6)
 

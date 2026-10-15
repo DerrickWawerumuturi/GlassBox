@@ -1,8 +1,11 @@
 import type {Metadata, MetadataRoute} from "next";
 
 import {SITE_URL} from "@/lib/site";
-import {FIRST_PUBLISHED, MARKET_NAMES, MarketBody, MarketInfo, marketPath} from "@/lib/market-pages";
+import {FIRST_PUBLISHED, MARKET_NAMES, MARKET_PAGES, MarketBody, MarketInfo, MarketName, marketPath} from "@/lib/market-pages";
 import {YEARS_PATH} from "@/lib/market-names";
+import {weekDate} from "@/lib/market-page";
+import {STORIES} from "@/lib/stories";
+import {StoryInfo, storyPath} from "@/lib/stories/story";
 
 /*
  * What search engines and share previews read: the site's metadata, each
@@ -12,9 +15,14 @@ import {YEARS_PATH} from "@/lib/market-names";
  * page therefore builds its block here, from the same parts.
  */
 
-/** The pages search should list, in sitemap order. Each /market page goes here too. */
-export const PUBLIC_PATHS = ["/", "/product", "/about", "/privacy", "/your-cv", "/market", "/market/entry-level-software",
-    YEARS_PATH, "/market/software-engineering", "/market/ai", "/market/machine-learning", "/market/devops", "/method"] as const;
+// A market page's stories, listed after it (lib/stories).
+const stories = (page: MarketName) => STORIES.filter((s) => s.page === page).map(storyPath);
+
+/** The pages search should list, in sitemap order. Each /market page goes here too, its stories after it. */
+export const PUBLIC_PATHS: ReadonlyArray<`/${string}`> = ["/", "/product", "/about", "/privacy", "/your-cv", "/market",
+    "/market/entry-level-software", YEARS_PATH, ...stories("entry-level-software"),
+    "/market/software-engineering", ...stories("software-engineering"), "/market/ai", ...stories("ai"),
+    "/market/machine-learning", ...stories("machine-learning"), "/market/devops", ...stories("devops"), "/method"];
 
 /** A path as an absolute address on this site ("/" is the bare origin). */
 export function absolute(path: string): string {
@@ -55,7 +63,7 @@ export const rootMetadata: Metadata = {
  * block. `ownImage` for a page with its own opengraph-image.tsx (a market
  * page's headline fact); otherwise the site's image.
  */
-export function publicPage(path: (typeof PUBLIC_PATHS)[number] | `/${string}`, page: {
+export function publicPage(path: `/${string}`, page: {
     title: string; description: string; share?: Share; ownImage?: boolean; article?: boolean;
 }): Metadata {
     const share = page.share ?? SHARE;
@@ -105,7 +113,8 @@ export function articleStructuredData(path: string, crumbs: Array<[string, strin
                 "@type": "BreadcrumbList", itemListElement: [["Market", "/market"], ...crumbs].map(([name, at], i) => (
                     {"@type": "ListItem", position: i + 1, name, item: absolute(at)})),
             },
-            ...faqStructuredData(faq),
+            // The page says the week once, under its questions; a search snippet shows one answer alone, so each carries it.
+            ...faqStructuredData(faq.map(({q, a}) => ({q, a: a.includes(weekDate(page)) ? a : `${a} Week of ${weekDate(page)}.`}))),
         ],
     };
 }
@@ -114,10 +123,33 @@ export function articleStructuredData(path: string, crumbs: Array<[string, strin
 export function marketStructuredData(info: MarketInfo, page: MarketBody, description: string, headline?: string | null,
                                      faq: Array<{q: string; a: string}> = []) {
     const path = marketPath(info.name);
-    return articleStructuredData(path, [[info.label, path]], page, headline ?? `The skills ${info.subject} jobs name, counted`, description, faq);
+    return articleStructuredData(path, [[info.label, path]], page, headline ?? `What ${info.subject} jobs ask for`, description, faq);
 }
 
 export const MARKET_PATHS = MARKET_NAMES.map(marketPath);
+
+/**
+ * A story as structured data: an Article by Glassbox, dated the day its
+ * numbers were fixed (a story counts one week and doesn't change with the
+ * live page), and its breadcrumbs: Market, its market page, the story.
+ */
+export function storyStructuredData(story: StoryInfo) {
+    const path = storyPath(story), page = MARKET_PAGES[story.page];
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Article", headline: story.title, description: story.card,
+                datePublished: story.published, dateModified: story.published, author: ORG, publisher: ORG,
+                image: [absolute(`${path}/opengraph-image`)], mainEntityOfPage: absolute(path),
+            },
+            {
+                "@type": "BreadcrumbList", itemListElement: [["Market", "/market"], [page.label, marketPath(story.page)], [story.title, path]].map(
+                    ([name, at], i) => ({"@type": "ListItem", position: i + 1, name, item: absolute(at)})),
+            },
+        ],
+    };
+}
 
 /**
  * The home page's structured data. WebSite and Organization give search a

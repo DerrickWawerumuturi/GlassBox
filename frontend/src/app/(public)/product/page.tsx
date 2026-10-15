@@ -1,62 +1,54 @@
-import Link from "next/link";
+import React from "react";
 
-import AddCvButton from "@/components/AddCvButton";
-import {Explainer, Numbers} from "@/components/site/Explainer";
-import {Button} from "@/components/ui/button";
+import {hankenGrotesk} from "@/app/fonts/hanken-grotesk";
+import Chapter from "@/components/product/Chapter";
+import CountCard from "@/components/product/CountCard";
+import CvClose from "@/components/product/CvClose";
+import {heroBox} from "@/components/product/drawings";
+import s from "@/components/product/product.module.css";
+import {dollSvg} from "@/components/stories/doll";
 import {lookForPage} from "@/lib/landing/look-server";
-import {weekDate} from "@/lib/market-page";
+import {countReceipt} from "@/lib/product-count";
 import {PRODUCT_PAGE as P} from "@/lib/site-copy";
 import {publicPage} from "@/lib/seo";
 
 export const metadata = publicPage("/product", {
     title: "Product",
-    description: "This week's jobs, counted. Then where you stand, once your CV is in.",
+    description: "One PDF in. Four pages out, each one about where you stand.",
 });
 
-// Static, with this week's counts for the numbers box; rebuilt like the home page.
+// Static, with this week's count for "The count"; rebuilt like the home page (lib/revalidate.ts).
 export const revalidate = false;
 
-/** This week's real counts for the Market section, or nothing when the count isn't available. */
-async function numbers(): Promise<string[] | null> {
-    const look = await lookForPage();
-    const backend = look?.families.backend;
-    if (!look || !backend) return null;
-    const [key, n] = Object.entries(backend.skills).sort((a, b) => b[1] - a[1])[0] ?? [];
-    if (!key) return null;
-    const total = Object.values(look.families).reduce((s, f) => s + f.jobs, 0);
-    const date = weekDate(look);
-    return P.numberLines(total.toLocaleString("en"), Object.keys(look.families).length, look.skills[key] ?? key,
-        String(n), backend.readable.toLocaleString("en"), date);
-}
-
-/** The Market section's box of this week's counts, when there is one, then where to read more. */
-function MarketExtra({lines}: {lines: string[] | null}) {
-    return (
-        <>
-            {lines && <Numbers title={P.numbers} lines={lines} />}
-            <ul className={"flex flex-col gap-1.5 text-[16px]"}>
-                {P.marketLinks.map((link) => (
-                    <li key={link.href}><Link href={link.href} className={"text-primary underline-offset-4 hover:underline"}>{link.label}</Link></li>
-                ))}
-            </ul>
-        </>
-    );
-}
-
-/** A long explainer: one numbered section per part of the product, real screenshots (example CV). */
+/**
+ * What Glassbox shows, in the editorial look of the stories (founder, 15 Oct
+ * 2026): the open box in the hero, five chips, then one chapter per part on a
+ * coloured stage with the real screenshots (example CV), the live count after
+ * the first, and the CV ask with a doll.
+ */
 export default async function ProductPage() {
-    const lines = await numbers();
+    const receipt = countReceipt(await lookForPage());
+    const [first, ...rest] = P.chapters;
     return (
-        <Explainer kicker={P.kicker} title={P.title} dek={P.dek} toc={P.toc} jump={P.jump} sections={P.sections}
-                   extra={{market: <MarketExtra lines={lines} />}}>
-            <section className={"flex flex-col gap-4 border-t border-border pt-12"}>
-                <h2 className={"max-w-xl font-heading text-2xl font-bold uppercase tracking-tight sm:text-3xl"}>{P.closing}</h2>
-                <div className={"flex flex-wrap items-center gap-x-5 gap-y-2"}>
-                    <AddCvButton label={P.cta} reading={P.reading} />
-                    <Button variant={"link"} className={"px-0 text-foreground"} nativeButton={false} render={<Link href={"/sign-in"} />}>{P.signUp}</Button>
+        <main className={`${hankenGrotesk.variable} ${s.page}`}>
+            <section className={`${s.hero} ${s.wrap}`}>
+                <div>
+                    <p className={s.kick}>{P.kicker}</p>
+                    <h1>{P.title}</h1>
+                    <p className={s.dek}>{P.dek}</p>
                 </div>
-                <p className={"font-mono text-[12px] text-muted-foreground"}>{P.lead}</p>
+                <div className={s.pic} aria-hidden dangerouslySetInnerHTML={{__html: heroBox()}} />
             </section>
-        </Explainer>
+            <nav className={`${s.chips} ${s.wrap}`} aria-label={P.toc}>
+                {P.chapters.map((c, i) => (
+                    <a key={c.id} className={s.chip} href={`#${c.id}`} style={{"--c": `var(--${c.stage})`} as React.CSSProperties}><i>{i + 1}</i>{c.name}</a>
+                ))}
+            </nav>
+            <Chapter c={first} n={1} />
+            <CountCard receipt={receipt} note={P.count.note} />
+            {rest.map((c, i) => <Chapter key={c.id} c={c} n={i + 2} />)}
+            <CvClose where={"product"}
+                     character={<div className={s.doll} aria-hidden dangerouslySetInnerHTML={{__html: dollSvg({i: 12, role: "web", wave: true})}} />} />
+        </main>
     );
 }

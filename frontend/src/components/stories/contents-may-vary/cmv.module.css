@@ -1,0 +1,155 @@
+/*
+ * Contents may vary: the page around the box, and the box. Hanken Grotesk for everything we write;
+ * Bungee only on the box front. The ground is cream, the counter the box sits on; with the dark
+ * theme the counter goes dark and the printed box keeps its inks. Orange only acts (the CV button,
+ * links, the pen notes). Lime marks the lit line and nothing else. Ported from the approved
+ * prototype (docs/local/editorial-sprint/stories/contents-may-vary/story.css and box.css).
+ */
+.root {
+  --pack: var(--font-bungee), var(--font-space-grotesk), sans-serif; --gap-beat: 150px;
+  --ground: #fff6e5; --ink: #161411; --muted: #645d52; --line: #e6dcc8; --counter: #f4e8d2; --slip: #fffdf8; --piece: #161411;
+  --magenta: #ff3d8f; --magenta-deep: #d9226f; --cyan: #1fb6ff; --cyan-deep: #0c8fd0; --lime: #d7ee4c; --hatch: #b5ab9d; --pen: var(--orange);
+  --label-bg: #ffffff; --label-ink: #111111; --label-mute: #5b5751;
+  overflow-x: clip; background: var(--ground); color: var(--ink); font: 400 20px/1.65 var(--essay); -webkit-font-smoothing: antialiased;
+}
+:global(.dark) .root { --ground: #1f1b17; --ink: #f1ebe1; --muted: #b5ac9e; --line: #3d372f; --counter: #2b2621; --slip: #2f2a24; --piece: #efe6d8; --hatch: #8f8577; }
+.crumbs { color: var(--muted); }
+.col { max-width: 600px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.wide { max-width: 1120px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.root p { margin: 0 0 1.1em; color: color-mix(in oklab, var(--ink) 90%, var(--ground)); }
+.root a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.root h1 { font: 800 clamp(40px, 5.6vw, 60px)/1.02 var(--essay); letter-spacing: -.03em; margin: 0 0 20px; }
+.root h2 { font: 700 clamp(28px, 3.4vw, 38px)/1.15 var(--essay); letter-spacing: -.02em; margin: 0 0 20px; }
+.root p.dek { font-size: clamp(20px, 2.1vw, 23px); line-height: 1.5; color: color-mix(in oklab, var(--ink) 72%, var(--ground)); }
+.root p.by { font-size: 15px; color: var(--muted); margin-top: 22px; }
+.root p.live { font-size: 15px; line-height: 1.55; color: var(--muted); }
+.root p.live a { color: var(--orange); }
+.root p.lead { font-size: clamp(21px, 2.3vw, 24px); line-height: 1.5; color: var(--ink); }
+.root strong { font-weight: 700; color: var(--ink); }
+.root .note { font: 500 26px/1.1 var(--hand); color: var(--pen); margin: 0; }
+.root section { margin-top: var(--gap-beat); }
+.beat > * + * { margin-top: 44px; }
+.root figure { margin: 44px 0 0; }
+.root p.cap { font: italic 400 15px/1.55 var(--essay); color: var(--muted); margin: 14px 0 0; max-width: 46em; }
+.root p.src { font: 500 12.5px/1.5 var(--mono); color: var(--muted); margin: 8px 0 0; letter-spacing: .01em; }
+.root p.src a { color: var(--orange); }
+.root p.readout { font-size: 15px; color: var(--muted); min-height: 1.6em; margin: 0 0 10px; }
+.readout b { color: var(--ink); font-weight: 700; }
+.stat { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: 26px; }
+.stat b { font: 800 clamp(88px, 12vw, 150px)/.85 var(--essay); letter-spacing: -.05em; }
+.stat span { font-size: clamp(21px, 2.4vw, 26px); line-height: 1.3; max-width: 13em; font-weight: 500; }
+
+/* Hero: the box on its shelf beside the title. */
+.root section.hero { margin-top: 26px; display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 540px); grid-template-areas: "shelf text" "shelf cue"; gap: 0 40px; align-items: center; justify-content: center; padding: 0 22px; }
+.shelf { position: relative; grid-area: shelf; }
+.heroText { grid-area: text; align-self: end; padding: 0; max-width: none; }
+.root p.heroCue { grid-area: cue; align-self: start; margin: 28px 0 0; }
+.packshot svg { width: 100%; height: auto; display: block; overflow: visible; }
+.reader { position: absolute; right: 2%; bottom: 7.5%; width: 12%; }
+.reader svg { width: 100%; height: auto; display: block; }
+.root .shelfNote { position: absolute; right: 0; top: 0; transform: rotate(-8deg); }
+.root p.cue { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+.cueText { font: 500 15px var(--essay); color: var(--muted); }
+.open { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px 0 16px; border-radius: 999px; border: 0; background: var(--ink); color: var(--ground); font: 700 16px var(--essay); cursor: pointer; }
+.open::before { content: ""; width: 14px; height: 11px; border: 2px solid currentColor; border-top-width: 4px; border-radius: 2px; }
+.open:disabled { opacity: .6; cursor: default; }
+.ghost { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font: 600 14px var(--essay); cursor: pointer; }
+
+/* Ending, as the essay's. */
+.cta { margin: 40px 0 20px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.root .cta p { margin: 0; font-weight: 500; max-width: 22em; }
+.method { margin: 34px 0 140px; }
+.method summary { cursor: pointer; font: 600 17px var(--essay); min-height: 44px; display: flex; align-items: center; }
+.root .method p { font-size: 16.5px; line-height: 1.6; }
+.root .method a { color: var(--orange); }
+
+/* The box. Halftone is a CSS dot pattern. */
+.pack::before, .lid, .back { background-image: radial-gradient(circle, rgba(0, 0, 0, .14) 1.1px, transparent 1.5px); background-size: 6px 6px; }
+
+/* Hero: the tear. The flat lid fades, the torn lid stands up, nine pieces pop out. */
+.lidTorn { opacity: 0; transition: opacity .35s; } .lidFlat { transition: opacity .35s; }
+.torn .lidTorn { opacity: 1; } .torn .lidFlat { opacity: 0; }
+.pop { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.torn .pop { animation: pop 1.1s cubic-bezier(.2, .7, .3, 1) var(--d, 0s) both; }
+@keyframes pop { 0% { opacity: 0; transform: translateY(0) rotate(0); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-120px) rotate(70deg); } }
+
+/* The counter scene */
+.scene { display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 36px 56px; align-items: start; }
+.pack { position: relative; margin: 46px 0 0 46px; }
+.pack::before { content: ""; position: absolute; top: 0; bottom: 0; left: -46px; width: 46px; background-color: var(--magenta); border: 3px solid var(--ink); border-right: 0; transform: skewY(33deg); transform-origin: 100% 0; }
+.top { position: absolute; left: 0; right: 0; top: -30px; height: 30px; transform: skewX(56.9deg); transform-origin: 0 100%; perspective: 420px; pointer-events: none; }
+.hole { position: absolute; inset: 0; background: #2a2226; border: 3px solid var(--ink); border-bottom: 0; }
+.lid { position: absolute; inset: 0; background-color: var(--cyan); border: 3px solid var(--ink); border-bottom: 0; transform-origin: 50% 0; transition: transform 1s cubic-bezier(.3, .9, .3, 1); }
+.lid::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 5px; border-top: 2px dashed rgba(255, 255, 255, .85); }
+.pack.opened .lid { transform: rotateX(-118deg); clip-path: polygon(0 0, 100% 0, 100% 72%, 96% 100%, 92% 70%, 88% 100%, 84% 72%, 80% 100%, 76% 70%, 72% 100%, 68% 72%, 64% 100%, 60% 70%, 56% 100%, 52% 72%, 48% 100%, 44% 70%, 40% 100%, 36% 72%, 32% 100%, 28% 70%, 24% 100%, 20% 72%, 16% 100%, 12% 70%, 8% 100%, 4% 72%, 0 100%); }
+.pack.opened .lid::after { display: none; }
+.face { position: relative; background: var(--label-bg); color: var(--label-ink); border: 3px solid var(--ink); }
+
+/* The label, set like the real thing: black on white, heavy rules, a column of numbers. */
+.label { padding: 16px 16px 14px; font-family: var(--essay); }
+.root .label h3 { font: 900 30px/1 var(--essay); letter-spacing: -.02em; margin: 0 0 6px; text-transform: uppercase; color: var(--label-ink); }
+.root .label p.of { font: 500 14px/1.4 var(--essay); margin: 0 0 8px; color: var(--label-ink); }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 58px 52px; gap: 0 8px; font: 700 12px/1 var(--essay); letter-spacing: .1em; text-transform: uppercase; border-top: 9px solid var(--label-ink); padding: 7px 0 6px 26px; color: var(--label-ink); }
+.cols span:nth-child(n+2) { text-align: right; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 58px 52px; gap: 0 8px; align-items: center; min-height: 44px; margin: 0; padding: 4px 0 4px 26px; width: 100%; border: 0; border-top: 1px solid var(--label-ink); border-radius: 0; background: none; text-align: left; font: 600 16.5px/1.2 var(--essay); color: var(--label-ink); position: relative; }
+.row .ct, .row .sh { font: 600 14.5px var(--mono); text-align: right; }
+button.row { cursor: pointer; transition: background-color .15s; }
+button.row::before { content: ""; position: absolute; left: 3px; top: 50%; width: 13px; height: 13px; margin-top: -8px; border: 2px solid var(--label-ink); border-radius: 50%; background: #fff; }
+button.row:hover { background: #f3f0e8; }
+button.row[aria-pressed="true"] { background: var(--lime); }
+button.row[aria-pressed="true"]::before { background: var(--label-ink); box-shadow: inset 0 0 0 2px var(--lime); }
+.row.share { color: var(--label-mute); } .row.share .ct { color: #a39d93; }
+.row.share .nm::after { content: " *"; }
+button.row.warn { display: block; margin-top: 12px; padding: 10px 12px 10px 36px; border: 3px solid var(--label-ink); }
+button.row.warn::before { left: 11px; top: 25px; margin-top: 0; border-radius: 2px; }
+button.row.warn[aria-pressed="true"] { background: repeating-linear-gradient(45deg, #d9d4ca 0 2px, #fff 2px 7px); }
+button.row.warn[aria-pressed="true"]::before { box-shadow: inset 0 0 0 2px #fff; }
+.warn .wh { display: block; font: 900 12px/1 var(--essay); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px; }
+.warn .wt { display: block; font-size: 16px; line-height: 1.3; }
+.warn .wm { display: block; font: 500 12.5px/1.4 var(--mono); color: var(--label-mute); margin-top: 5px; }
+.root .label p.foot { font: 500 12.5px/1.45 var(--essay); color: var(--label-mute); margin: 12px 0 0; }
+
+/* The pile: one piece per job. Lit pieces lime; "no language named" hatched grey. */
+.pilewrap { position: sticky; top: 16px; }
+.pile { position: relative; display: grid; grid-template-columns: repeat(var(--across), minmax(0, 1fr)); gap: 3px; background: var(--counter); padding: 12px; border: 3px solid var(--ink); border-radius: 4px; }
+.pile i { display: block; aspect-ratio: 1; background: var(--piece); border-radius: 26%; transition: transform .8s cubic-bezier(.2, .75, .25, 1) var(--d, 0s), opacity .3s linear var(--d, 0s), background-color .25s; }
+.pile:not(.out) i { opacity: 0; transform: translate(var(--sx, 0px), var(--sy, -60px)) rotate(var(--r, 0deg)) scale(.4); }
+/* Without script the pieces are simply on the counter. */
+@media (scripting: none) { .pile:not(.out) i { opacity: 1; transform: none; } .root p.cue, .bar button { display: none; } }
+.pile i.on { background: var(--lime); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4); }
+.pile i.gap { background: repeating-linear-gradient(45deg, var(--hatch) 0 1.5px, transparent 1.5px 4.5px); box-shadow: inset 0 0 0 1px var(--hatch); }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.root .bar p.readout { margin: 0; }
+.root p.tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.key { display: inline-flex; align-items: center; gap: 7px; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 26%; }
+.sw.on { background: var(--lime); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4); }
+.sw.gap { background: repeating-linear-gradient(45deg, var(--hatch) 0 1.5px, transparent 1.5px 4.5px); box-shadow: inset 0 0 0 1px var(--hatch); }
+
+@media (max-width: 900px) {
+  /* Box, then the button, then the title: the verb sits on the first screen. */
+  .root section.hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "shelf" "cue" "text"; justify-items: center; }
+  .shelf { width: 100%; max-width: 460px; }
+  .heroText { width: 100%; max-width: 600px; margin-top: 30px; }
+  .root p.heroCue { width: 100%; max-width: 600px; padding: 0 22px; margin-top: 18px; }
+}
+@media (max-width: 760px) {
+  .root { --gap-beat: 100px; font-size: 18px; }
+  .root section.hero { padding: 0 16px; }
+  .root .shelfNote { font-size: 20px; right: 1%; top: -3%; }
+  .root p.heroCue { padding: 0 16px; }
+  .stat b { font-size: clamp(88px, 24vw, 120px); }
+  .scene { display: block; }
+  .pack { margin: 38px 0 0 34px; }
+  .pack::before { left: -34px; width: 34px; }
+  .top { top: -22px; height: 22px; }
+  .lid::after { bottom: 3px; }
+  /* The counter stays on screen while the label scrolls above it. */
+  .pilewrap { position: sticky; top: auto; bottom: 0; margin: 20px -22px 0; padding: 10px 14px 12px; background: var(--ground); border-top: 3px solid var(--ink); z-index: 3; }
+  .pile { gap: 2px; padding: 8px; }
+  .bar { margin-bottom: 8px; } .root p.readout { font-size: 14px; }
+  .root p.tools { margin-top: 8px; font-size: 13px; }
+  .label { padding: 14px 12px 12px; } .root .label h3 { font-size: 26px; }
+  .row { grid-template-columns: minmax(0, 1fr) 50px 48px; font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .lid, .pile i, button.row { transition: none !important; } .torn .pop { animation: none; } }

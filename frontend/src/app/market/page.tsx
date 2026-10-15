@@ -1,74 +1,107 @@
+import React from "react";
 import Link from "next/link";
-import {ArrowRightIcon} from "lucide-react";
 
+import {allertaStencil} from "@/app/fonts/allerta-stencil";
+import {bebasNeue} from "@/app/fonts/bebas-neue";
+import {hankenGrotesk} from "@/app/fonts/hanken-grotesk";
+import {limelight} from "@/app/fonts/limelight";
+import {methodCover, yearsCover} from "@/components/market-hub/covers";
+import s from "@/components/market-hub/hub.module.css";
+import HubCv from "@/components/market-hub/HubCv";
+import HubFilter from "@/components/market-hub/HubFilter";
+import {STORY_COVERS} from "@/components/stories/covers";
+import t from "@/components/stories/story.module.css";
 import {weekDate, weekStart} from "@/lib/market-page";
-import {MARKET_NAMES, MARKET_PAGES, MarketBody, MarketInfo, marketPath} from "@/lib/market-pages";
-import {cardLine, headline, topic} from "@/lib/market-story";
+import {MARKET_NAMES} from "@/lib/market-pages";
+import {CV_AT, HubCard, hubCards, hubFilters} from "@/lib/market-hub";
 import {allMarkets, keepLastPage} from "@/lib/landing/look-server";
 import {publicPage} from "@/lib/seo";
+import type {StorySlug} from "@/lib/stories/story";
+import {cn} from "@/lib/utils";
 
 /*
- * /market: every market page as a card with its lead finding as the title,
- * so the site reads as a place that reports on the job market and search
- * finds the pages through one hub. Server rendered; a failed read during a
- * revalidation keeps the last good hub (look-server.ts). A page with no count
- * this week has no card.
+ * /market: the grid of stories (founder, 15 Oct 2026; docs/decisions/market-pages.md,
+ * "Stories"). Each story is one week's count; each card also links its live
+ * weekly market page, so the hub stays search's way into the live counts.
+ * Server rendered from the published count, for the live links, the years
+ * card and the week; a failed read during a revalidation keeps the last good
+ * hub (look-server.ts). The covers' display faces load here and in their stories only.
  */
 
 const HUB = {
-    title: "This week's tech jobs, counted",
-    dek: "Five counts of the skills tech jobs name, one finding each. Every number says what it counts and when.",
-    description: "The skills this week's tech jobs name, counted from live jobs: entry level software, software engineering, AI, machine learning and DevOps.",
+    title: "The week in tech jobs",
+    dek: "Every Monday, five pages count what tech jobs ask for. Each has a story that keeps one week and looks closer.",
+    description: "Which skills tech jobs ask for, counted every Monday from live job ads: entry level software, software engineering, AI, machine learning and DevOps.",
 };
 
 export const revalidate = false;
 export const metadata = publicPage("/market", {
-    title: "What this week's tech jobs ask for", description: HUB.description,
-    share: {title: "What this week's tech jobs ask for, counted", description: HUB.description}, ownImage: true, article: true,
+    title: "What tech jobs ask for, counted every week", description: HUB.description,
+    share: {title: "What tech jobs ask for, counted every week", description: HUB.description}, ownImage: true, article: true,
 });
 
-/**
- * One page's card: the week, the finding as the title, the count behind it,
- * and "Read more". Nothing else, so it reads the same at phone width. The
- * whole card is the link, named by its title.
- */
-function Card({info, page}: {info: MarketInfo; page: MarketBody}) {
-    const c = {info, page}, title = headline(c) ?? topic(c);
+// The faces the covers set their numbers in (Contents may vary's cover draws in Hanken Grotesk).
+const FONTS = [hankenGrotesk, bebasNeue, limelight, allertaStencil].map((f) => f.variable).join(" ");
+
+const cover = (c: HubCard) => c.cover === "years" ? yearsCover(c.years!.unstated, c.years!.total)
+    : c.cover === "method" ? methodCover() : STORY_COVERS[c.cover as StorySlug]();
+
+/** The badge by the title: a yellow starburst, like a price sticker. */
+function Badge() {
+    let d = "";
+    for (let k = 0; k < 32; k++) {
+        const r = k % 2 ? 52 : 62, a = Math.PI * k / 16;
+        d += (k ? "L" : "M") + (64 + r * Math.cos(a)).toFixed(1) + " " + (64 + r * Math.sin(a)).toFixed(1);
+    }
+    const word = {textAnchor: "middle", fill: "#22201c", style: {fontFamily: "var(--essay)"}} as const;
     return (
-        <li className={"relative flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-5 transition-colors hover:border-foreground/40 sm:p-6"}>
-            <p className={"m-0 font-mono text-[12px] uppercase tracking-[0.12em] text-muted-foreground"}>
-                <time dateTime={weekStart(page)}>Week of {weekDate(page)}</time>
-            </p>
-            <h2 className={"m-0 font-heading text-[22px] font-bold leading-[1.2] tracking-[-0.01em]"}>
-                <Link href={marketPath(info.name)} className={"after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"}>{title}</Link>
-            </h2>
-            <p className={"m-0 font-read text-[17px] leading-[1.5] text-foreground/85"}>{cardLine(c)}</p>
-            <span aria-hidden className={"mt-auto inline-flex items-center gap-1.5 text-[14px] font-medium text-primary"}>Read more<ArrowRightIcon className={"size-4"} /></span>
+        <div className={s.badge} aria-hidden>
+            <svg viewBox={"0 0 128 128"}>
+                <path d={`${d}Z`} fill={"#ffe066"} stroke={"#22201c"} strokeWidth={2} strokeLinejoin={"round"} />
+                <text x={64} y={54} fontSize={13} fontWeight={700} {...word}>NEW COUNT</text>
+                <text x={64} y={76} fontSize={20} fontWeight={800} {...word}>every</text>
+                <text x={64} y={96} fontSize={20} fontWeight={800} {...word}>Monday</text>
+            </svg>
+        </div>
+    );
+}
+
+function Card({c}: {c: HubCard}) {
+    return (
+        <li className={s.card} data-kind={c.kind}>
+            <div className={s.meta}><span className={s.pill}>{c.pill}</span>{c.when && <span className={s.when}>{c.when}</span>}</div>
+            <div className={s.cover} dangerouslySetInnerHTML={{__html: cover(c)}} />
+            <h2><Link href={c.href}>{c.title}</Link></h2>
+            <p>{c.line}</p>
+            {c.live && <Link className={s.live} href={c.live.href}>{c.live.label}</Link>}
         </li>
     );
 }
 
 export default async function MarketHub() {
     const pages = await allMarkets(keepLastPage());
-    const counted = MARKET_NAMES.filter((n) => pages[n] !== null);
-    const first = counted.length ? pages[counted[0]] : null;
+    const counted = MARKET_NAMES.map((n) => pages[n]).find((p) => p !== null) ?? null;
+    const cards = hubCards(pages);
     return (
-        <main className={"mx-auto w-full max-w-[1120px] px-4 pt-11 pb-24 sm:px-6"}>
-            <p className={"mb-3.5 font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground"}>Market</p>
-            <h1 className={"m-0 max-w-[920px] font-heading text-[36px] font-bold leading-[1.02] tracking-[-0.025em] sm:text-[56px]"}>{HUB.title}</h1>
-            <p className={"mt-[26px] max-w-[800px] font-read text-[20px] leading-[1.45] sm:text-[23px]"}>{HUB.dek}</p>
-            {first && <p className={"mt-4 font-mono text-[12px] text-muted-foreground"}>
-                <time dateTime={weekStart(first)}>Counted in the week of {weekDate(first)}</time> · Updated every Monday</p>}
-            <ol className={"mt-16 grid list-none gap-4 p-0 sm:mt-24 md:grid-cols-2"}>
-                {counted.map((name) => <Card key={name} info={MARKET_PAGES[name]} page={pages[name]!} />)}
-                <li className={"flex min-w-0 flex-col gap-3 rounded-xl border border-dashed border-border p-5 sm:p-6"}>
-                    <p className={"m-0 font-mono text-[12px] uppercase tracking-[0.12em] text-muted-foreground"}>Method</p>
-                    <h2 className={"m-0 font-heading text-[22px] font-bold leading-[1.2]"}>
-                        <Link href={"/method"} className={"underline-offset-4 hover:underline"}>How Glassbox counts</Link>
-                    </h2>
-                    <p className={"m-0 font-read text-[17px] leading-[1.5] text-foreground/85"}>Where the jobs come from, how each one counts once, and what we can&apos;t see.</p>
-                </li>
-            </ol>
-        </main>
+        <div className={cn(t.story, FONTS, s.hub)}>
+            <div className={s.wrap}>
+                <section className={s.mast}>
+                    <p className={s.kick}>Market</p>
+                    <h1>{HUB.title}</h1>
+                    <p className={s.dek}>{HUB.dek}</p>
+                    <Badge />
+                    {counted && <p className={s.when}><time dateTime={weekStart(counted)}>Counted in the week of {weekDate(counted)}</time></p>}
+                </section>
+                <HubFilter filters={hubFilters(cards)}>
+                    <ol className={s.grid}>
+                        {cards.slice(0, CV_AT).map((c) => <Card key={c.href} c={c} />)}
+                        <HubCv />
+                        {cards.slice(CV_AT).map((c) => <Card key={c.href} c={c} />)}
+                    </ol>
+                </HubFilter>
+                <p className={s.open}>The weekly counts are also open data, as CSV files on{" "}
+                    <a href={"https://github.com/DerrickWawerumuturi/glassbox-job-counts"}>GitHub</a>.</p>
+            </div>
+        </div>
     );
 }

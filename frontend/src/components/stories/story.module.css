@@ -1,0 +1,34 @@
+/*
+ * What every visual story shares (the prototypes' shared.css, scoped): the
+ * product's faces and colour roles under the names the stories use, the
+ * focus ring, the screen reader class and reduced motion. Each story sets
+ * its own ground and composition in its own module on top of `.story`.
+ * Orange acts (links, the button, pen notes); lime is the one highlight;
+ * green stays "on your CV" (docs/decisions/design-system.md).
+ */
+.story {
+  --paper: #f7f3ef; --card: #fbf9f6; --ink: #21201c; --muted: #63635e; --line: #dcd5cc;
+  --orange: oklch(0.575 0.20 35); --lime: oklch(0.92 0.19 116); --lime-ink: oklch(0.28 0.07 152); --lime-edge: oklch(0.28 0.07 152 / 28%);
+  --gap: oklch(0.58 0.012 70);
+  --charcoal: oklch(0.205 0.006 70); --charcoal-ink: oklch(0.955 0.004 80); --charcoal-muted: oklch(0.74 0.01 75); --charcoal-line: oklch(1 0 0 / 12%);
+  --essay: var(--font-hanken-grotesk), system-ui, sans-serif;
+  --disp: var(--font-space-grotesk), system-ui, sans-serif;
+  --mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --read: var(--font-source-serif-4), Georgia, serif;
+  --hand: var(--font-caveat), cursive;
+  -webkit-text-size-adjust: 100%;
+  /* Its own ground runs to its last line: no margin escapes into the footer. */
+  display: flow-root;
+}
+.story * { min-width: 0; }
+.story :is(button, a, [tabindex]):focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* The way back to the live count, where the prototypes had the wordmark: Market / the page / the story. */
+.crumbs { margin: 0; padding: 22px 22px 0; font: 500 12px/1.5 var(--mono); letter-spacing: .12em; text-transform: uppercase; text-align: center; }
+.story .crumbs a { color: inherit; text-decoration: none; }
+.story .crumbs a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .story *, .story *::before, .story *::after { transition: none !important; animation: none !important; }
+}

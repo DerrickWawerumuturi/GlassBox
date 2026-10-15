@@ -26,7 +26,7 @@ export const METHOD_PAGE = {
     kicker: "Method",
     title: "How Glassbox counts",
     description: "Where our jobs come from, how each one is counted once, how skills, levels and years are read, and what we can't see.",
-    dek: "Every market number on this site comes from one weekly count of live jobs. This is how it's made, and what it leaves out.",
+    dek: "Every number on the Market pages comes from one weekly count of live job ads. Here is how it's made, and what it leaves out.",
     toc: "On this page",
     jump: "Jump to",
     sections: [
@@ -107,10 +107,10 @@ export const METHOD_PAGE = {
         },
     ] as ExplainerSection[],
     sitesTitle: "The job sites we read",
-    backTitle: "Back to the count",
+    backTitle: "Back to the numbers",
     back: [
-        {href: "/", label: "This week's count"},
-        {href: "/market", label: "What this week's tech jobs ask for"},
+        {href: "/", label: "The home page"},
+        {href: "/market", label: "The week in tech jobs"},
         {href: "/market/entry-level-software", label: "What entry level software jobs ask for"},
         {href: "/your-cv", label: "What happens to your CV"},
     ],

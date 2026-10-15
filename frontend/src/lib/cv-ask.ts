@@ -18,7 +18,7 @@ export interface AskSkill {key: string; name: string}
 export interface Ask {
     skills: AskSkill[];
     what: string;
-    /** The jobs the skills were counted from: those whose ads we could read, not every job counted. */
+    /** The jobs the skills were counted from: those whose ads we read, not every job counted. */
     jobs: number;
     subject: string;
 }
@@ -29,8 +29,16 @@ const fmt = (n: number) => n.toLocaleString("en");
 const EXAMPLE_CHIPS = [["Python", true], ["React", true], ["Go", false], ["SQL", true], ["Kubernetes", false]] as const;
 const EXAMPLE = {have: EXAMPLE_CHIPS.filter(([, have]) => have).length, of: EXAMPLE_CHIPS.length, line: "skills on your CV", chips: EXAMPLE_CHIPS};
 
+/** A story's ask: the skills it picked, which need not be the ones its jobs mention most. */
+export const STORY_WHAT = "skills this story counts";
+
+/** A market page's ask: the skills its jobs mention most. */
+export const marketWhat = (subject: string) => `skills ${subject} jobs mention most`;
+
 export const ASK = {
     compare: "Compare your CV",
+    /** The question beside a market page's button (founder's yes, 15 Oct 2026: docs/local/copy-rewrite.html P13). */
+    lead: (ask: Ask) => `Curious how many of the ${ask.skills.length} skills these jobs ask for most are already on your CV?`,
     sub: (ask: Ask) => `The ${ask.skills.length} ${ask.what}.`,
     count: "on your CV",
     reading: "Reading your CV. About a minute.",
@@ -38,11 +46,12 @@ export const ASK = {
     doneLink: "See the jobs that ask for them",
     doneNote: "The charts above now mark yours in green.",
     sheet: {
-        title: (ask: Ask | null) => (ask ? "How many are on your CV?" : "See where you stand"),
-        line: (ask: Ask | null) => ask
-            // The count beside it counts every job; the skills come only from the ads we could read, so this says which.
-            ? `We read your CV for skills and compare them with the ${fmt(ask.jobs)} ${ask.subject} jobs whose ads we could read.`
-            : "We read your CV for skills and compare them with today's jobs.",
+        title: (ask: Ask | null) => (ask ? `How many of these ${ask.skills.length} are on your CV?` : "See where you stand"),
+        /** The comparison is with the skills, not the jobs; the jobs are the ones whose ads we read. A story picks its skills, so it says so. */
+        line: (ask: Ask | null) => !ask ? "We read the skills on your CV and compare them with the latest jobs."
+            : ask.what === STORY_WHAT
+                ? `We read the skills on your CV and compare them with the ${ask.skills.length} this story counts in ${fmt(ask.jobs)} ${ask.subject} jobs.`
+                : `We read the skills on your CV and compare them with the ${ask.skills.length} that ${fmt(ask.jobs)} ${ask.subject} jobs mention most.`,
         exampleKick: "You'll see",
         exampleTag: "example",
         /** A made up result, always labelled "example": never the visitor's. The count is the chips' own, so it adds up. */
@@ -77,7 +86,7 @@ export const ASK = {
         /** Past the promised minute, one plain line. It says what is true, not why: the wait can be the API waking or a slow job board. */
         waitLong: "Still reading. This one is taking more than a minute.",
         result: (k: number, n: number) => `${k} of ${n}`,
-        resultLine: (ask: Ask) => `of the ${ask.what} are on your CV.`,
+        resultLine: (ask: Ask) => `of the ${ask.skills.length} ${ask.what} are already on your CV.`,
         seeThem: "See them",
         keep: "Keep them",
         keepLine: " with a free account, to compare again later.",

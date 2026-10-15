@@ -8,7 +8,7 @@ import {cn} from "@/lib/utils";
  * site's own theme decides (the .dark class), not only the system's.
  */
 
-export type ShotName = "overview" | "market" | "market-demand" | "skills" | "opportunities" | "applications" | "upload";
+export type ShotName = "overview" | "market" | "market-demand" | "skills" | "opportunities" | "applications";
 
 const SIZE = {desktop: {width: 2880, height: 1800}, phone: {width: 780, height: 1688}};
 

@@ -1,0 +1,93 @@
+/*
+ * Within eleven jobs: Hanken Grotesk for everything we write, at the two years essay's sizes;
+ * Allerta Stencil for bay names, painted counts and the plate, the port's own lettering. The
+ * page adapts to the dark theme; the yards keep their own dusk in both. Orange only acts: the
+ * button, links and the pen notes. Lime is the plate on the hook, once per yard. Ported from
+ * the approved prototype (docs/local/editorial-sprint/stories/within-eleven-jobs/story.css).
+ * The yards are SVG strings, so their parts are styled by plain classes under the root.
+ */
+.root {
+  --stencil: var(--font-allerta-stencil), var(--font-space-grotesk), sans-serif;
+  --gap-beat: 150px; --pen: oklch(0.6 0.19 35); --panel: #fffdf9;
+  background: var(--paper); color: var(--ink); font: 400 20px/1.65 var(--essay); -webkit-font-smoothing: antialiased; overflow-x: clip;
+}
+:global(.dark) .root { --paper: var(--charcoal); --ink: var(--charcoal-ink); --muted: var(--charcoal-muted); --line: var(--charcoal-line); --panel: #2a2723; }
+.crumbs { color: var(--muted); }
+.col { max-width: 600px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.wide { max-width: 1080px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.root p { margin: 0 0 1.1em; color: color-mix(in oklab, var(--ink) 90%, var(--paper)); }
+.root a { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
+.root h1 { font: 700 clamp(38px, 5.4vw, 58px)/1.05 var(--essay); letter-spacing: -.02em; margin: 0 0 22px; }
+.root h2 { font: 650 clamp(28px, 3.4vw, 38px)/1.15 var(--essay); letter-spacing: -.015em; margin: 0 0 20px; }
+.root p.kick { font: 500 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.root p.dek { font-size: clamp(20px, 2.1vw, 23px); line-height: 1.5; color: color-mix(in oklab, var(--ink) 70%, var(--paper)); }
+.root p.by { font-size: 15px; color: var(--muted); margin-top: 26px; }
+.root p.live { font-size: 15px; line-height: 1.55; color: var(--muted); }
+.root p.lead { font-size: clamp(21px, 2.3vw, 24px); line-height: 1.5; color: var(--ink); }
+.root strong { font-weight: 650; color: var(--ink); }
+.root section { margin-top: var(--gap-beat); }
+.root section.hero { margin-top: 36px; }
+.beat > * + * { margin-top: 44px; }
+.root figure { margin: 44px auto 0; }
+.root p.cap { font: italic 400 15px/1.55 var(--essay); color: var(--muted); margin: 14px 0 0; max-width: 46em; }
+.root p.src { font: 500 12px/1.5 var(--mono); color: var(--muted); margin: 6px 0 0; }
+
+/* The yard */
+.stage { position: relative; border-radius: 8px; overflow: hidden; background: #d9d4ea; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.stage:active { cursor: grabbing; }
+.stage svg { display: block; width: 100%; height: auto; }
+.stage :global(.cam), .stage :global(.trolley), .stage :global(.hook), .stage :global(.cable) { transition: transform .75s cubic-bezier(.3, .7, .25, 1); }
+.stage :global(.cable) { transform-box: fill-box; transform-origin: 50% 0; }
+.stage :global(.trolley.drag) { transition: none; }
+.root :global(.bay-name) { font: 12.5px var(--stencil); fill: #2b2a26; }
+.root :global(.bay-sub) { font: 700 12px var(--mono); fill: #4a463f; }
+.root :global(.ship) :global(.bay-name) { fill: #f4f2ec; } .root :global(.ship) :global(.bay-sub) { fill: #dfe6f0; }
+.root :global(.paint) { font-family: var(--stencil); opacity: .92; }
+.root :global(.plate-name) { font: 13px var(--stencil); fill: #22201c; }
+.root :global(.plate-n) { font: 700 12.5px var(--mono); fill: #22201c; }
+.root :global(.pen) { font: 500 19px var(--hand); fill: var(--pen); }
+.deck { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.drv, .fly { font: 600 14px var(--essay); min-height: 44px; border-radius: 12px; border: 1.5px solid var(--ink); background: var(--panel); color: var(--ink); padding: 0 16px; cursor: pointer; }
+.drv span { font-size: 18px; line-height: 0; }
+.fly { margin-left: auto; }
+.fly[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.root p.readout { flex-basis: 100%; font-size: 16px; line-height: 1.5; color: var(--muted); min-height: 1.6em; margin: 4px 0 0; }
+.readout b { color: var(--ink); font-weight: 650; }
+.plan { display: none; }
+.flown .stage, .flown .drv { display: none; }
+.flown .plan { display: block; }
+.plan table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 15.5px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.plan caption { text-align: left; font: 600 14px var(--essay); padding: 10px 14px 6px; color: var(--muted); }
+.plan th, .plan td { text-align: left; padding: 9px 14px; border-top: 1px solid var(--line); vertical-align: middle; }
+.plan th[scope="col"] { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.plan th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.plan td:nth-child(2) { width: 50%; }
+.bar { display: inline-block; height: 14px; vertical-align: middle; border-radius: 2px; margin-right: 10px; min-width: 2px; }
+.bar.hatch { background: repeating-linear-gradient(45deg, #8a847a 0 1.6px, transparent 1.6px 6px); border: 1px solid #a8a29a; }
+.num { font: 600 13.5px var(--mono); white-space: nowrap; }
+/* Without script there is no crane to drive: the yard stands still and its table shows under it. */
+@media (scripting: none) { .drv, .fly { display: none; } .plan { display: block; margin-top: 14px; } }
+
+/* The painted plan */
+.planwrap { background: #c9c4bb; border-radius: 8px; padding: 10px 0 6px; background-image: radial-gradient(rgba(0, 0, 0, .06) .8px, transparent .9px); background-size: 7px 7px; }
+.planwrap svg { display: block; width: 100%; height: auto; }
+.planwrap :global(.stencil) { font-family: var(--stencil); fill: #2b2a26; }
+.planwrap :global(.name) { font: 500 15px var(--essay); fill: #2b2a26; }
+.planwrap :global(.mono) { font-family: var(--mono); fill: #2b2a26; }
+
+/* The ending */
+.cta { margin: 40px 0 20px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.root .cta p { margin: 0; font-weight: 500; max-width: 22em; }
+.method { margin: 34px 0 140px; }
+.method summary { cursor: pointer; font: 600 17px var(--essay); min-height: 44px; display: flex; align-items: center; }
+.root .method p { font-size: 16.5px; line-height: 1.6; }
+
+@media (max-width: 760px) {
+  .root { --gap-beat: 100px; font-size: 18px; }
+  .wide { padding: 0 16px; } .col { padding: 0 18px; }
+  .root :global(.pen) { font-size: 17px; }
+  .deck { gap: 8px; } .drv, .fly { padding: 0 12px; font-size: 13.5px; }
+  .plan { overflow-x: auto; } .plan table { font-size: 13px; } .plan caption { white-space: normal; }
+  .plan th, .plan td { padding: 7px 6px; } .plan th[scope="row"] { white-space: normal; } .plan th[scope="col"] { font-size: 12px; letter-spacing: .02em; white-space: normal; }
+  .plan td:nth-child(2) { width: auto; min-width: 86px; } .num { font-size: 12px; } .bar { display: block; margin: 0 0 4px; }
+}

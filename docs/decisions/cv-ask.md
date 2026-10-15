@@ -42,6 +42,15 @@ same sheet without a job type (title "See where you stand") and go to
   names what it counts.
 - **Landing:** the job type's 10 most asked skills from today's look, in the
   count's order. An ad on the glass asks about its own asks.
+- **Story (2026-10-15):** the skills the story names, by vocabulary key, from its
+  week's data module; N is that week's readable jobs ("The 11 skills this story
+  counts"). The question before the button is the founder's approved line,
+  "Curious which of the skills these jobs name are already on your CV?". After a
+  scan the answer has no line about charts: a story's figures don't mark skills.
+- **/market grid (2026-10-15):** the CV card asks nothing in particular: the
+  sheet compares with today's jobs and the results open on /analysis, as from the
+  header. Under its button, "Your file is deleted after it's read.", as the
+  approved grid prototype shows (the PDF is deleted after reading).
 - **k:** a skill counts when the scan's skills (`useHave`: the scan's skill
   presence plus the CV breakdown) match it by key or by name ("LLMs" and
   `llm`).
@@ -126,8 +135,8 @@ and `copy.test.ts` no longer allows any.
 ## Analytics
 
 `cta_clicked {where}`: `where` is the landing place (`hero`, `inside`,
-`closing`), `product`, the header's Try it out (`header` on desktop, `menu` on
-a phone), a market page's name, or `years` (the years of experience page).
+`closing`), `product`, the header's Compare your CV ("Try it out" until 15 Oct 2026; `menu` on a phone; `header`
+was the desktop Product menu's, gone since 15 Oct 2026), a market page's name, or `years` (the years of experience page).
 `ask` and `sticky` went with the question ask on 12 Oct. Scan events:
 `scan_started`, `cv_uploaded` or `cv_reused`,
 `scan_finished`, `scan_failed {stage, reason}`, and `file_refused {reason}`

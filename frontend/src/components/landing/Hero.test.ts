@@ -28,7 +28,7 @@ describe("the hero", () => {
     it("is the headline, one subtitle and one button, with nothing under it (founder, 13 Oct)", () => {
         const h = hero(ask);
         expect(h).toContain(COPY.hero.title);
-        expect(h).toContain("We count the skills tech jobs ask for each week and mark the ones on your CV.");
+        expect(h).toContain(COPY.hero.lede);
         expect(buttons(h)).toEqual(["Compare your CV"]);
         expect(nothingUnder(h)).toBe(true);
         expect(peeks(h)).toBe(true);
@@ -63,6 +63,13 @@ describe("a market page before a scan", () => {
         expect(peeks(h)).toBe(true);
         expect(h).not.toMatch(/\?\s*of\b/);
         expect(h).not.toContain("How many of these are on your CV?");
+    });
+
+    it("on a market page puts its question beside the button, above it, and still nothing under it (founder's yes, 15 Oct 2026)", () => {
+        const h = html(createElement(MarketAskProvider, {ask, page: "entry-level-software", children: createElement(MarketCvAsk, {lead: true})}));
+        expect(h).toMatch(/<p[^>]*>Curious how many of the 10 skills these jobs ask for most are already on your CV\?<\/p><div[^>]*><button/);
+        expect(buttons(h)).toEqual([ASK.compare]);
+        expect(nothingUnder(h)).toBe(true);
     });
 });
 

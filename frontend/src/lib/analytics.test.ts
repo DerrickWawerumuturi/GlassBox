@@ -94,6 +94,27 @@ describe("analytics with a key", () => {
         expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {});   // the sticky line is gone, and so is its name
     });
 
+    it("the closing CV card of /product and /about says which page it was on", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.track("cta_clicked", {where: "product"});
+        a.track("cta_clicked", {where: "about"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "product"});
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "about"});
+    });
+
+    it("each story's CV button and the /market grid's say which, by a known name only", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        const places = ["story_pick_a_side", "story_the_lobby", "story_contents_may_vary", "story_peak_python", "story_within_eleven_jobs", "market"] as const;
+        for (const where of places) {
+            a.track("cta_clicked", {where});
+            expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where});
+        }
+        (a.track as (e: string, p: object) => void)("cta_clicked", {where: "story_the_two_years"});
+        expect(posthog.capture).toHaveBeenLastCalledWith("cta_clicked", {});
+    });
+
     it("the header's Try it out says which menu it was in", async () => {
         const a = await load();
         a.initAnalytics("phc_test");
@@ -172,6 +193,39 @@ describe("pageviews", () => {
     });
 });
 
+describe("a story's interaction", () => {
+    const sent = () => posthog.capture.mock.calls.filter((c) => c[0] === "story_interacted").map((c) => c[1]);
+
+    it("is one story_interacted per page view, the story and the kind only", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.trackPageview("/market/entry-level-software/pick-a-side");
+        a.storyInteracted("pick-a-side", "pick_side");
+        a.storyInteracted("pick-a-side", "scratch");
+        a.storyInteracted("pick-a-side", "reveal_all");
+        expect(sent()).toEqual([{story: "pick-a-side", kind: "pick_side"}]);
+        // A new page view (another story, or back again) counts again.
+        a.trackPageview("/market/devops/within-eleven-jobs");
+        a.storyInteracted("within-eleven-jobs", "crane");
+        a.storyInteracted("within-eleven-jobs", "fly_over");
+        expect(sent()).toEqual([{story: "pick-a-side", kind: "pick_side"}, {story: "within-eleven-jobs", kind: "crane"}]);
+    });
+
+    it("takes known stories and kinds only, and nothing else rides along", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        (a.track as (e: string, p: object) => void)("story_interacted", {story: "the-two-years", kind: "scratch", guess: "senior", email: "a@b.c"});
+        (a.track as (e: string, p: object) => void)("story_interacted", {story: "the-lobby", kind: "Python, 5 years"});
+        expect(sent()).toEqual([{kind: "scratch"}, {story: "the-lobby"}]);
+    });
+
+    it("sends nothing without a key", async () => {
+        const a = await load();
+        a.storyInteracted("the-lobby", "lift");
+        expect(posthog.capture).not.toHaveBeenCalled();
+    });
+});
+
 describe("where a visit came from", () => {
     const visit = (referrer: string, search = "", host = "seeglassbox.com") => {
         vi.stubGlobal("document", {referrer});
@@ -187,6 +241,19 @@ describe("where a visit came from", () => {
         const [first, second] = posthog.capture.mock.calls.map((c) => c[1]);
         expect(first).toEqual({$current_url: "/", ref_domain: "reddit.com", utm_source: "reddit", utm_campaign: "launch"});
         expect(second).toEqual({$current_url: "/product"});
+    });
+
+    it("is the same for a story landed on from a tagged link as for a market page, its query string left off", async () => {
+        for (const path of ["/market/entry-level-software/pick-a-side", "/market/entry-level-software"]) {
+            vi.resetModules(); posthog.capture.mockClear();
+            visit("https://www.reddit.com/r/cscareerquestions/comments/abc", "?utm_source=reddit&utm_medium=social&utm_campaign=stories");
+            const a = await load();
+            a.initAnalytics("phc_test");
+            a.trackPageview(`${path}?utm_source=reddit&utm_medium=social&utm_campaign=stories`);
+            a.storyInteracted("pick-a-side", "scratch");
+            expect(posthog.capture.mock.calls[0]).toEqual(["$pageview",
+                {$current_url: path, ref_domain: "reddit.com", utm_source: "reddit", utm_medium: "social", utm_campaign: "stories"}]);
+        }
     });
 
     it("drops our own site and trims utm values to 100 characters", async () => {

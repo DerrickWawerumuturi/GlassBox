@@ -39,7 +39,7 @@ export const comparable = ({page}: Ctx) => page.story.compare.readable >= page.m
 
 /** What a page counts, as a statement: the line above its finding, its title when there is no finding, and its link. */
 export function topic({info}: Ctx | {info: MarketInfo}): string {
-    return `The skills ${info.subject} jobs name, counted`;
+    return `What ${info.subject} jobs ask for`;
 }
 
 // ------------------------------------------------------------------ the lead finding (the H1)
@@ -80,12 +80,12 @@ export function headline(c: Ctx): string | null {
     }
 }
 
-/** The counted sentence behind the finding: "191 of the 287 we could read name LLMs." `jobs` names the jobs ("AI jobs"). */
+/** The counted sentence behind the finding: "191 of the 287 we read name LLMs." `jobs` names the jobs ("AI jobs"). */
 export function findingCount(c: Ctx, jobs = ""): string | null {
     const f = finding(c), of = jobs ? ` ${jobs}` : "";
     if (!f) return null;
     if (f.kind === "years") return `${fmt(f.jobs)} of the ${fmt(f.of)}${of} that state a number of years ask for ${bucketPhrase(f.years, f.years)}.`;
-    const named = `${fmt(f.jobs[0])} of the ${fmt(f.of)}${of} we could read name ${inlineName(c, f.skills[0])}`;
+    const named = `${fmt(f.jobs[0])} of the ${fmt(f.of)}${of} we read name ${inlineName(c, f.skills[0])}`;
     return f.kind === "tied" || f.kind === "pair" ? `${named}, and ${fmt(f.jobs[1])} name ${inlineName(c, f.skills[1])}.` : `${named}.`;
 }
 
@@ -98,11 +98,11 @@ export function leadSkills({page}: Ctx): StorySkill[] {
     return page.publishable && from >= 0 ? skills.slice(from).filter((s) => s.broad) : [];
 }
 
-/** "312 of the 560 we could read name Python, 180 name SQL and 150 name Java." `jobs` names the jobs. Null without a lead skill. */
+/** "312 of the 560 we read name Python, 180 name SQL and 150 name Java." `jobs` names the jobs. Null without a lead skill. */
 export function skillsCount(c: Ctx, jobs = "", n = 3): string | null {
     const top = leadSkills(c).slice(0, n), of = jobs ? ` ${jobs}` : "";
     if (!top.length) return null;
-    const parts = top.map((s, i) => (i === 0 ? `${fmt(s.any)} of the ${fmt(c.page.readable)}${of} we could read name ${inlineName(c, s.key)}`
+    const parts = top.map((s, i) => (i === 0 ? `${fmt(s.any)} of the ${fmt(c.page.readable)}${of} we read name ${inlineName(c, s.key)}`
         : `${fmt(s.any)} name ${inlineName(c, s.key)}`));
     return `${list(parts)}.`;
 }
@@ -113,25 +113,49 @@ export function findingShare(c: Ctx): number | null {
     return f ? pct(f.kind === "years" ? f.jobs : f.jobs[0], f.of) : null;
 }
 
-/** The sentences under the headline: what was counted and when, then the count behind the finding. */
+/**
+ * The sentences under the headline: what was found and when, then why the
+ * skills come from fewer jobs ("had an ad long enough to read"), said where
+ * the reader meets the smaller number, and the count behind the finding.
+ * Every "we read" after this leans on it.
+ */
 export function dek(c: Ctx): string {
     const {info, page} = c;
-    const counted = `We counted ${plural(page.jobs, `${info.subject} job`, `${info.subject} jobs`)} at ${plural(page.employers, "employer", "employers")} in the week of ${weekDate(page)}.`;
-    // A years headline leaves the skills unsaid, and a page with no finding still has its most named skill: the dek says it.
-    const f = finding(c), behind = f ? findingCount(c) : null;
-    const skills = !f || f.kind === "years" ? skillsCount(c, "", 1) : null;
-    return behind || skills ? [counted, behind, skills].filter(Boolean).join(" ") : `${counted} Too few could be read this week to show shares.`;
+    const found = `In the week of ${weekDate(page)} we found ${plural(page.jobs, `${info.subject} job`, `${info.subject} jobs`)} at ${plural(page.employers, "employer", "employers")}.`;
+    const read = `${page.readable === page.jobs ? "All " : ""}${fmt(page.readable)} had an ad long enough to read for skills`;
+    const f = finding(c);
+    if (f && f.kind !== "years") {
+        const second = f.kind === "tied" || f.kind === "pair" ? `, ${fmt(f.jobs[1])} ${inlineName(c, f.skills[1])}` : "";
+        return `${found} ${read}, and ${fmt(f.jobs[0])} of those name ${inlineName(c, f.skills[0])}${second}.`;
+    }
+    // A years headline, or no finding: the page's most named skill, then the years behind the headline.
+    const top = leadSkills(c)[0];
+    if (!top) return page.readable < page.min_readable
+        ? `${found} Fewer than ${fmt(page.min_readable)} had an ad long enough to read, so this page shows counts and no shares this week.`
+        : `${found} ${read}.`;
+    const named = `${fmt(top.any)} of those name ${inlineName(c, top.key)}`;
+    return f ? `${found} ${read}. ${cap(named)}. ${findingCount(c)}` : `${found} ${read}, and ${named}.`;
+}
+
+/**
+ * The method fold's sentence on every market page and story: one wording for
+ * all ten, and it says what "read" meant ("long enough to read").
+ */
+export function readLine(readable: number, jobs: number): string {
+    const short = jobs - readable;
+    return `We look for about 250 named skills, by fixed rules, in the ${fmt(readable)} ads long enough to read.`
+        + (short > 0 ? ` The other ${fmt(short)} ${short === 1 ? "was" : "were"} too short.` : "");
 }
 
 /** Under the 100 rule: what the page shows instead of shares, and why. */
 export const thin = ({page}: Ctx) =>
-    `We could read ${fmt(page.readable)} of these jobs this week. Below ${page.min_readable}, a share describes a few employers more than the market, so this page shows counts only.`;
+    `Only ${fmt(page.readable)} of these jobs had an ad long enough to read. Below ${page.min_readable}, a share says more about a few employers than about the market, so this page shows counts only.`;
 
-export const UNAVAILABLE = "This week's count isn't here yet. Try again in a minute.";
+export const UNAVAILABLE = "This week's page isn't ready yet. Try again in a minute.";
 
 export const framing = ({info}: Ctx) => [
     `Glassbox reads the jobs open on public job boards every six hours and counts the skills each one names. ${info.counts}`,
-    "Each job counts once, however many boards or cities list it. The count is published every Monday, and this page shows the latest week.",
+    "Every Monday a new week replaces this one here. The story linked in the rail keeps one week and looks closer.",
 ];
 
 // ------------------------------------------------------------------ the lead visual
@@ -150,8 +174,8 @@ export function squaresLabel(c: Ctx): string {
     return parts.join(" ");
 }
 
-export const squaresCaption = ({info, page}: Ctx) =>
-    `${cap(info.subject)} jobs counted in the week of ${weekDate(page)}. Each square is one job.`;
+/** The byline above has the week; the aria label (squaresLabel) keeps it for a screen reader. */
+export const squaresCaption = ({info}: Ctx) => `${cap(info.subject)} jobs that week, one square each.`;
 
 // ------------------------------------------------------------------ findings
 
@@ -182,7 +206,7 @@ export function glance(c: Ctx): Finding[] {
             text: `${cap(bucketPhrase(b.from, b.to))} is the most common ask: ${fmt(b.jobs)} of the ${fmt(story.years.stated)} jobs that state a number.`};
     })() : null;
     const skillFinding: Finding = !lead || lead.kind === "years"
-        ? {id: "finding-skill", bold: inlineName(c, story.headline), text: `${fmt(skill(c, story.headline)!.any)} of the ${fmt(page.readable)} ${subject} we could read name ${inlineName(c, story.headline)}.`}
+        ? {id: "finding-skill", bold: inlineName(c, story.headline), text: `${fmt(skill(c, story.headline)!.any)} of the ${fmt(page.readable)} ${subject} we read name ${inlineName(c, story.headline)}.`}
         : {id: "finding-skill", bold: inlineName(c, lead.skills[0]), text: findingCount(c, subject)!};
     const out: Finding[] = lead?.kind === "years" && years ? [years, skillFinding] : [skillFinding];
     // The entry level page's years come from early career titles, on their own page.
@@ -204,7 +228,7 @@ export function glance(c: Ctx): Finding[] {
     const [, , two, three] = story.languages.per_job;
     if (out.length < 3 && has(c, "languages")) out.push({
         id: "finding-languages", bold: fmt(two + three),
-        text: `${fmt(two + three)} of the ${fmt(page.readable)} ${info.subject} jobs we could read name two or more languages.`,
+        text: `${fmt(two + three)} of the ${fmt(page.readable)} ${info.subject} jobs we read name two or more languages.`,
     });
     return out.slice(0, 3);
 }
@@ -217,24 +241,26 @@ export function languagesSection(c: Ctx) {
     const {info, page} = c;
     const [none, , two, three] = page.story.languages.per_job;
     const any = page.readable - none, many = two + three;
-    const heading = many * 2 > page.readable ? "Most of them name more than one language"
-        : any * 2 > page.readable ? "Most of them name at least one language" : "Fewer than half name a language";
+    const heading = many * 2 > page.readable ? "Most list more than one language"
+        : any * 2 > page.readable ? "Most list at least one language" : "Fewer than half list a language";
     const bars = page.story.languages.bars.map((k) => skill(c, k)!).filter(Boolean);
     const top = bars[0];
     const more = bars.filter((s) => share(c, s) > compareShare(c, s)).length;
     return {
         heading,
-        sub: `Share of the ${info.subject} jobs we could read, by language`,
-        before: `${fmt(any)} of the ${fmt(page.readable)} ${info.subject} jobs we could read name at least one language, and ${fmt(many)} name two or more.`,
+        sub: `Share of the ${fmt(page.readable)} jobs read, by language`,
+        before: `${fmt(any)} of the ${fmt(page.readable)} we read list at least one programming language. ${fmt(many)} list two or more.`,
         bars,
+        // The first "senior" on the page gets its meaning, and the breadth rule its reason, here; later figures lean on both.
         caption: [
-            comparable(c) ? `Bars: ${info.subject} jobs. Grey tick: the share in ${fmt(page.story.compare.readable)} ${info.compare} jobs.` : `Bars: ${info.subject} jobs.`,
-            top ? `${skillName(c, top.key)} is named by jobs at ${fmt(top.employers)} employers.` : "",
-            `Only skills named by jobs at ${page.story.breadth} or more employers are shown.`,
+            comparable(c) ? `Bars: these ${fmt(page.readable)} jobs. Grey tick: the same share in ${fmt(page.story.compare.readable)} ${info.compare} jobs, senior meaning a senior, lead or principal title.`
+                : `Bars: these ${fmt(page.readable)} jobs.`,
+            `A language is shown only when jobs at ${page.story.breadth} or more employers mention it, so one company's hiring can't make a pattern.`,
+            top ? `${skillName(c, top.key)}'s come from ${fmt(top.employers)}.` : "",
         ].filter(Boolean).join(" "),
         after: comparable(c) && bars.length
-            ? (more === bars.length ? `Each language in this chart is named more often in ${info.subject} jobs than in ${info.compare} jobs.`
-                : `${fmt(more)} of the ${fmt(bars.length)} languages in this chart are named more often in ${info.subject} jobs than in ${info.compare} jobs.`)
+            ? (more === bars.length ? `Every language here comes up more often than in ${info.compare} jobs.`
+                : `${fmt(more)} of these ${fmt(bars.length)} languages come up more often here than in ${info.compare} jobs.`)
             : null,
     };
 }
@@ -251,11 +277,13 @@ export function contrastSection(c: Ctx) {
         heading: info.kind === "entry"
             ? `${t} shows up ${far(ts, tc)}more at entry level. ${a} ${far(ac, as)}less.`
             : `Senior ${info.subject} jobs name ${a} ${far(ac, as)}more often. ${t} ${far(ts, tc)}less.`,
-        sub: `Share of the ${info.subject} and ${info.compare} jobs we could read naming each skill`,
+        sub: "Share of each set that mentions the skill",
         before: `Put the same skills side by side, and two groups appear. The top rows lean to ${info.subject} jobs. The bottom rows lean to ${info.compare} jobs.`,
         rows,
         legend: {left: cap(info.subject), right: cap(info.compare)},
-        caption: `Only skills named by jobs at ${page.story.breadth} or more employers are shown, so one company's hiring can't make a pattern.`,
+        // The languages figure gives the rule's reason; without it on the page, the reason stays here.
+        caption: has(c, "languages") ? `Same rule as the languages: a skill needs jobs at ${page.story.breadth} or more employers to be shown.`
+            : `Only skills named by jobs at ${page.story.breadth} or more employers are shown, so one company's hiring can't make a pattern.`,
         after: `${t} appears in ${plural(toward.any, `${info.subject} job`, `${info.subject} jobs`)} at ${plural(toward.employers, "employer", "employers")}: ${ts}% of them, against ${tc}% of ${info.compare} jobs. ${a} goes the other way: ${as}% here, ${ac}% in ${info.compare} jobs.`,
     };
 }
@@ -268,6 +296,8 @@ const CATEGORY: Record<string, [string, string]> = {
     infra: ["Infrastructure", "infrastructure"], embedded: ["Embedded", "embedded"],
 };
 export const categoryName = (key: string, inline = false) => (CATEGORY[key] ?? [cap(key), key])[inline ? 1 : 0];
+/** "a DevOps", "an AI": a category before "skill". */
+const article = (name: string) => `${/^[aeiouAEIOU]/.test(name) ? "an" : "a"} ${name}`;
 
 export function categoriesSection(c: Ctx) {
     const {info, page} = c, cats = page.story.categories;
@@ -275,13 +305,13 @@ export function categoriesSection(c: Ctx) {
     return {
         heading: second ? `Beyond the languages, ${categoryName(first.category, true)} and ${categoryName(second.category, true)} come up most`
             : `Beyond the languages, ${categoryName(first.category, true)} comes up most`,
-        sub: `Share of the ${info.subject} jobs we could read naming each skill`,
-        before: `${fmt(first.jobs)} of the ${fmt(page.readable)} ${info.subject} jobs we could read name a skill in ${categoryName(first.category, true)}.`
-            + (second ? ` ${fmt(second.jobs)} name one in ${categoryName(second.category, true)}.` : ""),
+        sub: `Share of the ${fmt(page.readable)} jobs read that mention each skill`,
+        before: `${fmt(first.jobs)} of the ${fmt(page.readable)} jobs read list ${article(categoryName(first.category, true))} skill.`
+            + (second ? ` ${fmt(second.jobs)} list one in ${categoryName(second.category, true)}.` : ""),
         groups: cats.map((g) => ({...g, title: categoryName(g.category), rows: g.skills.map((k) => skill(c, k)!).filter(Boolean)})),
         caption: comparable(c)
-            ? `Each bar is the share of the ${fmt(page.readable)} ${info.subject} jobs we could read. The grey tick is the share of the ${fmt(page.story.compare.readable)} ${info.compare} ones.`
-            : `Each bar is the share of the ${fmt(page.readable)} ${info.subject} jobs we could read.`,
+            ? `Each bar: the share of these ${fmt(page.readable)} jobs. Grey tick: the share of ${fmt(page.story.compare.readable)} ${info.compare} jobs.`
+            : `Each bar: the share of these ${fmt(page.readable)} jobs.`,
     };
 }
 
@@ -323,7 +353,7 @@ export function hiringSection(c: Ctx) {
     const dominates = big && big.jobs * 5 >= page.jobs;
     return {
         heading: "Who is hiring, and where",
-        sub: `The ${c.info.subject} jobs, by the place each one names`,
+        sub: `The ${fmt(page.jobs)} jobs, by the country each one names`,
         before: `${fmt(page.employers)} employers posted these jobs.` + (big ? (dominates
             ? ` ${big.name} has the most, ${fmt(big.jobs)} of the ${fmt(page.jobs)}.`
             : ` No single one dominates: ${big.name} has the most, ${fmt(big.jobs)} of the ${fmt(page.jobs)}.`) : ""),
@@ -345,8 +375,8 @@ export function pageTitle(info: MarketInfo, page: MarketBody | null): string {
 /** The search snippet: what the jobs ask for most, answered with the count and its week; else the finding. */
 export function pageDescription(info: MarketInfo, page: MarketBody | null): string {
     if (!page) return `The skills ${info.subject} jobs name, counted from live jobs every week.`;
-    const c = {info, page}, lead = headline(c), skills = skillsCount(c, "", 2);
-    if (skills) return `What ${info.subject} jobs ask for most, counted in the week of ${weekDate(page)}: ${skills}`;
+    const c = {info, page}, lead = headline(c), skills = skillsCount(c, "ads", 2);
+    if (skills) return `What ${info.subject} jobs ask for most in the week of ${weekDate(page)}: ${skills}`;
     const counted = `Counted in the week of ${weekDate(page)}: ${plural(page.jobs, "job", "jobs")} at ${plural(page.employers, "employer", "employers")}.`;
     return `${lead ? `${lead}.` : `${topic(c)}.`} ${counted}`;
 }

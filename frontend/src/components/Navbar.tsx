@@ -3,25 +3,19 @@
 import React, {useState} from 'react'
 import Link from "next/link";
 import {
-    ActivityIcon, BookOpenIcon, ChartColumnIcon, ClipboardListIcon, CornerDownLeftIcon, LayoutGridIcon,
-    LucideIcon, MenuIcon, RadarIcon, TrendingUpIcon,
+    ChartColumnIcon, CircleHelpIcon, CornerDownLeftIcon, InfoIcon, LayoutGridIcon, LucideIcon, MenuIcon, PackageIcon,
 } from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
 import {cn} from "@/lib/utils";
 import {Button} from "@/components/ui/button";
-import {
-    NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import {FEATURES, NAV} from "@/lib/site-copy";
+import {NAV} from "@/lib/site-copy";
 import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {track} from "@/lib/analytics";
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuGroup,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -30,26 +24,19 @@ import {initials} from "@/lib/utils";
 import {GlassboxWordmark} from "@/components/brand/Logo";
 import AccountMenuItems from "@/components/AccountMenuItems";
 
-const ICONS: Record<string, LucideIcon> = {
-    market: ActivityIcon, "your-skills": TrendingUpIcon, opportunities: RadarIcon, applications: ClipboardListIcon,
-};
+/*
+ * Four plain links, the same on the bar and in the phone menu (founder, 15 Oct 2026): Product is one page, so
+ * no menu; Market goes straight to the market pages, so it no longer sits beside the product's own Market view.
+ */
+export const SITE_LINKS: {href: string; label: string; icon: LucideIcon}[] = [
+    {href: "/product", label: NAV.product, icon: PackageIcon},
+    {href: "/market", label: NAV.market, icon: ChartColumnIcon},
+    {href: "/about", label: NAV.about, icon: InfoIcon},
+    {href: "/#faq", label: NAV.faq, icon: CircleHelpIcon},
+];
 
-/** One Product item: an icon tile, the name and one line. */
-function FeatureItem({id}: {id: string}) {
-    const f = FEATURES.find((x) => x.id === id)!;
-    const Icon = ICONS[id];
-    return (
-        <span className={"flex w-full items-center gap-3"}>
-            <span className={"flex size-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground"}>
-                <Icon className={"size-4"} />
-            </span>
-            <span className={"flex min-w-0 flex-1 flex-col"}>
-                <span className={"text-sm font-medium text-foreground"}>{f.title}</span>
-                <span className={"text-[13px] leading-snug text-muted-foreground"}>{f.nav}</span>
-            </span>
-        </span>
-    );
-}
+/** A link is current on its page and the pages under it: /market/devops lights Market. */
+export const isCurrent = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
 const Navbar = () => {
     const {data: session} = useSession();
@@ -66,34 +53,15 @@ const Navbar = () => {
     // The dashboard (and a scan without an account) brings its own shell; a second header would fight the sidebar.
     if (pathname.startsWith("/dashboard") || pathname.startsWith("/analysis")) return null;
 
-    // The dashboard needs an account, so its link shows only when signed in.
-    const siteLinks = [{href: "/about", label: NAV.about}, {href: "/#faq", label: NAV.faq}];
-    const trigger = "h-auto bg-transparent px-0 py-0 font-mono text-xs font-normal uppercase tracking-[0.12em] text-muted-foreground hover:bg-transparent hover:text-foreground data-popup-open:bg-transparent data-open:bg-transparent";
-    const resourceLink = (href: string, title: string, line?: string) => (
-        <li key={href}>
-            <NavigationMenuLink render={<Link href={href} />} className={"block rounded-md px-3 py-2 transition-colors hover:bg-foreground/[0.05]"}>
-                <span className={"block text-sm font-medium text-foreground"}>{title}</span>
-                {line && <span className={"block text-[13px] leading-snug text-muted-foreground"}>{line}</span>}
-            </NavigationMenuLink>
-        </li>
-    );
     const linkClass = (href: string) => cn(
         "font-mono text-xs uppercase tracking-[0.12em] transition-colors",
-        pathname === href ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+        isCurrent(pathname, href) ? "text-foreground" : "text-muted-foreground hover:text-foreground"
     );
     const menuLink = (href: string, icon: React.ReactNode, label: string) => (
         <DropdownMenuItem key={href} render={(props) => (
             <Link {...props} href={href} className={cn(props.className, "cursor-pointer")}>{icon} {label}</Link>
         )} />
     );
-    // In the header's mono language, not the peek family (founder, 8 Oct: orange capitals in a thin outline, a return key mark).
-    const withCv = (close?: () => void) => (
-        <Button variant={"ghost"} onClick={() => { close?.(); track("cta_clicked", {where: "header"}); scan.open(); }}
-                className={"m-1 h-auto w-fit justify-start gap-2 rounded-md border border-primary/45 px-3 py-2 font-mono text-xs font-normal uppercase tracking-[0.12em] text-primary hover:border-primary hover:bg-primary/[0.06] hover:text-primary"}>
-            <span>{NAV.withCv}</span><CornerDownLeftIcon className={"size-4"} />
-        </Button>
-    );
-
     return (
         <header className={"flex items-center justify-between gap-4 px-5 py-5 lg:px-8"}>
             <div className={"flex items-center gap-8"}>
@@ -105,42 +73,10 @@ const Navbar = () => {
                     {/* A soft pill that slides to the item under the pointer (Supabase's top level indicator). */}
                     <span aria-hidden className={"pointer-events-none absolute -inset-y-1.5 rounded-md bg-foreground/[0.06] transition-[left,width,opacity] duration-200 ease-out motion-reduce:transition-none"}
                           style={{left: (pill?.left ?? 0) - 10, width: (pill?.width ?? 0) + 20, opacity: pill ? 1 : 0}} />
-                    <NavigationMenu>
-                        <NavigationMenuList className={"gap-5"}>
-                            <NavigationMenuItem>
-                                <NavigationMenuTrigger onPointerEnter={pillTo} className={trigger}>
-                                    {NAV.product}
-                                </NavigationMenuTrigger>
-                                <NavigationMenuContent>
-                                    <div className={"w-[min(600px,calc(100vw-48px))] p-2"}>
-                                        <ul className={"grid grid-cols-2 gap-2"}>
-                                            {FEATURES.map((f) => (
-                                                <li key={f.id}>
-                                                    <NavigationMenuLink render={<Link href={`/product#${f.id}`} />} className={"spotlight block h-full rounded-lg border border-border p-3 transition-colors hover:border-foreground/25"}>
-                                                        <FeatureItem id={f.id} />
-                                                    </NavigationMenuLink>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <div className={"mt-1 border-t border-border pt-1"}>{withCv()}</div>
-                                    </div>
-                                </NavigationMenuContent>
-                            </NavigationMenuItem>
-                            {/* Market pages and how the count is made, in one menu (founder, 2026-10-07). */}
-                            <NavigationMenuItem>
-                                <NavigationMenuTrigger onPointerEnter={pillTo} className={trigger}>{NAV.resources}</NavigationMenuTrigger>
-                                <NavigationMenuContent>
-                                    {/* Two links (founder, 2026-10-08): the hub lists every market page. */}
-                                    <ul className={"w-[min(340px,calc(100vw-48px))] p-2"}>
-                                        {resourceLink("/market", NAV.market, NAV.marketHubLine)}
-                                        <li aria-hidden className={"mx-3 my-1 border-t border-border"} />
-                                        {resourceLink("/method", NAV.method, NAV.methodLine)}
-                                    </ul>
-                                </NavigationMenuContent>
-                            </NavigationMenuItem>
-                        </NavigationMenuList>
-                    </NavigationMenu>
-                    {siteLinks.map((link) => <Link key={link.href} href={link.href} onPointerEnter={pillTo} className={cn(linkClass(link.href), "relative")}>{link.label}</Link>)}
+                    {SITE_LINKS.map((link) => (
+                        <Link key={link.href} href={link.href} onPointerEnter={pillTo} aria-current={isCurrent(pathname, link.href) ? "page" : undefined}
+                              className={cn(linkClass(link.href), "relative")}>{link.label}</Link>
+                    ))}
                 </nav>
             </div>
 
@@ -152,10 +88,9 @@ const Navbar = () => {
                     <DropdownMenuTrigger render={<Button variant={"ghost"} size={"icon-sm"} aria-label={NAV.menu} className={"text-muted-foreground md:hidden"} />}>
                         <MenuIcon className={"size-5"} />
                     </DropdownMenuTrigger>
-                    {/* Two groups only (founder, 2026-10-08): the product and the market pages. Sign in is the
-                        button beside the menu; About and FAQ stay on the desktop bar and the home page. */}
+                    {/* Dashboard first when signed in, then the one action (founder, 2026-10-08), then the bar's four links
+                        (founder, 15 Oct 2026). Sign in is the button beside the menu. */}
                     <DropdownMenuContent align={"end"} className={"w-56"}>
-                        {/* Dashboard first when signed in, then the one action (founder, 2026-10-08). */}
                         {session?.user && menuLink("/dashboard", <LayoutGridIcon className={"size-4 opacity-70"} />, NAV.dashboard)}
                         {/* Try it out: orange capitals in a thin orange outline, so it reads as a button, with a return key mark. */}
                         <DropdownMenuItem onClick={() => { track("cta_clicked", {where: "menu"}); scan.open(); }}
@@ -163,11 +98,7 @@ const Navbar = () => {
                             {NAV.withCv}<CornerDownLeftIcon className={"size-4 text-primary"} />
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                            <DropdownMenuLabel className={"font-mono text-[11px] uppercase tracking-[0.12em]"}>{NAV.resources}</DropdownMenuLabel>
-                            {menuLink("/market", <ChartColumnIcon className={"size-4 opacity-70"} />, NAV.market)}
-                            {menuLink("/method", <BookOpenIcon className={"size-4 opacity-70"} />, NAV.method)}
-                        </DropdownMenuGroup>
+                        {SITE_LINKS.map(({href, label, icon: Icon}) => menuLink(href, <Icon className={"size-4 opacity-70"} />, label))}
                     </DropdownMenuContent>
                 </DropdownMenu>
 

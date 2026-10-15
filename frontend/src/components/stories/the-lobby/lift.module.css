@@ -1,0 +1,72 @@
+/*
+ * The lift: a brass floor indicator above walnut doors, a panel of five buttons beside them, the
+ * corridor behind, and the building's section to the right. Lime marks the floor you're on, in the
+ * panel, the section and the bar chart twin. Travel time rides in --t, set per press.
+ * (docs/local/editorial-sprint/stories/the-lobby/lift.css)
+ */
+.liftGrid { display: grid; grid-template-columns: 440px minmax(0, 1fr); gap: 36px 48px; align-items: start; }
+.lf { position: relative; }
+.ind { display: block; width: 100%; height: auto; }
+.needle { transform-box: view-box; transform-origin: 220px 126px; transform: rotate(-68deg); transition: transform var(--t, .8s) cubic-bezier(.45, 0, .2, 1); }
+
+/* The doorway: doors on the left, the panel on the right, as in a lobby. */
+.doorway { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 14px; align-items: start; }
+.doors { position: relative; aspect-ratio: 300 / 320; overflow: hidden; background: #141a2b; border: 8px solid var(--brass); border-top-width: 12px; box-shadow: inset 0 0 0 2px var(--brass-dk), 0 20px 36px -24px rgba(0, 0, 0, .6); }
+.cor { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.door { position: absolute; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, var(--walnut-dk), var(--walnut) 18%, var(--walnut) 82%, var(--walnut-dk)); transition: transform .75s cubic-bezier(.6, 0, .3, 1); will-change: transform; }
+.door::before { content: ""; position: absolute; inset: 18px 14px; border: 2px solid var(--brass); opacity: .85; }
+.door::after { content: ""; position: absolute; inset: 30px 26px; border: 1px solid var(--brass-hi); opacity: .5; }
+.door.l { left: 0; border-right: 2px solid var(--brass-dk); } .door.r { right: 0; border-left: 2px solid var(--brass-dk); }
+.lf.open .door.l { transform: translateX(-101%); } .lf.open .door.r { transform: translateX(101%); }
+.attendant { position: absolute; left: 6px; bottom: -6px; width: 54px; z-index: 3; }
+.attendant svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+/* The panel: round brass buttons with the band in Limelight, the count beside in mono. */
+.panel { background: linear-gradient(180deg, var(--brass-hi), var(--brass) 30%, var(--brass-dk)); border-radius: 8px; padding: 12px 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .28), inset 0 0 0 5px rgba(61, 45, 15, .3), 0 20px 36px -24px rgba(0, 0, 0, .6); }
+.fb { appearance: none; display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; margin: 0; min-height: 48px; border-radius: 30px; cursor: pointer; color: var(--brass-ink); font: 600 14px var(--mono); text-shadow: 0 1px 0 rgba(255, 255, 255, .3); }
+.fb i { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font: 400 19px/1 var(--deco); font-style: normal; color: var(--brass-ink); background: radial-gradient(circle at 35% 30%, #fff6dc, var(--brass-hi) 38%, var(--brass) 72%, var(--brass-dk)); box-shadow: inset 0 -2px 3px rgba(0, 0, 0, .28), 0 2px 4px rgba(0, 0, 0, .4); transition: box-shadow .25s; }
+.fb:hover i { filter: brightness(1.06); }
+.fb:active i { transform: translateY(1px); }
+.fb[aria-pressed="true"] i { box-shadow: 0 0 0 3px var(--w-junior), 0 0 16px 2px var(--w-junior), inset 0 -2px 3px rgba(0, 0, 0, .28); }
+
+/* The floor note under the doors: the count, what it counts, the plates. */
+.fnote { margin-top: 18px; min-height: 4.5em; }
+.lf p.ro { font-size: 17px; line-height: 1.5; margin: 0; }
+.ro b { font: 700 32px/1 var(--essay); letter-spacing: -.02em; margin-right: 6px; vertical-align: -2px; }
+.plates { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.plates li { background: linear-gradient(135deg, var(--brass-hi), var(--brass) 55%, var(--brass-dk) 130%); color: var(--brass-ink); border-radius: 3px; padding: 7px 11px 8px; font: 500 13.5px/1.3 var(--essay); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35), 0 1px 2px rgba(0, 0, 0, .35); text-shadow: 0 1px 0 rgba(255, 255, 255, .3); max-width: 100%; }
+.plates li small { display: block; font: 400 12px/1.3 var(--mono); opacity: .85; margin-top: 2px; }
+
+/* The section: an architectural cut through the building, floor widths as counts. */
+.sec { display: block; width: 100%; height: auto; }
+.floor { fill: var(--slab); stroke: var(--ink); stroke-width: 1.5; transition: fill .4s; }
+.floor.lit { fill: var(--w-junior); }
+.car { transition: transform var(--t, .8s) cubic-bezier(.45, 0, .2, 1); }
+
+/* Show all floors: the same five counts as plain bars, which is also the table. */
+.link { appearance: none; background: none; border: 0; padding: 0; min-height: 44px; font: 600 15px var(--essay); color: var(--orange); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; border-radius: 4px; }
+.allfloors { margin-top: 10px; width: 100%; max-width: 600px; border-collapse: collapse; font-size: 15px; }
+.allfloors.folded { display: none; }
+.allfloors th { text-align: left; font: 400 20px var(--deco); padding: 6px 14px 6px 0; white-space: nowrap; color: var(--ink); }
+.allfloors td { padding: 6px 0; }
+.allfloors td.bc { width: 100%; } /* the bar cell takes what the label and count leave; a % bar needs a settled width */
+.bar { display: block; height: 18px; background: var(--ink); border-radius: 2px; }
+.allfloors tr.lit .bar { background: var(--w-junior); border: 1px solid var(--ink); }
+.allfloors tr.lobby .bar { background: repeating-linear-gradient(45deg, var(--gap) 0 2px, transparent 2px 7px); border: 1px solid var(--gap); }
+.allfloors tr.lobby.lit .bar { background: repeating-linear-gradient(45deg, var(--ink) 0 2px, var(--w-junior) 2px 7px); border: 1px solid var(--ink); }
+.allfloors td.n { font: 500 15px var(--mono); padding-left: 12px; white-space: nowrap; text-align: right; width: 1%; }
+.allfloors td.what { font-size: 14px; color: var(--muted); padding-left: 12px; white-space: nowrap; }
+
+/* Without script the lift doesn't run: the bars are shown and the button that folds them is not. */
+@media (scripting: none) { .allfloors.folded { display: table; } .cue { display: none; } }
+
+@media (max-width: 760px) {
+  .liftGrid { grid-template-columns: 1fr; gap: 28px; }
+  .doorway { grid-template-columns: minmax(0, 1fr) 104px; gap: 10px; } /* room for "1,207" beside its button */
+  .panel { padding: 8px 6px; gap: 6px; }
+  .fb i { width: 44px; height: 44px; font-size: 17px; } .fb { min-height: 44px; font-size: 12.5px; gap: 6px; }
+  .attendant { width: 44px; }
+  .lf p.ro { font-size: 16px; } .ro b { font-size: 28px; }
+  .allfloors td.what { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .needle, .car, .door, .floor { transition: none !important; } }

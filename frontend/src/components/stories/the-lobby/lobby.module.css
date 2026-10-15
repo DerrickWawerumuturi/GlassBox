@@ -1,0 +1,106 @@
+/*
+ * The lobby: a building of software engineering jobs. Outside is night (the facade). Inside is
+ * marble cream (the directory, the lift, the plaques). Hanken Grotesk reads, Limelight numbers the
+ * floors, JetBrains Mono counts, Caveat is the pen. Orange only acts: the button at the end, links
+ * and the pen notes. Lime is the one highlight per chart: junior windows outside, the lit floor
+ * inside. Both grounds are the story's own and stay the same in dark mode. Ported from the approved
+ * prototype (docs/local/editorial-sprint/stories/the-lobby/lobby.css).
+ */
+.root {
+  --deco: var(--font-limelight), var(--font-space-grotesk), serif;
+  --night: #141a2b; --night-2: #1d2335; --night-line: #2c3550; --night-ink: #efe8df; --night-muted: #b8afa3;
+  --brass: #c9a24a; --brass-hi: #e8c875; --brass-dk: #8a6a2a; --brass-ink: #3d2d0f;
+  --cream: #efe6d6; --wall: #f6efe3; --slab: #e6dcc8; --walnut: #5a3d2b; --walnut-dk: #3a2518; --felt: #1a1814; --lamp: #fff3c4;
+  --ink: #21201c; --muted: #63635e; --line: #d8cdb9; --pen: oklch(0.6 0.19 35);
+  --w-senior: #f2e8d0; --w-junior: #d7ee4c; --w-mid: #8a8f99;
+  --gap-beat: 150px;
+  background: var(--night); color: var(--night-ink); font: 400 20px/1.65 var(--essay); -webkit-font-smoothing: antialiased; overflow-x: clip;
+}
+.crumbs { color: var(--night-muted); }
+.col { max-width: 600px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.wide { max-width: 1080px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.root p { margin: 0 0 1.1em; }
+.root h1 { font: 700 clamp(38px, 5.4vw, 58px)/1.05 var(--essay); letter-spacing: -.02em; margin: 0 0 22px; }
+.root h2 { font: 650 clamp(28px, 3.4vw, 38px)/1.15 var(--essay); letter-spacing: -.015em; margin: 0 0 20px; }
+.root h3 { margin: 0; }
+.root p.kick { font: 500 12.5px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--night-muted); margin: 0 0 18px; }
+.root p.dek { font-size: clamp(20px, 2.1vw, 23px); line-height: 1.5; color: var(--night-muted); }
+.root p.lead { font-size: clamp(21px, 2.3vw, 24px); line-height: 1.5; }
+.root p.by, .root p.live { font-size: 15px; color: var(--night-muted); margin-top: 26px; }
+.root p.live { margin-top: 0; }
+.root :is(strong, b) { font-weight: 650; }
+/* Notes under a figure: smaller and italic, like a chart's caption; the source line in mono. */
+.root p.cap { font: italic 400 15px/1.55 var(--essay); color: var(--muted); margin: 14px 0 0; max-width: 46em; }
+.root p.src { font: 400 12.5px/1.5 var(--mono); color: var(--muted); margin: 6px 0 0; }
+.root p.dark { color: var(--night-muted); }
+.root a { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
+.root .note { font: 500 26px/1.1 var(--hand); color: var(--pen); margin: 0; }
+.root section { margin-top: var(--gap-beat); }
+.beat > * + * { margin-top: 44px; }
+:where(.root) figure { margin: 44px 0 0; } /* low, so .col and .wide still centre a figure */
+.root p.cue { margin: 14px 0 0; }
+
+/* Hero: the facade at night beside the title. */
+.root section.hero { margin: 36px auto 0; max-width: 1080px; padding: 0 22px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 40px 64px; align-items: center; }
+.hero .text { max-width: 520px; justify-self: end; }
+.root figure.facade { margin: 0; }
+.facade svg { display: block; width: 100%; height: auto; }
+.call { display: inline-flex; align-items: center; gap: 14px; background: none; border: 0; padding: 0; min-height: 52px; color: var(--night-ink); font: 600 17px var(--essay); cursor: pointer; margin: 6px 0 0; border-radius: 30px; }
+.call i { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6dc, var(--brass-hi) 38%, var(--brass) 72%, var(--brass-dk)); box-shadow: inset 0 -2px 3px rgba(0, 0, 0, .3), 0 0 0 4px var(--brass-dk), 0 3px 8px rgba(0, 0, 0, .5); display: grid; place-items: center; transition: box-shadow .2s; }
+.call i::before { content: ""; width: 0; height: 0; border: 9px solid transparent; border-bottom: 13px solid var(--brass-ink); border-top: 0; margin-top: -3px; }
+.call:hover i, .call:focus-visible i { box-shadow: inset 0 -2px 3px rgba(0, 0, 0, .3), 0 0 0 4px var(--brass-dk), 0 0 18px 4px var(--lamp); }
+.call:active i { transform: translateY(1px); }
+.key { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14.5px; color: var(--night-ink); margin-top: 16px; align-items: center; }
+.key span { display: inline-flex; align-items: center; gap: 7px; }
+.key i { display: inline-block; width: 14px; height: 16px; border-radius: 1.5px; }
+.key i.gap { background: repeating-linear-gradient(45deg, var(--w-mid) 0 1.2px, transparent 1.2px 4px); border: 1px solid var(--w-mid); }
+.key b { font: 500 14px var(--mono); }
+
+/* Inside: the marble lobby. A brass lintel marks the door. */
+.inside { background: var(--cream); color: var(--ink); margin-top: var(--gap-beat); padding: 110px 0 120px; border-top: 8px solid var(--brass); box-shadow: inset 0 2px 0 var(--brass-dk); }
+.inside p { color: color-mix(in oklab, var(--ink) 90%, var(--cream)); }
+.inside h2, .inside strong, .inside b { color: var(--ink); }
+.root .inside section.first { margin-top: 0; }
+
+/* The lobby directory: white slotted letters on grooved black felt, in a brass frame. */
+.board { background: var(--felt); color: #fff; border: 10px solid var(--brass); outline: 2px solid var(--brass-dk); border-radius: 3px; padding: 14px 24px 22px; max-width: 620px; margin: 0 auto; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 28px 44px -28px rgba(0, 0, 0, .7);
+  background-image: repeating-linear-gradient(transparent 0 33px, rgba(255, 255, 255, .09) 33px 34px); background-position: 0 14px; }
+.board table { width: 100%; border-collapse: collapse; font: 500 15px/34px var(--essay); letter-spacing: .14em; text-transform: uppercase; }
+.board caption { font: 400 24px/34px var(--deco); letter-spacing: .3em; color: var(--brass-hi); text-align: center; padding-bottom: 10px; }
+.board th { text-align: left; font: 700 11px/34px var(--essay); letter-spacing: .22em; color: var(--brass-hi); padding-top: 14px; }
+.board td { padding: 0; white-space: nowrap; }
+.board td.n { text-align: right; font: 500 15px/34px var(--mono); letter-spacing: .04em; }
+
+/* Brass plaques: engraved counts. */
+.plaque { position: relative; background: linear-gradient(135deg, var(--brass-hi), var(--brass) 45%, var(--brass-dk) 120%); color: var(--brass-ink); border-radius: 6px; padding: 22px 26px 24px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .3), inset 0 0 0 6px rgba(61, 45, 15, .22), 0 18px 30px -20px rgba(0, 0, 0, .55); text-shadow: 0 1px 0 rgba(255, 255, 255, .35); }
+.plaque::before, .plaque::after, .plaque dl::before, .plaque dl::after { content: ""; position: absolute; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff6dc, var(--brass-dk)); box-shadow: 0 1px 1px rgba(0, 0, 0, .4); }
+.plaque::before { top: 10px; left: 10px; } .plaque::after { top: 10px; right: 10px; } .plaque dl::before { bottom: 10px; left: 10px; } .plaque dl::after { bottom: 10px; right: 10px; }
+.root .plaque h3 { font: 700 12px/1.4 var(--essay); letter-spacing: .24em; text-transform: uppercase; margin: 0 0 12px; }
+.plaque dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 16px; margin: 0; font-size: 16.5px; line-height: 1.35; position: static; }
+.plaque dt { font: 600 16.5px/1.35 var(--mono); text-align: right; } .plaque dd { margin: 0; }
+.twolists { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding-bottom: 30px; }
+.root .twonote { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%) rotate(-4deg); white-space: nowrap; }
+.where { display: flex; height: 16px; margin: 0 0 16px; border: 1px solid var(--brass-ink); background: var(--wall); }
+.where .us { background: var(--ink); } .where .el { background: var(--brass-ink); opacity: .55; }
+.where .nc { flex: 1; background: repeating-linear-gradient(45deg, var(--brass-ink) 0 1.5px, transparent 1.5px 6px); }
+
+/* The ending */
+.cta { margin: 40px 0 20px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.root .cta p { margin: 0; font-weight: 500; max-width: 22em; }
+.root .inside p.live { color: var(--muted); font-size: 16px; line-height: 1.55; }
+.method { margin: 34px 0 0; } .method summary { cursor: pointer; font: 600 17px var(--essay); min-height: 44px; display: flex; align-items: center; }
+.root .method p { font-size: 16.5px; line-height: 1.6; }
+
+/* Without script the lift can't be called: the bars stand in for it (lift.module.css). */
+@media (scripting: none) { .call { display: none; } }
+
+@media (max-width: 760px) {
+  .root { --gap-beat: 100px; font-size: 18px; }
+  .root section.hero { grid-template-columns: 1fr; gap: 30px; margin-top: 24px; }
+  .hero .text { max-width: none; justify-self: stretch; }
+  .inside { padding: 80px 0 90px; }
+  .board { padding: 10px 12px 16px; border-width: 7px; }
+  .board table { font-size: 12.5px; letter-spacing: .08em; } .board td.n { font-size: 12.5px; } .board caption { font-size: 20px; }
+  .twolists { grid-template-columns: 1fr; }
+  .plaque { padding: 20px 20px 22px; } .plaque dl { font-size: 15.5px; } .plaque dt { font-size: 15.5px; }
+}

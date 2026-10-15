@@ -31,10 +31,10 @@ export default function LeadSquares({c}: {c: Ctx}) {
                 </div>
                 <figcaption className={"mt-4 flex flex-wrap gap-x-[18px] gap-y-1.5 font-mono text-[12px] font-medium text-muted-foreground"}>
                     {l.skill && <span className={"inline-flex items-center gap-[7px]"}>
-                        <Swatch className={"bg-accent-lime shadow-[inset_0_0_0_1px_var(--accent-lime-edge)]"} />names {l.skill}, {fmt(l.named)}</span>}
-                    {l.skill && <span className={"inline-flex items-center gap-[7px]"}><Swatch className={"bg-foreground"} />doesn&apos;t, {fmt(l.without)}</span>}
+                        <Swatch className={"bg-accent-lime shadow-[inset_0_0_0_1px_var(--accent-lime-edge)]"} />mentions {l.skill} · {fmt(l.named)}</span>}
+                    {l.skill && <span className={"inline-flex items-center gap-[7px]"}><Swatch className={"bg-foreground"} />doesn&apos;t · {fmt(l.without)}</span>}
                     {l.interns > 0 && <span className={"inline-flex items-center gap-[7px]"}>
-                        <Swatch className={"shadow-[inset_0_0_0_2px_var(--foreground)]"} />outlined: internship, {fmt(l.interns)}</span>}
+                        <Swatch className={"shadow-[inset_0_0_0_2px_var(--foreground)]"} />outlined: internship · {fmt(l.interns)}</span>}
                 </figcaption>
             </div>
         </figure>

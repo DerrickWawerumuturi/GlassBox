@@ -1,6 +1,6 @@
 import posthog, {CaptureResult} from "posthog-js";
 
-import {MARKET_NAMES, MarketName} from "@/lib/market-names";
+import {MARKET_NAMES, MarketName, STORY_SLUGS, StorySlug, storyPlace} from "@/lib/market-names";
 
 /*
  * Product analytics (decisions/analytics.md): PostHog, US cloud. Kept small
@@ -17,8 +17,20 @@ export type Page = "overview" | "market" | "skills" | "opportunities" | "applica
 /** The public market pages, by name (lib/market-pages.ts): where a CTA, a copied fact or a scan came from. */
 export type MarketPage = MarketName;
 // "hero": the landing page's first screen. "header": Try it out in the desktop Product menu; "menu": the same in the
-// phone menu. "years": the years of experience page. A market page's button says the page's name.
-const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years"] as const;
+// phone menu. "years": the years of experience page. "market": the /market grid's CV card. "product", "about":
+// the closing CV card of /product, /about. A market page's button says the page's name; a story's says "story_" and
+// its address ("story_pick_a_side").
+const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years", "market", "about", ...STORY_SLUGS.map(storyPlace)] as const;
+/** Where a "Compare your CV" or "Try it out" click came from. */
+export type CtaPlace = (typeof CTA_PLACES)[number] | MarketPage;
+/**
+ * A story's interactions, by a short name: the first one a reader uses in a page view is story_interacted
+ * (docs/decisions/analytics.md). Pick a side: pick_side, scratch, reveal_all. The lobby: lift, all_floors.
+ * Contents may vary: open_box, ingredient, show_none. Peak Python: arm, peak_list. Within eleven jobs: crane, fly_over.
+ */
+export const STORY_KINDS = ["pick_side", "scratch", "reveal_all", "lift", "all_floors", "open_box", "ingredient", "show_none",
+    "arm", "peak_list", "crane", "fly_over"] as const;
+export type StoryKind = (typeof STORY_KINDS)[number];
 /** Why a chosen file was refused before anything was sent. */
 export const REFUSALS = ["not_pdf", "too_big"] as const;
 /** Why a scan failed, as a kind, never the error's own text. */
@@ -35,8 +47,9 @@ type Events = {
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
     ad_pasted: {kind: "text" | "url"};
-    cta_clicked: {where: (typeof CTA_PLACES)[number] | MarketPage};
+    cta_clicked: {where: CtaPlace};
     fact_copied: {page: MarketPage};
+    story_interacted: {story: StorySlug; kind: StoryKind};
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
@@ -49,6 +62,7 @@ const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
     ad_pasted: ["kind"],
     cta_clicked: ["where"],
     fact_copied: ["page"],
+    story_interacted: ["story", "kind"],
 };
 
 export const DEFAULT_HOST = "https://us.i.posthog.com";
@@ -59,6 +73,7 @@ export const PROXY_PATH = "/ingest";
 const NAMED: Partial<Record<keyof Events, Record<string, readonly string[]>>> = {
     fact_copied: {page: MARKET_NAMES}, scan_started: {from: MARKET_NAMES}, scan_finished: {from: MARKET_NAMES},
     cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES]},
+    story_interacted: {story: STORY_SLUGS, kind: STORY_KINDS},
     scan_failed: {stage: ["upload", "reuse"], reason: FAIL_REASONS}, file_refused: {reason: REFUSALS},
 };
 
@@ -181,6 +196,8 @@ export function track<E extends keyof Events>(event: E, ...props: Events[E] exte
 }
 
 let lastPath: string | null = null;
+// Page views sent so far in this page load, and the one a story interaction was last counted in.
+let views = 0, interactedIn = -1;
 
 /**
  * One pageview per path change (React's dev double effects would send two).
@@ -193,7 +210,19 @@ export function trackPageview(path: string) {
     const source = lastPath === null && typeof document !== "undefined"
         ? visitSource(document.referrer, location.search, location.hostname) : {};
     lastPath = clean;
+    views++;
     posthog.capture("$pageview", {$current_url: clean, ...source});
+}
+
+/**
+ * A reader used a story's interaction: story_interacted, once per page view
+ * whatever they use after, so it counts readers who play, not taps. The
+ * story's address and the interaction's short name only.
+ */
+export function storyInteracted(story: StorySlug, kind: StoryKind) {
+    if (!initAnalytics() || interactedIn === views) return;
+    interactedIn = views;
+    track("story_interacted", {story, kind});
 }
 
 /**

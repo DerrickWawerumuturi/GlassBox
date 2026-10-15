@@ -7,7 +7,7 @@ import {Figure, Stacked, TableTwin} from "@/components/market-page/Figures";
 import MarketCvAsk, {MarketAskProvider} from "@/components/market-page/MarketCvAsk";
 import {P} from "@/components/market-page/StorySections";
 import TitleBar from "@/components/market-page/TitleBar";
-import {marketAskSkills} from "@/lib/cv-ask";
+import {marketAskSkills, marketWhat} from "@/lib/cv-ask";
 import {fmt, weekDate, weekStart} from "@/lib/market-page";
 import {YEARS_PATH} from "@/lib/market-names";
 import {MARKET_PAGES, marketPath} from "@/lib/market-pages";
@@ -75,7 +75,7 @@ export default function YearsArticle({c}: {c: YearsCounts | null}) {
                         <div className={"text-[14px]"}>
                             Counted by <b className={"font-heading"}>Glassbox</b>
                             <span className={"mt-0.5 block font-mono text-[12px] text-muted-foreground"}>
-                                <time dateTime={weekStart(c.page)}>Counted in the week of {weekDate(c.page)}</time> · Updated every Monday
+                                <time dateTime={weekStart(c.page)}>Week of {weekDate(c.page)}</time> · a new count every Monday
                             </span>
                         </div>
                         <BylineActions url={`${SITE_URL}${YEARS_PATH}`} title={h} cite={cite} />
@@ -91,15 +91,15 @@ export default function YearsArticle({c}: {c: YearsCounts | null}) {
                         </div>
                         <Chart c={c} />
                         {softwareLine(c) && <P>{softwareLine(c)}</P>}
-                        <Faq items={faq} />
-                        <MarketCvAsk />
+                        <Faq items={faq} week={weekDate(c.page)} />
+                        <MarketCvAsk lead />
                         <section id={"method"} aria-labelledby={"method-h"} className={"mt-[72px] scroll-mt-[70px] border-t border-border pt-[22px]"}>
                             <h2 id={"method-h"} className={"m-0 mb-[18px] font-heading text-[22px] font-bold"}>How we counted</h2>
                             <div className={"flex flex-col gap-4 font-read text-[15px] leading-[1.7] text-foreground/85"}>
                                 {YEARS_METHOD.map((p) => <p key={p} className={"m-0"}>{p}</p>)}
                                 <p className={"m-0"}>
                                     <Link href={"/method"} className={"text-primary underline-offset-4 hover:underline"}>How Glassbox counts</Link>
-                                    {" · "}<Link href={marketPath(INFO.name)} className={"text-primary underline-offset-4 hover:underline"}>The skills entry level software jobs name</Link>
+                                    {" · "}<Link href={marketPath(INFO.name)} className={"text-primary underline-offset-4 hover:underline"}>What entry level software jobs ask for</Link>
                                 </p>
                             </div>
                             <p className={"mt-4 rounded-lg border border-border bg-card px-3 py-2.5 font-mono text-[12px] leading-[1.6] break-words text-muted-foreground"}>{cite}</p>
@@ -110,6 +110,6 @@ export default function YearsArticle({c}: {c: YearsCounts | null}) {
         </div>
     );
     if (!c) return body;
-    const ask = {skills: marketAskSkills(c.page), what: `skills ${INFO.subject} jobs name most`, jobs: c.page.readable, subject: INFO.subject};
+    const ask = {skills: marketAskSkills(c.page), what: marketWhat(INFO.subject), jobs: c.page.readable, subject: INFO.subject};
     return <MarketAskProvider ask={ask} page={INFO.name} where={"years"}>{body}</MarketAskProvider>;
 }

@@ -33,22 +33,22 @@ export const COPY = {
         eyebrow: (total: string | null) => (total ? `${total} tech jobs counted this week` : "Tech jobs counted this week"),
         title: "The list is shorter than it looks.",
         /** One subtitle (founder, 12 Oct 2026). The button and its small line are the CV ask's: lib/cv-ask.ts ASK.compare. */
-        lede: "We count the skills tech jobs ask for each week and mark the ones on your CV.",
+        lede: "Each week we count which skills thousands of tech jobs ask for, and how many of them you already have.",
     },
     hiring: {
-        title: "Who they're hiring.",
-        line: "Every square is one job counted this week. Pick a job type.",
+        title: "Who they're hiring, by level.",
+        line: "Every square is one job this week. Pick a job type and see how many are junior, mid level or senior.",
     },
     count: {
-        chapter: "This week's count",
+        chapter: "The weekly count",
         kicker: (date: string) => `Counted in the week of ${date}`,
         howWeCount: "Each square is one job counted this week. Junior counts intern, entry and junior. Senior counts senior, staff, lead and principal. A job listed on two boards counts once.",
         levels: ["Junior", "Mid level", "Senior +"],
         more: "More",
         moreCount: (n: number) => `${n} more job types`,
         say: (n: number, of: string, family: string, level: Level) => n === 0
-            ? `None of the ${of} ${family} jobs counted this week ${LEVEL_PLURAL[level]}.`
-            : `${n.toLocaleString("en")} of the ${of} ${family} jobs counted this week ${n === 1 ? LEVEL_ONE[level] : LEVEL_PLURAL[level]}.`,
+            ? `None of the ${of} ${family} jobs ${LEVEL_PLURAL[level]}.`
+            : `${n.toLocaleString("en")} of the ${of} ${family} jobs ${n === 1 ? LEVEL_ONE[level] : LEVEL_PLURAL[level]}.`,
         share: (pct: string, family: string) => `${pct} of ${family} jobs`,
         legendOne: (perSquare: number) => (perSquare === 1 ? "one job at this level" : `${perSquare} jobs at this level`),
         legendOther: "other levels",
@@ -59,20 +59,20 @@ export const COPY = {
         pausedAd: "Paused while your ad is showing.",
         stopped: "Stopped. Press play to move on.",
         reduced: "Nothing changes on its own here. Pick a job type and a level.",
-        unavailable: "This week's count is not available right now. Try again in a minute.",
+        unavailable: "The weekly count is not available right now. Try again in a minute.",
     },
     wall: {
-        chapter: "The jobs behind the count",
-        title: "The jobs behind the count",
-        note: "lit = in this week's count",
-        allLit: (n: string, level: string, family: string) => `All ${n} ${level} ${family} jobs counted this week, lit.`,
-        someLit: (lit: number, n: string, level: string, family: string) => `Here are some of them. ${lit} of the ${n} ${level} ${family} jobs counted this week, lit. The rest, dimmed.`,
-        more: (rest: string, family: string) => `And ${rest} more ${family} jobs counted this week.`,
+        chapter: "The jobs behind the squares",
+        title: "The jobs behind the squares",
+        note: "lit: the level you picked",
+        allLit: (n: string, level: string, family: string) => `All ${n} ${level} ${family} jobs, lit.`,
+        someLit: (lit: number, n: string, level: string, family: string) => `${lit} of the ${n} ${level} ${family} jobs, lit. The rest, other ${family} jobs, dimmed.`,
+        more: (rest: string, family: string) => `And ${rest} more ${family} jobs this week.`,
         foot: "Titles and companies only. We don't copy the ads.",
     },
     glass: {
         chapter: "Hold a job ad to the glass.",
-        lede: "Paste any job ad. See which of its asks are common, and which are rare.",
+        lede: "Paste any job ad and see how common each of its asks is across this week's jobs.",
         paste: "Paste a job ad",
         emptyClipboard: "Your clipboard is empty. Copy a job ad first.",
         pressToPaste: (keys: string) => `Press ${keys} to paste`,
@@ -107,12 +107,12 @@ export const COPY = {
     },
     inside: {
         chapter: "Inside Glassbox.",
-        line: "This week's jobs and one example CV. This is what your dashboard shows.",
+        line: "Your dashboard, shown with an example CV. Four pages, built from the latest jobs and what's on your CV.",
         example: "example",
         tabs: ["Market", "Your skills", "Opportunities", "Applications"],
-        market: (n: string, family: string) => `What this week's ${n} ${family} jobs ask for most. Green is on the example CV.`,
+        market: (n: string, family: string) => `The skills these ${n} ${family} jobs ask for most. Green: on the example CV.`,
         skills: "How the example CV's skills connect to what these jobs ask for.",
-        jobs: "Jobs from this week's count that ask for what the example CV has.",
+        jobs: "Jobs that ask for what the example CV has, and why each is there.",
         jobHave: (have: number, n: number) => `${have} of the ${n} required skills are on the CV.`,
         applications: "Every job applied to, in one list, with its stage.",
         cta: "Add your CV",
@@ -120,7 +120,7 @@ export const COPY = {
     },
     cv: {
         title: "There's more of you in these jobs than you think.",
-        line: "We mark every skill today's jobs ask for that you already have.",
+        line: "Your scan runs on the latest jobs, not the Monday count, and marks every skill you already have.",
         lead: "About a minute. No account.",
         cta: "Find out",
         signUp: "Sign up",
@@ -139,14 +139,14 @@ export const COPY = {
     lower: {
         how: {
             chapter: "How it works",
-            lead: "We count this week's jobs. Add your CV and the count becomes about you.",
+            lead: "Four steps make the weekly count. Your CV is the fifth, and makes it about you.",
             steps: [
                 {title: "Read", body: "New jobs from public job boards, every day."},
                 {title: "Deduplicate", body: "A job listed twice counts once."},
                 {title: "Match to real skill names", body: "Real skill names only. A phrase is not a skill."},
-                {title: "Count, with the date", body: "Every number shows its count and date."},
+                {title: "Count, with the date", body: "Every number says what it counts and the week it comes from."},
             ],
-            withCv: {title: "With your CV", body: "Your skills meet the count, on four pages."},
+            withCv: {title: "With your CV", body: "Your skills meet the weekly count, on four pages."},
             once: "counted once",
             /** A real pair from the pool on 6 Oct 2026: one job, two boards. */
             pair: {title: "Backend Engineer, Control Plane", company: "Tailscale", boards: ["We Work Remotely", "Greenhouse"], note: "a real pair, 6 Oct"},
@@ -168,13 +168,15 @@ export const COPY = {
                 {q: "Do I need an account?", a: "No. Look around and check your CV without one. Sign up to keep your results and track applications across devices."},
                 {q: "Is a low number a bad sign?", a: "No. It counts overlap with today's jobs. It's not a verdict on you."},
                 {q: "Where do the jobs come from?", a: "Public job boards, read every day. Mostly tech jobs in the US and Europe for now."},
+                /** Founder's yes, 15 Oct 2026 (docs/local/copy-rewrite.html H11). */
+                {q: "Why once a week?", a: "Jobs are read every six hours, but one count a week, dated, is big enough to trust and stays put until the next Monday."},
                 {q: "Does it cost anything?", a: "No."},
             ],
         },
     },
     footer: {
         line: "We show. You decide.",
-        sub: "Read from public job boards every day. Counted every week. Mostly tech jobs in the US and Europe.",
+        sub: "Public job boards, read every day and counted every Monday. Mostly tech jobs in the US and Europe.",
     },
 } as const;
 

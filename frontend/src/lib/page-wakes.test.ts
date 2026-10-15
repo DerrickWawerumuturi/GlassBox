@@ -23,6 +23,9 @@ vi.mock("@/lib/published", async (original) => ({
     },
 }));
 
+// next/font is the compiler's: outside a build it throws. The hub loads the stories' faces for its covers.
+vi.mock("next/font/local", () => ({default: () => ({className: "", variable: "", style: {}})}));
+
 const APP = join(__dirname, "..", "app");
 
 function files(dir: string): string[] {
@@ -89,5 +92,25 @@ describe("rendering a public page", {timeout: 30_000}, () => {
 
         expect(fetches).toEqual([]);
         expect(read.calls).toBeGreaterThan(0);
+    });
+
+    // A story is one week's count in its own data module: it reads no publication and calls nothing, so only a deploy builds it.
+    it("renders every story without reading the publication or calling the API", async () => {
+        const stories = [
+            ["entry-level-software", await import("@/app/market/[page]/pick-a-side/page")],
+            ["software-engineering", await import("@/app/market/[page]/the-lobby/page")],
+            ["ai", await import("@/app/market/[page]/contents-may-vary/page")],
+            ["machine-learning", await import("@/app/market/[page]/peak-python/page")],
+            ["devops", await import("@/app/market/[page]/within-eleven-jobs/page")],
+        ] as const;
+        for (const [page, route] of stories) {
+            const params = {params: Promise.resolve({page})};
+            expect((await route.generateMetadata(params)).alternates?.canonical).toMatch(new RegExp(`^/market/${page}/`));
+            await route.default(params);
+        }
+        expect(fetches).toEqual([]);
+        expect(read.calls).toBe(0);
+        expect(routes.filter(([path]) => /^market\/\[page]\/(pick-a-side|the-lobby|contents-may-vary|peak-python|within-eleven-jobs)\//.test(path))
+            .filter(([, text]) => text.includes("look-server") || text.includes("@/lib/published"))).toEqual([]);
     });
 });

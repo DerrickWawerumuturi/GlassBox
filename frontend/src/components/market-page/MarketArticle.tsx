@@ -10,7 +10,7 @@ import {ScanStatus} from "@/components/market-page/SkillName";
 import {Method, Rail} from "@/components/market-page/StoryEnd";
 import StorySections, {P} from "@/components/market-page/StorySections";
 import TitleBar from "@/components/market-page/TitleBar";
-import {Ask, marketAskSkills} from "@/lib/cv-ask";
+import {Ask, marketAskSkills, marketWhat} from "@/lib/cv-ask";
 import {weekDate, weekStart} from "@/lib/market-page";
 import {MarketBody, MarketInfo, MarketName, absoluteMarket, marketPath} from "@/lib/market-pages";
 import {citeLine, Ctx, dek, findingText, framing, glance, has, headline, skillName, thin, topic, UNAVAILABLE} from "@/lib/market-story";
@@ -43,7 +43,7 @@ function Head({info, page, c}: {info: MarketInfo; page: MarketBody | null; c: Ct
                     <div className={"text-[14px]"}>
                         Counted by <b className={"font-heading"}>Glassbox</b>
                         <span className={"mt-0.5 block font-mono text-[12px] text-muted-foreground"}>
-                            <time dateTime={weekStart(page)}>Counted in the week of {weekDate(page)}</time> · Updated every Monday
+                            <time dateTime={weekStart(page)}>Week of {weekDate(page)}</time> · a new count every Monday
                         </span>
                     </div>
                     <BylineActions url={absoluteMarket(info.name)} title={h ?? q} cite={citeLine(c, new URL(SITE_URL).host)} />
@@ -65,7 +65,7 @@ export default function MarketArticle({info, page, others}: {
         ...(has(c, "categories") ? story.categories.flatMap((g) => g.skills) : []),
     ])].map((k) => ({key: k, name: skillName(c, k)})) : [];
     // The CV ask: the skills these jobs name most, counted from the jobs we could read.
-    const ask: Ask | null = c ? {skills: marketAskSkills(c.page), what: `skills ${info.subject} jobs name most`, jobs: c.page.readable, subject: info.subject} : null;
+    const ask: Ask | null = c ? {skills: marketAskSkills(c.page), what: marketWhat(info.subject), jobs: c.page.readable, subject: info.subject} : null;
     const body = (
         <div className={"pb-24"}>
             {c && <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(marketStructuredData(info, c.page, dek(c), headline(c), faq))}} />}
@@ -109,8 +109,8 @@ export default function MarketArticle({info, page, others}: {
                         )}
                         <ScanStatus skills={figureSkills} />
                         <StorySections c={c} />
-                        <Faq items={faq} />
-                        <MarketCvAsk />
+                        <Faq items={faq} week={weekDate(c.page)} />
+                        <MarketCvAsk lead />
                         <Method c={c} />
                     </article>
                     <Rail c={c} others={others} />

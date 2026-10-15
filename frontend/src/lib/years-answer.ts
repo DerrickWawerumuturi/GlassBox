@@ -74,13 +74,13 @@ export const unstatedShare = ({titled}: YearsCounts) => pct(titled.unstated, job
 
 /** The page's questions, each answered with a count; a question the data can't answer is left out. */
 export function yearsFaq(c: YearsCounts): Answer[] {
-    const {page, software} = c, week = weekDate(page), out: Answer[] = [];
+    const {software} = c, out: Answer[] = [];
     out.push({q: "How many years of experience do entry level software jobs ask for?", a: yearsAnswer(c)});
     if (software.stated) {
         out.push({q: "How many software jobs ask for two years of experience or less?",
-            a: `${fmt(asking(software, 0, 2))} of the ${fmt(software.stated)} software jobs that state a number of years, in the week of ${week}.`});
+            a: `${fmt(asking(software, 0, 2))} of the ${fmt(software.stated)} software jobs that state a number of years.`});
         out.push({q: "How many software jobs ask for five years of experience or more?",
-            a: `${fmt(asking(software, 5, null))} of the ${fmt(software.stated)} software jobs that state a number of years, in the week of ${week}.`});
+            a: `${fmt(asking(software, 5, null))} of the ${fmt(software.stated)} software jobs that state a number of years.`});
     }
     return out;
 }

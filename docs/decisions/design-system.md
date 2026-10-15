@@ -145,6 +145,44 @@ size pinned at 20 (72 KB). Loaded by `app/market/layout.tsx` only, so no other
 page pays for it. Headlines stay Space Grotesk, labels and numbers JetBrains
 Mono, and the product keeps Schibsted Grotesk.
 
+**2026-10-15: the stories' faces.** The visual stories and the /market grid set
+what we write in Hanken Grotesk (variable, with its italic; OFL beside it),
+loaded by those routes only (`app/fonts/hanken-grotesk.ts`). Each story may add
+one OFL display face for its picture and big numbers, in its own font module so
+only its route and the grid's covers load it: Bebas Neue (Pick a side), Limelight
+(The lobby), Bungee (Contents may vary), Allerta Stencil (Within eleven jobs);
+Peak Python adds none. Bebas Neue and Bungee are cut to Latin + Latin Extended;
+Limelight and Allerta Stencil reserve their names under the OFL, so they ship
+uncut (only wrapped as woff2). Static ttf cuts for share images sit in
+`app/fonts/og`. None of the five preloads: this build preloads every next/font
+file on every page (measured: /about preloaded all eleven), so they load only
+where a page uses them, in the fallback until then. Each story keeps its own ground and palette; orange still only
+acts, lime is the one highlight per chart, green stays "on your CV".
+
+**2026-10-15: /product in the editorial look** (founder: "the product page
+needs the new look, to match the market"). /product sets its headings and
+reading text in Hanken Grotesk (the stories' module), labels in JetBrains Mono,
+pen notes in Caveat, captions in Hanken italic. Each of its five chapters sits
+on a coloured stage (sky, lavender, butter, mint, pink, darker in dark mode):
+illustration colours that never mark data. On the stage, a cropped screenshot
+of the example scan (`public/product/crop`, a phone crop below 641px) is pinned
+like a print, or, for the CV chapter, a drawing of what happens to a PDF (true
+to the code: text to Groq, PDF deleted, skills kept only when signed in). The
+first chapter is "Market charts", since the header's Market is /market; the old
+`#market` anchor stays on it. The count is a till receipt after it. The product's
+ground and `.dark` theme, not the stories' own grounds.
+
+**2026-10-15: /about in the editorial look** (founder: "love the prototype, move
+it to the actual page"). /about wears /product's look and reuses its parts: the
+chapter, the receipt, the CV drawing for "Your PDF is read, then deleted" and the
+closing CV card. Six chapters on stages (butter, sky, lavender, pink, mint and a
+sixth, peach), each drawn: the wall of one ad, the four counting steps as cards
+on one stage, a map with no route, three crossed out stamps, The Count sealed.
+What is kept signed in sits on two paper sheets beside "Never kept from your
+CV"; the values as four signed cards. The prototype's dashed "character" boxes
+are left out until the ink cast is drawn: `Chapter` and `CvClose` take a
+`character` slot, empty on /about (the product's close keeps its doll).
+
 ## Editorial figure grammar (market pages, 2026-10-07)
 
 The chart grammar above, as a figure in a story (`components/market-page/Figures.tsx`):
@@ -234,15 +272,15 @@ as the button's first child:
   travel.
 - **Who wears it: every orange button that takes a CV into the box, and only
   those.** Today: "Compare your CV" in the hero, on a market page and on the
-  years page (`CompareCv`); "Add your CV" on /product (`AddCvButton`); "Add
+  years page (`CompareCv`); "Add your CV" on /product and /about (`AddCvButton`); "Add
   your CV" in Inside Glassbox (`Showcase`); "Find out" in the closing CV
   section (`CvSection`); in the CV sheet, "See them" and the kept CV button
   (`CvSheet`, full width). One primary action per screen keeps the moment
   special.
-- **Who stays quiet, and why:** the header's "Try it out" in the Product menu
-  and the phone menu (the header's mono capitals in a thin outline with a
-  return key mark, founder 8 Oct; a 44px display face button would be a
-  different header); "See your results" in the closing section (it goes
+- **Who stays quiet, and why:** the header's "Try it out" in the phone menu
+  (the header's mono capitals in a thin outline with a return key mark,
+  founder 8 Oct; a 44px display face button would be a different header; the
+  desktop bar's went with the Product menu on 15 Oct); "See your results" in the closing section (it goes
   somewhere, so it keeps its arrow); the dashboard's example banner button
   (a slim sticky bar; the dashboard stays quiet); sign in, sign up, the
   skills form, the dashboard dialogs (admin, not the CV). Secondary, ghost
@@ -263,3 +301,24 @@ it. The O now renders as the rim with the dot inside, as the brand book
 draws it. The OG and share images read the SVG files in `public/brand`,
 which carry the rule, so they were right all along; the favicon and app
 icons are the symbol, not the wordmark.
+
+## The header (2026-10-15)
+
+Founder, 15 Oct 2026: the Product menu's Market item read as the same thing
+as the Resources menu's Market. Both menus are gone. The bar is four plain
+links in the header's mono capitals: Product (`/product`, one page, so no
+menu), Market (`/market`, the public market pages), About, FAQ. Sign in and,
+when signed in, Dashboard sit on the right, as before.
+
+- **Current page:** a link is current on its own page and the pages under it
+  (`isCurrent` in `Navbar.tsx`), so `/market/devops` and every story light
+  Market. It carries `aria-current="page"`.
+- **Hover:** the soft pill still slides to the link under the pointer.
+- **Phone menu:** Dashboard when signed in, Compare your CV ("Try it out" until
+  the copy rewrite of 15 Oct 2026), then the same four
+  links (`SITE_LINKS`) with an icon each. The "Resources" label is gone.
+- **How Glassbox counts** (`/method`) left the header. It stays in the footer
+  ("How we count") and on `/market`.
+- **Gone with the menus:** the desktop "Try it out" that sat in the Product
+  menu (`cta_clicked` `where: header`), the menu lines in `FEATURES.nav` and
+  `NAV`, and `components/ui/navigation-menu.tsx`, which nothing else used.

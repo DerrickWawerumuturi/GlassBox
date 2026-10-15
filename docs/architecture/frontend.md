@@ -30,10 +30,18 @@ src/
                                  and Source Serif 4 (font-read), loaded on these pages only
     market/[page]/years-of-experience  how many years entry level software jobs ask for, from the entry level page's
                                  `experience` counts (lib/years-answer.ts); any other page name is a 404
-    market/page.tsx              /market, the hub: each page with its job count and first finding, and its own share image
+    market/[page]/<story>        a story per market page (pick-a-side, the-lobby, contents-may-vary, peak-python,
+                                 within-eleven-jobs): one week's count, static, its own share image and faces
+                                 (components/stories, lib/stories, decisions/market-pages.md "Stories")
+    market/page.tsx              /market, the grid of stories: covers, a plain link to each live page, the years card from the
+                                 live count, how we count, the CV card (components/market-hub, lib/market-hub.ts); own share image
     (public)/method              how Glassbox counts, written from the code (components/site/Explainer.tsx, lib/method-copy.ts)
-    (public)/product, about      long explainers (components/site/Explainer.tsx, static like the landing); words in lib/site-copy.ts;
-                                 screenshots in public/product (docs/local/render/product-shots.mjs)
+    (public)/about               why Glassbox exists, in the editorial look of /product (components/about: drawings, the
+                                 counting steps, the kept sheets; reuses components/product's chapter, count card and close);
+                                 words in lib/site-copy.ts (ABOUT_PAGE); the receipt from the publication (lib/product-count.ts)
+    (public)/product             what Glassbox shows, in the stories' editorial look (components/product: chapters, drawings,
+                                 the count card); words in lib/site-copy.ts (PRODUCT_PAGE); the count from the publication
+                                 (lib/product-count.ts); crops in public/product/crop, from docs/local/render/product-shots.mjs
     (auth)/sign-in/page.tsx      layout.tsx only gives it a title (the page is a client component)
     (product)/
       analysis/…                 a scan without an account, on the dashboard's views: market · skills · jobs (gaps redirects);
@@ -78,13 +86,18 @@ src/
                                  result, error), CvPicker (choose or drop a PDF; it starts the scan;
                                  also on /dashboard/scan), useCvScan.tsx (the sheet and the scan, for
                                  every public page, the header and /analysis)
+    stories/                     the visual stories: StoryParts (page, crumbs, source line, the week line, scope),
+                                 StoryCvAsk, OpenMethod, doll.ts, share.tsx (share images), covers/ (a cover per
+                                 story for the hub), and a folder per story (its CSS module, server parts, small client parts)
+    market-hub/                  the /market grid: hub.module.css, HubFilter (the chips), HubCv (the CV card), covers.ts
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token
     analysis-store.tsx           the analysis, cached in localStorage and on the account
     cv-store.tsx                 the CV, same pattern
     applications-store.tsx       tracked applications, optimistic writes, per-user cache
-    site-copy.ts                 the header's Product menu, /product and /about, in one place
+    site-copy.ts                 the header's words, /product and /about, in one place
+    product-count.ts             the count card's receipt on /product and /about, from the published count
     application-rows.ts          the applied day as a date, which row clicks select (tested)
     opportunities-store.tsx      matched pool jobs, per-user cache
     market.ts                    display transforms over the analysis
@@ -108,6 +121,9 @@ src/
     market-page.ts               numbers, dates, copied facts' links, title level chips
     market-faq.ts                a market page's questions, each answered with this week's count (and FAQPage markup)
     years-answer.ts              the years of experience page's sentences, chart rows and questions
+    stories/                     a data module per story (one week's numbers, a comment per figure) and its tests;
+                                 story.ts (types, addresses, the week), route.ts (metadata), index.ts (the list)
+    market-hub.ts                the /market grid's cards, in order, and its filters (tested)
     method-copy.ts               /method's words, each section naming the code it describes
     dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract

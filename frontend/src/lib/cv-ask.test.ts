@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 
 import {ApiError} from "@/lib/api";
-import {Ask, ASK, askCount, checkFile, failReason, familyAskSkills, fileProblem, IDLE, MAX_BYTES, marketAskSkills, readingSteps, runUpload, scanError, ScanEvent, scanStep, ScanState, waitClock, WAIT_LINE_SECONDS} from "@/lib/cv-ask";
+import {Ask, ASK, askCount, checkFile, failReason, familyAskSkills, fileProblem, IDLE, MAX_BYTES, marketAskSkills, marketWhat, readingSteps, runUpload, scanError, ScanEvent, scanStep, ScanState, STORY_WHAT, waitClock, WAIT_LINE_SECONDS} from "@/lib/cv-ask";
 import {haveSet, Look} from "@/lib/landing/look";
 import fixture from "@/lib/landing/look.fixture.json";
 import {MarketBody} from "@/lib/market-pages";
@@ -9,7 +9,7 @@ import stories from "@/lib/market-story.fixture.json";
 
 const entry = stories["entry-level-software"] as unknown as MarketBody;
 const look = fixture as unknown as Look;
-const ask = (skills = marketAskSkills(entry)): Ask => ({skills, what: "skills entry level software jobs name most", jobs: entry.readable, subject: "entry level software"});
+const ask = (skills = marketAskSkills(entry)): Ask => ({skills, what: marketWhat("entry level software"), jobs: entry.readable, subject: "entry level software"});
 
 describe("which skills the ask is about", () => {
     it("a market page asks about the 15 skills its jobs name most, broad ones only", () => {
@@ -170,7 +170,18 @@ describe("the sheet's example", () => {
 
 describe("the sheet's words", () => {
     it("names which jobs the skills were counted from", () => {
-        expect(ASK.sheet.line(ask())).toBe(`We read your CV for skills and compare them with the ${entry.readable} entry level software jobs whose ads we could read.`);
+        // The comparison is with the skills, not the jobs (copy rewrite P14, 15 Oct 2026).
+        expect(ASK.sheet.line(ask())).toBe(`We read the skills on your CV and compare them with the 15 that ${entry.readable} entry level software jobs mention most.`);
+        expect(ASK.sheet.title(ask())).toBe("How many of these 15 are on your CV?");
+        expect(ASK.sheet.resultLine(ask())).toBe("of the 15 skills entry level software jobs mention most are already on your CV.");
+        // A story picks its skills, so its sheet never says they are the ones mentioned most.
+        const story: Ask = {...ask(ask().skills.slice(0, 11)), what: STORY_WHAT};
+        expect(ASK.sheet.line(story)).toBe(`We read the skills on your CV and compare them with the 11 this story counts in ${entry.readable} entry level software jobs.`);
+        expect(ASK.sheet.line(null)).toBe("We read the skills on your CV and compare them with the latest jobs.");
+    });
+
+    it("asks a market page's question beside its button, with the count it is about", () => {
+        expect(ASK.lead(ask())).toBe("Curious how many of the 15 skills these jobs ask for most are already on your CV?");
     });
 
     it("says nothing is kept to someone without an account", () => {

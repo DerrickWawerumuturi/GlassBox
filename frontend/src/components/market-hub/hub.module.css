@@ -1,0 +1,87 @@
+/*
+ * The market hub as a grid of stories (founder, 15 Oct 2026), after the approved
+ * prototype (docs/local/editorial-sprint/market-home/mh.css), itself after The
+ * Pudding's home: square covers, a pill and a date above each, a short heavy
+ * title and one line below. Hanken Grotesk for what we write, JetBrains Mono for
+ * dates and filters, the product's ground and colour roles in both themes.
+ */
+.hub { --card-bg: #fffdf9; --hub-ink: var(--foreground); --hub-muted: var(--muted-foreground); --hub-line: var(--border);
+  background: var(--background); color: var(--hub-ink); font: 400 17px/1.5 var(--essay); -webkit-font-smoothing: antialiased; }
+:global(.dark) .hub { --card-bg: #2a2723; }
+.hub a { color: inherit; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px 24px; }
+
+/* Masthead */
+.mast { position: relative; padding: 56px 0 0; max-width: 980px; }
+.kick { font: 500 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--hub-muted); margin: 0 0 14px; }
+.mast h1 { font: 800 clamp(40px, 6.4vw, 76px)/1 var(--essay); letter-spacing: -.035em; margin: 0; max-width: 11.5em; }
+.dek { font-size: clamp(19px, 2vw, 22px); line-height: 1.45; color: color-mix(in oklab, var(--hub-ink) 75%, var(--background)); max-width: 34em; margin: 22px 0 0; }
+.when { font: 500 12px var(--mono); letter-spacing: .02em; color: var(--hub-muted); }
+.mast > .when { margin: 16px 0 0; }
+.badge { position: absolute; right: -150px; top: 34px; width: 132px; transform: rotate(10deg); }
+.badge svg { display: block; width: 100%; height: auto; }
+
+/* Filters: sticker chips with drawn icons */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 56px 0 0; }
+.chip { appearance: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--hub-ink); background: var(--card-bg); color: var(--hub-ink); font: 600 12.5px var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  box-shadow: 0 2px 0 var(--hub-ink); transition: transform .12s, box-shadow .12s; }
+.chip svg { width: 18px; height: 18px; flex: none; }
+.chip:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--hub-ink); }
+.chip[aria-pressed="true"] { background: var(--hub-ink); color: var(--background); transform: translateY(2px); box-shadow: none; }
+.chip:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+/* Without script the filters can't filter: every card is simply there. */
+@media (scripting: none) { .chips { display: none; } }
+
+/* The grid */
+.grid { list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 64px 32px; }
+.card { position: relative; display: flex; flex-direction: column; min-width: 0; }
+.card[hidden] { display: none; }
+.meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.pill { font: 600 13px var(--essay); border: 1.5px solid var(--hub-ink); border-radius: 999px; padding: 3px 12px; }
+.meta .when { font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 12.5px; color: var(--hub-ink); }
+.cover { aspect-ratio: 1; overflow: hidden; border-radius: 2px; }
+/* On the dark page a dark cover (the tags on a rail) needs an edge. */
+:global(.dark) .cover { outline: 1px solid var(--hub-line); outline-offset: -1px; }
+.cover svg { display: block; width: 100%; height: 100%; transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+.card:hover .cover svg { transform: scale(1.035) rotate(-.6deg); }
+.card h2 { font: 800 28px/1.08 var(--essay); letter-spacing: -.03em; margin: 18px 0 8px; }
+.card h2 a { text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card:hover h2 a { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
+.card h2 a:focus-visible { outline: none; }
+.card:has(h2 a:focus-visible) { outline: 3px solid var(--orange); outline-offset: 6px; border-radius: 4px; }
+.card p { margin: 0; color: var(--hub-muted); font-size: 17px; line-height: 1.45; }
+/* The small plain link to the live weekly page: above the card's own link, so it is its own target. */
+.card a.live { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font: 500 13px var(--mono);
+  color: var(--orange); text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; }
+
+/* The CV ask, where The Pudding puts its newsletter */
+.cvcard { align-items: center; justify-content: center; text-align: center; background: var(--card-bg); border: 1.5px dashed var(--hub-line); border-radius: 14px; padding: 28px 26px; }
+.cvpic { width: 78%; }
+.cvpic svg { display: block; width: 100%; height: auto; }
+.cvcard h2.cvq { font: 800 24px/1.15 var(--essay); letter-spacing: -.02em; margin: 14px 0 20px; max-width: 13em; }
+.cvcard p.fine { font-size: 14px; margin-top: 12px; }
+
+.open { margin: 72px 0 0; padding: 22px 0 0; border-top: 1px solid var(--hub-line); color: var(--hub-muted); font-size: 16px; }
+.hub .open a { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 1320px) { .badge { right: -20px; top: 8px; } .mast { max-width: none; padding-right: 150px; } }
+@media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px 24px; } }
+@media (max-width: 640px) {
+  .wrap { padding: 0 16px 24px; }
+  .mast { padding: 36px 0 0; padding-right: 0; }
+  .badge { position: static; width: 104px; margin: 18px 0 0; transform: rotate(-6deg); }
+  /* One row that swipes, like The Pudding's filter on phones, instead of three rows of chips. */
+  .chips { margin: 32px -16px 0; padding: 2px 16px 6px; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; } .chip { flex: none; }
+  .grid { grid-template-columns: minmax(0, 1fr); gap: 52px; margin-top: 32px; }
+  .card h2 { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) { .cover svg, .chip { transition: none; } .card:hover .cover svg { transform: none; } }
+
+/* A filter shows one kind: the rest of the cards, the CV card among them, step aside. */
+.filtered[data-show="essay"] .card:not([data-kind="essay"]),
+.filtered[data-show="count"] .card:not([data-kind="count"]),
+.filtered[data-show="years"] .card:not([data-kind="years"]),
+.filtered[data-show="method"] .card:not([data-kind="method"]) { display: none; }

@@ -1,0 +1,143 @@
+/*
+ * Peak Python: Hanken Grotesk reading text at the essay's sizes. The range sets its own palette
+ * (ice sky, slate rock, ochre valley, bronze table) and turns to dusk in the dark theme. Orange
+ * only acts: the sighting beam, the sighted name, the pen notes, the button. Lime once: Python's
+ * flag (and, in the visitors' book, the one most common ask). Ported from the approved prototype
+ * (docs/local/editorial-sprint/stories/peak-python/peak.css).
+ */
+.root {
+  --gap-beat: 150px; --pen: oklch(0.6 0.19 35);
+  --sky1: #cfe0f0; --sky2: #f4f6f8; --snow: #ffffff; --rock: #9aa6b1; --rock2: #5c6974; --hatch: #3f4a54; --edge: #3b4651; --contour: #8fa3b5; --far: #c3cdd6; --label: #21201c;
+  --valley: #d9c9a3; --cream: #f1e6cf; --bronze: #8c6a3f; --bronze2: #5e4527; --plate: #6b4f2c;
+  background: var(--paper); color: var(--ink); font: 400 20px/1.65 var(--essay); -webkit-font-smoothing: antialiased; overflow-x: clip;
+}
+:global(.dark) .root {
+  --paper: var(--charcoal); --ink: var(--charcoal-ink); --muted: var(--charcoal-muted); --line: var(--charcoal-line);
+  --sky1: #16202b; --sky2: #2a3744; --snow: #dfe7ee; --rock: #55626d; --rock2: #2c353e; --hatch: #1a2027; --edge: #0f1418; --contour: #6f8699; --far: #3a4652; --label: #eef1f4; --valley: #4a3f2c;
+}
+.crumbs { color: var(--muted); }
+.col { max-width: 600px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.wide { max-width: 1080px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.root p { margin: 0 0 1.1em; color: color-mix(in oklab, var(--ink) 90%, var(--paper)); }
+.root a { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
+.root h1 { font: 700 clamp(38px, 5.4vw, 58px)/1.05 var(--essay); letter-spacing: -.02em; margin: 0 0 22px; }
+.root h2 { font: 650 clamp(28px, 3.4vw, 38px)/1.15 var(--essay); letter-spacing: -.015em; margin: 0 0 20px; }
+.root h3 { font: 700 17px/1.3 var(--essay); margin: 0 0 4px; }
+.root p.kick { font: 500 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.root p.dek { font-size: clamp(20px, 2.1vw, 23px); line-height: 1.5; color: color-mix(in oklab, var(--ink) 70%, var(--paper)); }
+.root p.by { font-size: 15px; color: var(--muted); margin-top: 26px; }
+.root p.live { font-size: 15px; line-height: 1.55; color: var(--muted); }
+.root p.lead { font-size: clamp(21px, 2.3vw, 24px); line-height: 1.5; color: var(--ink); }
+.root section { margin-top: var(--gap-beat); }
+/* The hero: title left, dek and the verb right, so the range itself sits on the first screen. */
+.root section.hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 56px; align-items: start; margin-top: 30px; }
+.root .hero h1 { margin-bottom: 0; } .root .hero p.lead { font-size: clamp(19px, 1.9vw, 21px); } .root .hero p.by { margin-top: 10px; }
+.root section.first { margin-top: 36px; }
+.beat > * + * { margin-top: 44px; }
+.root figure { margin: 44px 0 0; }
+.root figure.view { padding: 0; }
+.root figure.col, .root figure.wide { margin-left: auto; margin-right: auto; }
+.root p.cap { font: italic 400 15px/1.55 var(--essay); color: var(--muted); margin: 14px 0 0; max-width: 46em; }
+.root p.src { font: 400 12.5px/1.5 var(--mono); color: var(--muted); margin: 8px 0 0; }
+.root .src a { color: var(--muted); }
+
+/* The range and the table, one svg */
+.range { display: block; width: 100%; height: auto; overflow: visible; user-select: none; -webkit-user-select: none; }
+/* Before the page measures its column: the desk's drawing, or the phone's. */
+.onPhone { display: none; }
+@media (max-width: 699px) { .onDesk { display: none; } .onPhone { display: block; } }
+/* The five peaks sit in the reading column: the phone's drawing once the column is under 520px. */
+.fivePhone { display: none; }
+@media (max-width: 563px) { .fiveDesk { display: none; } .fivePhone { display: block; } }
+.range .rock { fill: var(--rock); } .range .shade { fill: var(--rock2); opacity: .8; }
+.range .edge { fill: none; stroke: var(--edge); stroke-width: .9; stroke-linejoin: round; }
+.range .snow { fill: var(--snow); stroke: var(--edge); stroke-width: .6; stroke-linejoin: round; }
+.range .contour { fill: none; stroke: var(--contour); stroke-width: .8; opacity: .9; }
+.range .far { fill: var(--far); stroke: var(--contour); stroke-width: .6; stroke-linejoin: round; }
+.range .grid { stroke: var(--contour); stroke-dasharray: 2 4; stroke-width: .8; fill: none; opacity: .85; }
+.range .gl { font: 500 12px var(--mono); fill: var(--muted); }
+.range .title { font: 500 12px var(--mono); letter-spacing: .08em; fill: var(--muted); }
+.range .pole { stroke: var(--edge); stroke-width: 1.4; } .range .flag { fill: var(--lime); stroke: var(--edge); stroke-width: .8; stroke-linejoin: round; }
+.range .nm { font: italic 400 13px var(--read); fill: var(--label); pointer-events: none; }
+.range.phone .nm { font-size: 12px; }
+.range .nm.lime { font-weight: 700; } .range .nm.on { fill: var(--orange); font-weight: 600; }
+.range .pen { font: 500 21px var(--hand); fill: var(--pen); pointer-events: none; }
+.range.phone .pen { font-size: 18px; }
+.range .penline { fill: none; stroke: var(--pen); stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 3 3; }
+.range .valley { fill: var(--valley); } .range .baseline { stroke: var(--ink); stroke-width: 1.2; }
+.range .bracket { fill: none; stroke: var(--ink); stroke-width: .8; opacity: .6; }
+.range .rl { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; fill: var(--ink); }
+.range .rn { font: italic 12px var(--essay); fill: var(--ink); opacity: .75; }
+.range .pk rect { fill: transparent; cursor: pointer; } .range .pk:focus { outline: none; }
+.range .pk:focus-visible rect { stroke: var(--orange); stroke-width: 2; stroke-dasharray: 3 3; }
+.range .peak.on .rock { fill: color-mix(in oklab, var(--rock) 80%, var(--snow)); }
+.range .share { font: 700 15px var(--essay); fill: var(--label); }
+.range .cnt { font: 500 12px var(--mono); fill: var(--label); }
+.range .pg { font: 600 13px var(--essay); fill: var(--ink); } .range.phone .pg { font-size: 12px; }
+/* the table */
+.range .disc { touch-action: none; cursor: grab; } .range .disc:focus { outline: none; }
+.range .disc:focus-visible:not(.touched) .outer { stroke: var(--orange); stroke-width: 3; opacity: 1; }
+.range .ring { fill: none; stroke: var(--cream); stroke-width: 1.2; opacity: .75; } .range .ring.thin { stroke-width: .7; opacity: .55; }
+.range .tick { stroke: var(--cream); stroke-width: .8; opacity: .6; } .range .tick.long { stroke-width: 1.2; opacity: .85; }
+.range .rim { font: 500 12px var(--mono); letter-spacing: .1em; fill: var(--cream); }
+.range .ptick { stroke: var(--cream); stroke-width: 1.6; cursor: pointer; } .range .ptick.on { stroke: var(--orange); stroke-width: 3; }
+.range .here { font: 600 12px var(--mono); letter-spacing: .12em; fill: var(--muted); }
+.range .glove { fill: #a9814f; stroke: #4f3920; stroke-width: 1; stroke-linejoin: round; } .range .stitch { fill: none; stroke: #4f3920; stroke-width: .7; stroke-dasharray: 2 2; }
+.range .armb { fill: #3b2a16; stroke: var(--cream); stroke-width: .6; } .range .armline { stroke: var(--cream); stroke-width: .6; opacity: .7; }
+.range .sight { fill: none; stroke: var(--orange); stroke-width: 2.4; } .range .sightdot { fill: var(--orange); }
+.range .bolt { fill: #3b2a16; stroke: var(--cream); stroke-width: 1.2; }
+.range .beam { fill: none; stroke: var(--orange); stroke-width: 1.5; stroke-dasharray: 4 4; pointer-events: none; }
+.range .mark { fill: none; stroke: var(--orange); stroke-width: 2; pointer-events: none; }
+.range .plate { fill: var(--plate); stroke: #3b2a16; stroke-width: 1; } .range .platein { fill: none; stroke: var(--cream); stroke-width: .8; opacity: .7; }
+.range .pr { font: 600 12px var(--mono); letter-spacing: .14em; fill: var(--cream); opacity: .8; }
+.range .pn { font: italic 400 26px var(--read); fill: var(--cream); } .range.phone .pn { font-size: 24px; }
+.range .p1 { font: 600 14px var(--mono); fill: var(--cream); } .range .p2 { font: 400 12.5px var(--mono); fill: var(--cream); opacity: .9; }
+.range.phone .p2 { font-size: 12px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; padding: 0 22px; }
+.step { appearance: none; font: 600 14px var(--essay); min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--ink); background: var(--card); color: var(--ink); cursor: pointer; }
+:global(.dark) .step { background: transparent; }
+.step:hover { background: var(--ink); color: var(--paper); }
+.step.ghost { border-style: dashed; }
+.twin { margin-top: 18px; overflow-x: auto; }
+/* Without script the list of peaks is simply open: the arm can't move. */
+.twin.shut { display: none; }
+@media (scripting: none) { .twin.shut { display: block; } .controls { display: none; } }
+.twin table { width: 100%; border-collapse: collapse; font-size: 14px; } .twin caption { text-align: left; font: 600 14px var(--essay); padding: 0 0 8px; }
+.twin th, .twin td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
+.twin thead th { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.twin td { font-family: var(--mono); font-size: 13px; }
+
+/* The visitors' book: a ruled ledger */
+.ledger { background: var(--card); border: 1px solid var(--line); padding: 24px 24px 18px; background-image: repeating-linear-gradient(transparent 0 27px, color-mix(in oklab, var(--line) 60%, transparent) 27px 28px); box-shadow: 0 18px 40px -28px rgba(60, 45, 20, .4); }
+:global(.dark) .ledger { background-color: #2a2723; --rock2: #6b7884; }
+.ledger .row { margin: 0 0 24px; } .root .ledger .row p { font-size: 15.5px; color: var(--muted); margin: 0 0 10px; }
+.bar { display: flex; height: 26px; gap: 2px; } .bar i { display: block; background: var(--rock2); min-width: 2px; }
+.bar i.lime { background: var(--lime); } .bar i.none { background: repeating-linear-gradient(45deg, var(--gap) 0 1.5px, transparent 1.5px 6px); border: 1px solid var(--gap); }
+.key { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0; margin: 8px 0 0; font: 400 14px var(--essay); color: var(--ink); }
+.key li { display: inline-flex; align-items: center; gap: 6px; } .key b { font: 600 13px var(--mono); }
+.key i { width: 14px; height: 12px; background: var(--rock2); border-radius: 2px; } .key i.lime { background: var(--lime); }
+.key i.none { background: repeating-linear-gradient(45deg, var(--gap) 0 1.5px, transparent 1.5px 6px); border: 1px solid var(--gap); }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 6px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.facts div { margin: 0; } .facts dt { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 4px 0 0; font: 500 14.5px/1.4 var(--essay); color: var(--ink); }
+
+/* Titles as small brass plates */
+.plates { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 10px; }
+.plates li { display: flex; flex-direction: column; gap: 3px; padding: 12px 16px; background: linear-gradient(135deg, #b08a55, #8c6a3f 60%, #7a5a33); color: var(--cream); border: 1px solid #3b2a16; border-radius: 3px; box-shadow: inset 0 0 0 4px rgba(241, 230, 207, .18); }
+.plates b { font: 600 16px/1.35 var(--essay); } .plates span { font: 400 12.5px var(--mono); opacity: .9; }
+
+/* The ending */
+.cta { margin: 40px 0 20px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.root .cta p { margin: 0; font-weight: 500; max-width: 22em; }
+.method { margin: 34px 0 140px; } .method summary { cursor: pointer; font: 600 17px var(--essay); min-height: 44px; display: flex; align-items: center; } .root .method p { font-size: 16.5px; line-height: 1.6; }
+
+@media (max-width: 760px) {
+  .root { --gap-beat: 100px; font-size: 18px; }
+  .root section.hero { display: block; } .root .hero h1 { margin-bottom: 22px; }
+  .root section.first { margin-top: 44px; }
+  .ledger { padding: 18px 14px 14px; }
+  .facts { grid-template-columns: 1fr; gap: 10px; }
+  .range .pk { pointer-events: none; }   /* 19 peaks in 390px are under 44px each; the arm and the step buttons are the touch targets */
+}
+@media (prefers-reduced-motion: reduce) { .step, .range * { transition: none !important; } }

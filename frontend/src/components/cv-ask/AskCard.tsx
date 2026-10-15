@@ -16,7 +16,7 @@ const COUNT = "font-heading font-bold leading-[0.9] tracking-[-0.03em] whitespac
  * Before a scan there is nothing here: the page shows "Compare your CV"
  * (CompareCv) instead. `read` sets the line in the market pages' reading face.
  */
-export default function AskCard({ask, read, done}: {ask: Ask; read?: boolean; done?: {href: string; label: string; note: string}}) {
+export default function AskCard({ask, read, done}: {ask: Ask; read?: boolean; done?: {href: string; label: string; note: string | null}}) {
     const {k, n, mine} = askCount(ask.skills, useHave());
     if (k === null) return null;
     return (
@@ -36,7 +36,7 @@ export default function AskCard({ask, read, done}: {ask: Ask; read?: boolean; do
             {done && (
                 <div className={"mt-5 flex flex-wrap items-center gap-x-3.5 gap-y-2"}>
                     <Link href={done.href} className={"text-[14px] text-foreground underline underline-offset-[3px]"}>{done.label}</Link>
-                    <span className={"font-mono text-[12px] text-muted-foreground"}>{done.note}</span>
+                    {done.note && <span className={"font-mono text-[12px] text-muted-foreground"}>{done.note}</span>}
                 </div>
             )}
         </section>

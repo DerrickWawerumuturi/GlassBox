@@ -8,8 +8,9 @@ import {JOB_SITES, METHOD_PAGE} from "./method-copy";
 import {chartName, copyText, copyUrl, levelLabel, shortDate, weekDate, weekStart} from "./market-page";
 import {MARKET_PAGES, MarketBody} from "./market-pages";
 import {
-    bucketPhrase, cardLine, has, categoriesSection, citeLine, contrastSection, dek, findingCount, findingShare, findingText, fractionPhrase, glance,
-    headline, hiringSection, languagesSection, levelsSection, pageDescription, pageTitle, say, squaresCaption, squaresLegend, thin, topic, yearsSection,
+    bucketPhrase, cardLine, has, categoriesSection, citeLine, contrastSection, dek, findingCount, findingShare, findingText, fractionPhrase, framing, glance,
+    headline, hiringSection, languagesSection, levelsSection, pageDescription, pageTitle, readLine, say, squaresCaption, squaresLegend, thin, topic,
+    UNAVAILABLE, yearsSection,
 } from "./market-story";
 
 // Four real bodies, built read only from the 7 Oct 2026 pool (v5 profiles), titles cut to three.
@@ -24,7 +25,7 @@ const THIN = {info: ENTRY.info, page: {...ENTRY.page, publishable: false, readab
 
 describe("a market page's words, written from its counts", () => {
     it("leads with the finding, one pattern per page, never a question", () => {
-        expect(topic(ENTRY)).toBe("The skills entry level software jobs name, counted");
+        expect(topic(ENTRY)).toBe("What entry level software jobs ask for");
         // The entry level set takes in jobs asking two years or less, so its own years never lead it,
         // even from a publication made before that rule: then the topic is the H1 until the next one.
         expect(headline(ENTRY)).toBeNull();
@@ -54,29 +55,34 @@ describe("a market page's words, written from its counts", () => {
     });
 
     it("keeps the counted context under the headline", () => {
-        expect(dek(ENTRY)).toBe("We counted 136 entry level software jobs at 67 employers in the week of 5 October 2026. 58 of the 135 we could read name Python.");
-        expect(dek(AI)).toBe("We counted 288 AI jobs at 107 employers in the week of 5 October 2026. 191 of the 287 we could read name LLMs.");
-        expect(dek(SE)).toBe("We counted 1,379 software engineering jobs at 256 employers in the week of 5 October 2026. 490 of the 1,366 we could read name Python, and 478 name distributed systems.");
+        // Why 135 and not 136 is said where the reader meets it (copy rewrite P2, 15 Oct 2026).
+        expect(dek(ENTRY)).toBe("In the week of 5 October 2026 we found 136 entry level software jobs at 67 employers. 135 had an ad long enough to read for skills, and 58 of those name Python.");
+        expect(dek(AI)).toBe("In the week of 5 October 2026 we found 288 AI jobs at 107 employers. 287 had an ad long enough to read for skills, and 191 of those name LLMs.");
+        expect(dek(SE)).toBe("In the week of 5 October 2026 we found 1,379 software engineering jobs at 256 employers. 1,366 had an ad long enough to read for skills, and 490 of those name Python, 478 distributed systems.");
+        const years = withFinding({kind: "years", years: 5, jobs: 70, of: 100});
+        expect(dek(years)).toMatch(/ had an ad long enough to read for skills\. \d+ of those name \w+\. 70 of the 100 that state a number of years ask for 5 years\.$/);
+        const all = {...AI, page: {...AI.page, readable: AI.page.jobs}};
+        expect(dek(all)).toMatch(/\. All 288 had an ad long enough to read for skills, and /);
     });
 
     it("gives three findings at a glance, the headline's first", () => {
         expect(glance(ENTRY).map(findingText)).toEqual([
-            "58 of the 135 entry level software jobs we could read name Python.",
+            "58 of the 135 entry level software jobs we read name Python.",
             "JavaScript is named in 25% of entry level software jobs and 9% of senior software jobs.",
-            "89 of the 135 entry level software jobs we could read name two or more languages.",
+            "89 of the 135 entry level software jobs we read name two or more languages.",
         ]);
         expect(glance(ENTRY).map((f) => f.id)).toEqual(["finding-skill", "finding-contrast", "finding-languages"]);
-        expect(glance(AI)[0].text).toBe("191 of the 287 AI jobs we could read name LLMs.");
-        expect(glance(ML)[0].text).toBe("106 of the 194 machine learning jobs we could read name Python, and 102 name LLMs.");
+        expect(glance(AI)[0].text).toBe("191 of the 287 AI jobs we read name LLMs.");
+        expect(glance(ML)[0].text).toBe("106 of the 194 machine learning jobs we read name Python, and 102 name LLMs.");
     });
 
     it("agrees on the hub, the share image and the citation", () => {
-        expect(cardLine(AI)).toBe("191 of the 287 AI jobs we could read name LLMs.");
+        expect(cardLine(AI)).toBe("191 of the 287 AI jobs we read name LLMs.");
         expect(cardLine(THIN)).toBe(thin(THIN));
-        expect(findingCount(AI, "AI jobs")).toBe("191 of the 287 AI jobs we could read name LLMs.");
+        expect(findingCount(AI, "AI jobs")).toBe("191 of the 287 AI jobs we read name LLMs.");
         expect(findingShare(AI)).toBe(67);
         expect(findingShare(ENTRY)).toBeNull();        // its own years never lead
-        expect(cardLine(ENTRY)).toBe("58 of the 135 entry level software jobs we could read name Python.");
+        expect(cardLine(ENTRY)).toBe("58 of the 135 entry level software jobs we read name Python.");
         expect(citeLine(AI, "seeglassbox.com")).toBe('Glassbox. "Two in three AI jobs name LLMs" Counted in the week of 5 October 2026. seeglassbox.com/market/ai');
     });
 
@@ -87,14 +93,15 @@ describe("a market page's words, written from its counts", () => {
     });
 
     it("under the 100 rule says why there are no shares, and finds nothing", () => {
-        expect(dek(THIN)).toBe("We counted 136 entry level software jobs at 67 employers in the week of 5 October 2026. Too few could be read this week to show shares.");
+        expect(dek(THIN)).toBe("In the week of 5 October 2026 we found 136 entry level software jobs at 67 employers. Fewer than 100 had an ad long enough to read, so this page shows counts and no shares this week.");
+        expect(thin(THIN)).toMatch(/^Only \d+ of these jobs had an ad long enough to read\. Below 100, a share says more about a few employers than about the market, so this page shows counts only\.$/);
         expect(glance(THIN)).toEqual([]);
         expect(findingShare(THIN)).toBeNull();
     });
 
     it("writes section headings as findings, never as advice", () => {
-        expect(languagesSection(ENTRY).heading).toBe("Most of them name more than one language");
-        expect(languagesSection(ENTRY).before).toBe("110 of the 135 entry level software jobs we could read name at least one language, and 89 name two or more.");
+        expect(languagesSection(ENTRY).heading).toBe("Most list more than one language");
+        expect(languagesSection(ENTRY).before).toBe("110 of the 135 we read list at least one programming language. 89 list two or more.");
         expect(contrastSection(ENTRY).heading).toBe("JavaScript shows up far more at entry level. Distributed systems less.");
         expect(contrastSection(AI).heading).toBe("Senior AI jobs name LLMs more often. TypeScript less.");
         expect(categoriesSection(ENTRY).heading).toBe("Beyond the languages, backend systems and AI come up most");
@@ -113,21 +120,42 @@ describe("a market page's words, written from its counts", () => {
         expect(weekStart({taken_at: "2026-10-12T00:20:00Z", week: "2026-10-12"})).toBe("2026-10-12");
         expect(weekStart({taken_at: "2026-10-11T23:59:00Z"})).toBe("2026-10-05");             // Sunday belongs to the week before
         expect(weekDate(AI.page)).toBe("5 October 2026");
-        expect(squaresCaption(AI)).toBe("AI jobs counted in the week of 5 October 2026. Each square is one job.");
+        expect(squaresCaption(AI)).toBe("AI jobs that week, one square each.");
         const words = [dek, cardLine, thin, squaresCaption, (c: typeof AI) => citeLine(c, "x"), (c: typeof AI) => pageDescription(c.info, c.page)]
             .flatMap((f) => [ENTRY, AI, SE, ML, THIN].map((c) => f(c))).join(" ");
         expect(words).not.toMatch(/\btoday\b|open on|every day/i);
     });
 
     it("subtitles a chart with what it counts, never a question", () => {
-        expect(languagesSection(ENTRY).sub).toBe("Share of the entry level software jobs we could read, by language");
-        expect(contrastSection(ENTRY).sub).toBe("Share of the entry level software and senior software jobs we could read naming each skill");
-        expect(categoriesSection(AI).sub).toBe("Share of the AI jobs we could read naming each skill");
-        expect(hiringSection(AI).sub).toBe("The AI jobs, by the place each one names");
+        // Three figure subtitles on one page, three different lines (copy rewrite P7 to P10).
+        expect(languagesSection(ENTRY).sub).toBe("Share of the 135 jobs read, by language");
+        expect(contrastSection(ENTRY).sub).toBe("Share of each set that mentions the skill");
+        expect(categoriesSection(AI).sub).toBe("Share of the 287 jobs read that mention each skill");
+        expect(hiringSection(AI).sub).toBe("The 288 jobs, by the country each one names");
         const lines = [languagesSection, contrastSection, categoriesSection, hiringSection].flatMap((f) => [ENTRY, AI].map((c) => f(c)))
             .flatMap((s) => [s.sub, s.heading, s.before]);
         lines.push(...[ENTRY, AI, SE, ML, THIN].flatMap((c) => [topic(c), headline(c) ?? "", cardLine(c), dek(c)]));
         expect(lines.filter((l) => l.includes("?"))).toEqual([]);
+    });
+
+    it("explains a term once, then leans on it (copy rewrite, founder, 15 Oct 2026)", () => {
+        const langs = languagesSection(ENTRY).caption;
+        // The first "senior" and the breadth rule's reason, in the first figure.
+        expect(langs).toMatch(/^Bars: these 135 jobs\. Grey tick: the same share in [\d,]+ senior software jobs, senior meaning a senior, lead or principal title\. /);
+        expect(langs).toMatch(/A language is shown only when jobs at 10 or more employers mention it, so one company's hiring can't make a pattern\. \w+'s come from \d+\.$/);
+        expect(contrastSection(ENTRY).caption).toBe("Same rule as the languages: a skill needs jobs at 10 or more employers to be shown.");
+        // Without the languages figure the reason stays with the rule.
+        const noLangs = {...ENTRY, page: {...ENTRY.page, story: {...ENTRY.page.story, sections: ENTRY.page.story.sections.filter((x) => x !== "languages")}} as MarketBody};
+        expect(contrastSection(noLangs).caption).toMatch(/so one company's hiring can't make a pattern\.$/);
+        expect(languagesSection(ENTRY).after).toMatch(/^(\d+ of these \d+ languages come up more often here|Every language here comes up more often) than in senior software jobs\.$/);
+        expect(categoriesSection(ENTRY).before).toMatch(/^\d+ of the 135 jobs read list an? [\w ]+ skill\. \d+ list one in [\w ]+\.$/);
+        expect(categoriesSection(ENTRY).before).not.toMatch(/\ba AI\b/);
+        expect(categoriesSection(AI).caption).toMatch(/^Each bar: the share of these 287 jobs\. Grey tick: the share of [\d,]+ senior AI jobs\.$/);
+        expect(readLine(135, 136)).toBe("We look for about 250 named skills, by fixed rules, in the 135 ads long enough to read. The other 1 was too short.");
+        expect(readLine(559, 561)).toBe("We look for about 250 named skills, by fixed rules, in the 559 ads long enough to read. The other 2 were too short.");
+        expect(readLine(351, 351)).toBe("We look for about 250 named skills, by fixed rules, in the 351 ads long enough to read.");
+        expect(framing(ENTRY)[1]).toBe("Every Monday a new week replaces this one here. The story linked in the rail keeps one week and looks closer.");
+        expect(UNAVAILABLE).toBe("This week's page isn't ready yet. Try again in a minute.");
     });
 
     it("leaves out a level no job has, instead of writing a zero", () => {
@@ -152,11 +180,11 @@ describe("a market page's words, written from its counts", () => {
         expect(pageTitle(ENTRY.info, ENTRY.page)).toBe("Entry level software engineer skills, counted from 136 jobs");
         expect(pageTitle(ML.info, ML.page)).toBe("Machine learning engineer skills, counted from 194 jobs");
         expect(pageDescription(ENTRY.info, ENTRY.page)).toBe(
-            "What entry level software jobs ask for most, counted in the week of 5 October 2026: 58 of the 135 we could read name Python and 43 name Go.");
+            "What entry level software jobs ask for most in the week of 5 October 2026: 58 of the 135 ads we read name Python and 43 name Go.");
         // Machine learning names the job type itself: Python and LLMs answer instead.
-        expect(pageDescription(ML.info, ML.page)).toMatch(/: 106 of the 194 we could read name Python and 102 name LLMs\.$/);
+        expect(pageDescription(ML.info, ML.page)).toMatch(/: 106 of the 194 ads we read name Python and 102 name LLMs\.$/);
         expect(pageDescription(ENTRY.info, THIN.page)).toBe(
-            "The skills entry level software jobs name, counted. Counted in the week of 5 October 2026: 136 jobs at 67 employers.");
+            "What entry level software jobs ask for. Counted in the week of 5 October 2026: 136 jobs at 67 employers.");
         expect(pageTitle(AI.info, null)).toBe("AI engineer skills");
     });
 });

@@ -1,19 +1,18 @@
 import React from "react";
 
-import ProductShot from "@/components/site/ProductShot";
 import JumpTo from "@/components/site/JumpTo";
 import type {ExplainerSection} from "@/lib/site-copy";
 
 /*
- * A long explainer page (/product, /about), in the manner of a Vox explainer:
+ * A long explainer page (/method), in the manner of a Vox explainer:
  * a big headline and a dek, a sticky table of contents on the left (a "Jump to"
- * select on a phone), then numbered sections with short paragraphs, a large
- * screenshot with a caption, and a pull quote or a box of counts.
+ * select on a phone), then numbered sections with short paragraphs, and a pull
+ * quote. (/product and /about have the editorial look: components/product, components/about.)
  */
 
 export function Explainer({kicker, title, dek, toc, jump, sections, extra, children}: {
     kicker: string; title: string; dek: string; toc: string; jump: string; sections: ExplainerSection[];
-    /** Anything a section adds after its text, by section id (a box of live counts). */
+    /** Anything a section adds after its text, by section id (/method's job sites). */
     extra?: Record<string, React.ReactNode>;
     children?: React.ReactNode;
 }) {
@@ -54,27 +53,11 @@ export function Explainer({kicker, title, dek, toc, jump, sections, extra, child
                                 </blockquote>
                             )}
                             {extra?.[s.id]}
-                            {s.shot && (
-                                <figure className={"flex flex-col gap-2.5"}>
-                                    <ProductShot name={s.shot.name} alt={s.shot.caption} sizes={"(max-width: 1023px) 100vw, 860px"} />
-                                    <figcaption className={"font-mono text-[12px] text-muted-foreground"}>{s.shot.caption}</figcaption>
-                                </figure>
-                            )}
                         </section>
                     ))}
                     {children}
                 </article>
             </div>
         </main>
-    );
-}
-
-/** A box of counts beside the text: each line names what it counts. */
-export function Numbers({title, lines}: {title: string; lines: string[]}) {
-    return (
-        <aside className={"flex max-w-xl flex-col gap-2 rounded-xl border border-border bg-card/60 p-5"}>
-            <p className={"font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground"}>{title}</p>
-            {lines.map((l) => <p key={l} className={"text-[15px] leading-snug"}>{l}</p>)}
-        </aside>
     );
 }

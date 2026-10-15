@@ -46,9 +46,9 @@ describe("the years of experience page, written from the count", () => {
         expect(yearsFaq(c)).toEqual([
             {q: "How many years of experience do entry level software jobs ask for?", a: yearsAnswer(c)},
             {q: "How many software jobs ask for two years of experience or less?",
-                a: "254 of the 2,052 software jobs that state a number of years, in the week of 12 October 2026."},
+                a: "254 of the 2,052 software jobs that state a number of years."},
             {q: "How many software jobs ask for five years of experience or more?",
-                a: "1,420 of the 2,052 software jobs that state a number of years, in the week of 12 October 2026."},
+                a: "1,420 of the 2,052 software jobs that state a number of years."},
         ]);
         const noSoftware = yearsCounts(page({...REAL, software: years([0, 0, 0, 0, 0, 0], 9)}))!;
         expect(yearsFaq(noSoftware).map((f) => f.q)).toEqual(["How many years of experience do entry level software jobs ask for?"]);
@@ -69,11 +69,13 @@ describe("a market page's questions", () => {
     it("answers each with this week's count, two to four of them", () => {
         const faq = marketFaq(AI);
         expect(faq[0]).toEqual({q: "What skills do AI jobs ask for most?",
-            a: expect.stringMatching(/^191 of the 287 AI jobs we could read in the week of 5 October 2026 name LLMs, \d+ name [^,]+ and \d+ name .+\.$/)});
+            a: expect.stringMatching(/^191 of the 287 AI jobs we read name LLMs, \d+ name [^,]+ and \d+ name .+\.$/)});
         expect(faq.length).toBeGreaterThanOrEqual(2);
         expect(faq.length).toBeLessThanOrEqual(4);
         expect(faq.find((f) => f.q === "How many AI jobs are remote?")?.a).toBe(
-            `${AI.page.remote} of the 288 AI jobs counted in the week of 5 October 2026 are marked remote by their job board.`);
+            `${AI.page.remote} of the 288 AI jobs are marked remote by their job board.`);
+        // The page says the week once, under the heading (Faq.tsx); no answer repeats it (copy rewrite P12).
+        for (const {a} of faq) expect(a).not.toContain("week of");
         for (const {a} of [...faq, ...marketFaq(ML), ...marketFaq(E)]) {
             expect(a).toMatch(/\d/);
             expect(a).not.toMatch(/\blearn\b|should|start here|next step|recommend|—|!/i);

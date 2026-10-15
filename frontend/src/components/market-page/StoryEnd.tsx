@@ -3,16 +3,19 @@ import Link from "next/link";
 
 import {fmt, levelLabel, weekDate, weekStart} from "@/lib/market-page";
 import {MARKET_NAMES, MARKET_PAGES, MarketBody, MarketName, marketPath} from "@/lib/market-pages";
-import {citeLine, Ctx, topic} from "@/lib/market-story";
+import {citeLine, Ctx, readLine, topic} from "@/lib/market-story";
+import {storyFor} from "@/lib/stories";
+import {storyPath, storyWeek} from "@/lib/stories/story";
 import {SITE_URL} from "@/lib/site";
 
 /*
  * The end of a market page and its rail: how we counted, the jobs in a fold
- * and a cite line; then "In this count" and "More from the count", which sits
- * beside the article on a desktop and under it on a phone.
+ * and a cite line; then "This page counts" and "Also this week", which sits
+ * beside the article on a desktop and under it on a phone. The page's story,
+ * one week's count told visually (lib/stories), leads "Also this week".
  */
 
-const HOW = {
+export const HOW = {
     entry: [
         "Entry level means one of three things. The job's level reads as intern, entry level or junior. Or its title says intern, graduate, new grad, entry level, early career or junior. Or it requires 2 years of experience or less and its level isn't senior.",
         "Software means five job types: software engineering, backend, frontend, full stack and mobile.",
@@ -29,7 +32,7 @@ export function Method({c}: {c: Ctx}) {
                 {info.kind === "role" && <p className={"m-0"}>{info.counts}</p>}
                 {HOW[info.kind].map((p) => <p key={p} className={"m-0"}>{p}</p>)}
                 <p className={"m-0"}>
-                    Skills are matched against a list of about 250, by fixed rules, in the {fmt(page.readable)} jobs long enough to read.
+                    {readLine(page.readable, page.jobs)}
                     {" "}<Link href={"/method"} className={"text-primary underline-offset-4 hover:underline"}>How Glassbox counts</Link>.
                 </p>
             </div>
@@ -68,7 +71,7 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
         ...(page.internships ? [["Internships", fmt(page.internships)] as [string, string]] : []),
         ["Remote", fmt(page.remote)], ["Week of", day(weekStart(page))],
     ];
-    const more = MARKET_NAMES.filter((n) => n !== info.name);
+    const more = MARKET_NAMES.filter((n) => n !== info.name), story = storyFor(info.name);
     const h3 = "m-0 mb-1.5 font-heading text-[14px] font-bold uppercase tracking-[0.06em]";
     const link = "font-heading text-[16px] font-semibold leading-[1.3] no-underline hover:underline hover:underline-offset-[3px]";
     const item = "grid grid-cols-[30px_1fr] gap-3 border-b border-border py-[13px] before:grid before:size-[26px] before:place-items-center before:rounded-full before:border-[1.5px] before:border-foreground before:font-mono before:text-[12px] before:font-semibold before:content-[counter(m)] [counter-increment:m]";
@@ -76,7 +79,7 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
         <aside aria-label={"About this count"}>
             <div className={"lg:sticky lg:top-[76px]"}>
                 <div className={"border-t-2 border-foreground pt-3"}>
-                    <h3 className={h3}>In this count</h3>
+                    <h3 className={h3}>This page counts</h3>
                     <dl className={"m-0 grid grid-cols-[1fr_auto] text-[14px]"}>
                         {facts.map(([k, v]) => (
                             <React.Fragment key={k}>
@@ -88,9 +91,11 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
                         ))}
                     </dl>
                 </div>
-                <nav aria-label={"More from the count"} className={"mt-[30px] border-t-2 border-foreground pt-3"}>
-                    <h3 className={h3}>More from the count</h3>
+                <nav aria-label={"Also this week"} className={"mt-[30px] border-t-2 border-foreground pt-3"}>
+                    <h3 className={h3}>Also this week</h3>
                     <ol className={"m-0 list-none p-0 [counter-reset:m]"}>
+                        {story && <li className={item}><span><Link href={storyPath(story)} className={link}>{story.title}</Link>
+                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>a story fixed to the week of {storyWeek(story)}</small></span></li>}
                         {more.map((n) => (
                             <li key={n} className={item}>
                                 <span>
@@ -99,8 +104,8 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
                                 </span>
                             </li>
                         ))}
-                        <li className={item}><span><Link href={"/market"} className={link}>Every market page</Link>
-                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>counted in the week of {weekDate(page)}</small></span></li>
+                        <li className={item}><span><Link href={"/market"} className={link}>All five pages</Link>
+                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>week of {weekDate(page)}</small></span></li>
                         <li className={item}><span><Link href={"/method"} className={link}>How Glassbox counts</Link>
                             <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>sources, rules, limits</small></span></li>
                     </ol>
