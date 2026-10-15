@@ -60,9 +60,12 @@ select l.profile, l.file_name, l.text_sha256, l.parser_version, l.parsed_at
 from latest_cvs l where l.user_id = %s
 """
 
-DELETE_LATEST_CV = """
-delete from latest_cvs where user_id = %s
-"""
+# "Delete the skills we kept" (profile, Your data) means every copy of them: the latest
+# scan's profile and the saved CV. The privacy page promises it.
+DELETE_KEPT_SKILLS = (
+    "delete from latest_cvs where user_id = %s",
+    "delete from cvs where user_id = %s",
+)
 
 GET_LOCATION_PREFERENCES = """
 select u.location_preferences from users u where u.id = %s
@@ -138,9 +141,12 @@ def get_latest_cv(conn, user_id: int) -> dict | None:
 
 
 def delete_latest_cv(conn, user_id: int) -> bool:
+    deleted = 0
     with conn.cursor() as cur:
-        cur.execute(DELETE_LATEST_CV, (user_id,))
-        return cur.rowcount > 0
+        for statement in DELETE_KEPT_SKILLS:
+            cur.execute(statement, (user_id,))
+            deleted += cur.rowcount
+    return deleted > 0
 
 
 def get_location_preferences(conn, user_id: int) -> dict | None:

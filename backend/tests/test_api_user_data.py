@@ -134,6 +134,18 @@ def test_latest_cv_is_one_row_replaced_then_deleted(client):
     assert client.put("/cv", json=CV).status_code == 200                # the tests below match against it
 
 
+def test_deleting_the_kept_skills_removes_every_copy(client):
+    # /privacy: "you can delete the skills we kept". The saved CV holds them too, not only the latest scan.
+    from src.Agent.utils.types import ParsedQuery
+    from src.database.services.users import user_service
+    assert client.put("/cv", json=CV).status_code == 200
+    user_service.store_latest_cv({"sub": SUB}, ParsedQuery(skills=["Python"]), "cv.pdf", "text")
+    assert client.delete("/cv/latest").json() == {"deleted": True}
+    assert client.get("/cv/latest").status_code == 404
+    assert client.get("/cv").status_code == 404
+    assert client.put("/cv", json=CV).status_code == 200                # the tests below match against it
+
+
 def test_location_preferences(client):
     first = client.get("/profile/location-preferences").json()
     assert first["saved"] is False and first["source"] == "default"

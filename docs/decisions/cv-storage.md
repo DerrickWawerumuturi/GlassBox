@@ -54,8 +54,10 @@ onboarding (`PUT /cv`). This change does not touch it.
 - `GET /cv/latest`: `file_name`, `parsed_at`, `skills`, and `reusable` (false
   when the version is stale, so the pop-up does not offer a rescan that would
   409). 404 when nothing is kept.
-- `DELETE /cv/latest`: forgets it. `DELETE /account/data` removes it too, and
-  deleting the account cascades.
+- `DELETE /cv/latest`: forgets the kept skills, every copy: the latest scan's profile
+  (`latest_cvs`) and the saved CV (`cvs`), as /privacy promises ("delete the skills we
+  kept"). Until 15 Oct 2026 it left the `cvs` copy behind. `DELETE /account/data` removes
+  them too, and deleting the account cascades.
 
 ## Why a version, and why the hash
 
