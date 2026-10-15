@@ -99,14 +99,15 @@ jobs:
           docker push jobradarregistry.azurecr.io/jobradar:live
 
       - name: Smoke test
-        # A fresh revision can take a minute to pull and take traffic —
-        # poll rather than judge on one shot.
+        # A fresh revision can take minutes to pull and take traffic, and a cold
+        # start answers in about 25 s (15 Oct 2026: 10 s checks over 2 minutes failed
+        # a healthy release). Poll for about 7 minutes, 30 s per check.
         run: |
-          for i in $(seq 1 12); do
-            if curl --silent --fail --max-time 10 \
+          for i in $(seq 1 14); do
+            if curl --silent --fail --max-time 30 \
               https://jobradar-backend.agreeabledune-79b95957.southafricanorth.azurecontainerapps.io/health; then
-              echo " — healthy after ${i}0s"; exit 0
+              echo " — healthy on check $i"; exit 0
             fi
-            sleep 10
+            sleep 15
           done
           echo "backend never became healthy"; exit 1
