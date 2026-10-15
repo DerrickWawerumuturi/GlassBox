@@ -2,6 +2,8 @@ import React from "react";
 import Link from "next/link";
 
 import {HOW} from "@/components/market-page/StoryEnd";
+import tomas from "@/components/people/art/tomas-reading";
+import Person from "@/components/people/Person";
 import StoryCvAsk from "@/components/stories/StoryCvAsk";
 import {Crumbs, LiveLine, Scope, Source, StoryPage} from "@/components/stories/StoryParts";
 import {fmt} from "@/lib/market-page";
@@ -146,6 +148,8 @@ function Ending() {
     return (
         <section className={s.col}>
             <h2>{cap(inWords(gap()))} jobs.</h2>
+            {/* Tomas reads, beside "What they mean for you is yours to read." */}
+            <Person art={tomas} width={140} />
             <p>Three skills within {inWords(gap())} jobs of each other, at the top of the {R} DevOps jobs we could read that week. We count the
                 words in the jobs. What they mean for you is yours to read.</p>
             <p>Next Monday we count again.</p>

@@ -13,6 +13,8 @@ export interface Card {
     /** The skill's vocabulary key: what the CV ask looks for on a CV. */
     key: string;
     name: string;
+    /** The card's corner index, as a rank on a real card: "PY", "C++", "K8S". */
+    rank: string;
     /** The name mid sentence, where it differs: "distributed systems". */
     inline?: string;
     e: {jobs: number; share: number};
@@ -24,6 +26,13 @@ export interface Card {
 
 export type Lean = "entry" | "senior" | "draw";
 
+/**
+ * A card's suit: a spade for each language the weekly page charts, a club for
+ * the other skills. It says what kind of skill a card is, never which way it
+ * leans: the suit shows before the guess.
+ */
+export type Suit = "spade" | "club";
+
 /** A card by its key. */
 export const card = (key: string): Card => {
     const c = PICK.deck.find((d) => d.key === key);
@@ -32,6 +41,8 @@ export const card = (key: string): Card => {
 };
 
 /** Which side names a card more. A point apart, or less, is neither: rounding is not a verdict. */
+export const suit = (c: Card): Suit => (PICK.charted.languages.includes(c.key) ? "spade" : "club");
+
 export const lean = (c: Card): Lean => (Math.abs(c.e.share - c.s.share) <= 1 ? "draw" : c.e.share > c.s.share ? "entry" : "senior");
 
 export const PICK = {
@@ -45,18 +56,18 @@ export const PICK = {
     senior: 2237,
     /** The eleven cards, in the order they are dealt. */
     deck: [
-        {key: "python", name: "Python", e: {jobs: 276, share: 49}, s: {jobs: 803, share: 36}, employers: 114}, // L60, L104
-        {key: "c++", name: "C++", e: {jobs: 164, share: 29}, s: {jobs: 306, share: 14}, employers: 65}, // L61, L103
-        {key: "git", name: "Git", e: {jobs: 117, share: 21}, s: {jobs: 259, share: 12}, employers: null}, // L105, L109
-        {key: "distributed systems", name: "Distributed systems", inline: "distributed systems",
+        {key: "python", name: "Python", rank: "PY", e: {jobs: 276, share: 49}, s: {jobs: 803, share: 36}, employers: 114}, // L60, L104
+        {key: "c++", name: "C++", rank: "C++", e: {jobs: 164, share: 29}, s: {jobs: 306, share: 14}, employers: 65}, // L61, L103
+        {key: "git", name: "Git", rank: "GIT", e: {jobs: 117, share: 21}, s: {jobs: 259, share: 12}, employers: null}, // L105, L109
+        {key: "distributed systems", name: "Distributed systems", rank: "DS", inline: "distributed systems",
             e: {jobs: 84, share: 15}, s: {jobs: 639, share: 29}, employers: null}, // L106, L109
-        {key: "kubernetes", name: "Kubernetes", e: {jobs: 69, share: 12}, s: {jobs: 559, share: 25}, employers: null}, // L107, L109
-        {key: "aws", name: "AWS", e: {jobs: 88, share: 16}, s: {jobs: 602, share: 27}, employers: null}, // L108, L109
-        {key: "typescript", name: "TypeScript", e: {jobs: 114, share: 20}, s: {jobs: null, share: 24}, employers: 71}, // L62
-        {key: "java", name: "Java", e: {jobs: 100, share: 18}, s: {jobs: null, share: 19}, employers: 59}, // L63
-        {key: "go", name: "Go", e: {jobs: 97, share: 17}, s: {jobs: null, share: 24}, employers: 51}, // L64
-        {key: "javascript", name: "JavaScript", e: {jobs: 82, share: 15}, s: {jobs: null, share: 11}, employers: 52}, // L65
-        {key: "c", name: "C", e: {jobs: 80, share: 14}, s: {jobs: null, share: 6}, employers: 32}, // L66
+        {key: "kubernetes", name: "Kubernetes", rank: "K8S", e: {jobs: 69, share: 12}, s: {jobs: 559, share: 25}, employers: null}, // L107, L109
+        {key: "aws", name: "AWS", rank: "AWS", e: {jobs: 88, share: 16}, s: {jobs: 602, share: 27}, employers: null}, // L108, L109
+        {key: "typescript", name: "TypeScript", rank: "TS", e: {jobs: 114, share: 20}, s: {jobs: null, share: 24}, employers: 71}, // L62
+        {key: "java", name: "Java", rank: "JAVA", e: {jobs: 100, share: 18}, s: {jobs: null, share: 19}, employers: 59}, // L63
+        {key: "go", name: "Go", rank: "GO", e: {jobs: 97, share: 17}, s: {jobs: null, share: 24}, employers: 51}, // L64
+        {key: "javascript", name: "JavaScript", rank: "JS", e: {jobs: 82, share: 15}, s: {jobs: null, share: 11}, employers: 52}, // L65
+        {key: "c", name: "C", rank: "C", e: {jobs: 80, share: 14}, s: {jobs: null, share: 6}, employers: 32}, // L66
     ] as Card[],
     /**
      * The beats, by key, in the order the story deals them: the first card,
@@ -65,8 +76,8 @@ export const PICK = {
      */
     beats: {first: "python", lime: "c++", same: "git", turn: ["distributed systems", "kubernetes", "aws"],
         more: ["typescript", "java", "go", "javascript", "c"]},
-    /** Languages the live page charts, and how many of them lean to entry level: L70. */
-    charted: {languages: 7, leanEntry: 4},
+    /** The languages the live page charts (L60 to L66), the spades, and how many of them lean to entry level: L70. */
+    charted: {languages: ["python", "c++", "typescript", "java", "go", "javascript", "c"], leanEntry: 4},
     /** Jobs naming at least one language, and two or more, of the readable ones: L37. */
     languages: {any: 440, twoOrMore: 339},
     /** Internships and remote jobs, of the jobs counted: L162 to L166. */

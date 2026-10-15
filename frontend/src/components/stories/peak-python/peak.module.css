@@ -6,6 +6,7 @@
  * (docs/local/editorial-sprint/stories/peak-python/peak.css).
  */
 .root {
+  --person-ground: var(--paper); /* the cast's paper fills (components/people) */
   --gap-beat: 150px; --pen: oklch(0.6 0.19 35);
   --sky1: #cfe0f0; --sky2: #f4f6f8; --snow: #ffffff; --rock: #9aa6b1; --rock2: #5c6974; --hatch: #3f4a54; --edge: #3b4651; --contour: #8fa3b5; --far: #c3cdd6; --label: #21201c;
   --valley: #d9c9a3; --cream: #f1e6cf; --bronze: #8c6a3f; --bronze2: #5e4527; --plate: #6b4f2c;

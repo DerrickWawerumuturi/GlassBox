@@ -2,6 +2,8 @@ import React from "react";
 import Link from "next/link";
 
 import {HOW} from "@/components/market-page/StoryEnd";
+import amina from "@/components/people/art/amina-figure";
+import Person from "@/components/people/Person";
 import StoryCvAsk from "@/components/stories/StoryCvAsk";
 import {Crumbs, LiveLine, Scope, Source, StoryPage} from "@/components/stories/StoryParts";
 import {fmt} from "@/lib/market-page";
@@ -89,6 +91,8 @@ function Beats() {
             <section className={s.beat}>
                 <div className={s.col}>
                     <h2>The ridge almost every job stands on</h2>
+                    {/* Amina, standing, under "The ridge almost every job stands on": a section of words alone, no figure beside it. */}
+                    <Person art={amina} flip width={76} />
                     <p>{aiJobs} of the {PEAK.readable} jobs name a skill in AI. The tallest peak is the range’s own name. This page counts machine learning jobs,
                         and {ml.share}% of them name machine learning among their skills. So {100 - ml.share}% don’t (100 − {ml.share} = {100 - ml.share}).</p>
                     <p>Beside it, {llm.name}: {llm.jobs} of {PEAK.readable} jobs, {llm.share}%. And {torch.name}: {torch.jobs} of {PEAK.readable}, {torch.share}%, named by jobs

@@ -6,10 +6,13 @@ import {describe, expect, it, vi} from "vitest";
 vi.mock("@/components/landing/useHave", () => ({useHave: () => null}));
 vi.mock("@/components/cv-ask/useCvScan", () => ({useCvScan: () => ({open: vi.fn(), isOpen: false, scanning: false, sheet: null})}));
 
-import {ICON} from "@/components/stories/pick-a-side/icons";
+import {existsSync, readdirSync, readFileSync} from "node:fs";
+import {join} from "node:path";
+
+import {BACK_SRC, ICON} from "@/components/stories/pick-a-side/icons";
 import PickASide from "@/components/stories/pick-a-side/PickASide";
 import {pickASideCover} from "@/components/stories/covers/pick-a-side";
-import {card, lean, PICK, PICK_A_SIDE} from "./pick-a-side";
+import {card, lean, PICK, PICK_A_SIDE, suit} from "./pick-a-side";
 
 /*
  * Pick a side's numbers are one week's (pick-a-side.ts). These catch a refresh
@@ -48,10 +51,39 @@ describe("Pick a side's numbers", () => {
         expect(us + elsewhere + unknown).toBe(PICK.jobs);
     });
 
-    it("deal every card once, each with a glyph on its coin", () => {
+    it("deal every card once, each with a glyph in its medallion", () => {
         const dealt = [PICK.beats.first, PICK.beats.lime, PICK.beats.same, ...PICK.beats.turn, ...PICK.beats.more];
         expect([...dealt].sort()).toEqual(PICK.deck.map((c) => c.key).sort());
         for (const c of PICK.deck) expect(ICON[c.key], c.key).toBeTruthy();
+    });
+});
+
+describe("the deck", () => {
+    it("deals the seven charted languages as spades and the other four skills as clubs", () => {
+        const spades = PICK.deck.filter((c) => suit(c) === "spade").map((c) => c.key);
+        expect(spades).toEqual(PICK.charted.languages);
+        expect(spades.length).toBe(7);
+        expect(PICK.deck.filter((c) => suit(c) === "club").map((c) => c.name)).toEqual(["Git", "Distributed systems", "Kubernetes", "AWS"]);
+    });
+
+    it("'4 of them are named more often in entry level': the spades that lean to entry level", () => {
+        expect(PICK.deck.filter((c) => suit(c) === "spade" && lean(c) === "entry").length).toBe(PICK.charted.leanEntry);
+    });
+
+    it("gives every card its own short rank for the corners", () => {
+        const ranks = PICK.deck.map((c) => c.rank);
+        expect(new Set(ranks).size).toBe(ranks.length);
+        for (const r of ranks) expect(r, r).toMatch(/^[A-Z0-9+]{1,4}$/);
+    });
+
+    it("self hosts the CC0 back with its licence beside it, and keeps no foil", () => {
+        const pub = join(__dirname, "..", "..", "..", "public");
+        for (const f of ["back-blue.webp", "back-blue-share.png", "LICENSES.md", "CC0-1.0.txt"]) expect(existsSync(join(pub, "stories", "pick-a-side", f)), f).toBe(true);
+        expect(existsSync(join(pub, BACK_SRC))).toBe(true);
+        expect(readFileSync(join(pub, "stories", "pick-a-side", "LICENSES.md"), "utf8")).toContain("CC0 1.0");
+        const dir = join(__dirname, "..", "..", "components", "stories", "pick-a-side");
+        for (const f of readdirSync(dir)) expect([f, /foil|holograph/i.test(readFileSync(join(dir, f), "utf8"))]).toEqual([f, false]);
+        expect(readFileSync(join(dir, "scratch.ts"), "utf8")).toMatch(/drawImage\(back/);
     });
 });
 
@@ -101,7 +133,10 @@ describe("the story as rendered", () => {
     });
 
     it("writes the key sentences from the numbers", () => {
-        expect(h).toContain("Eleven skills, one per card.");
+        expect(h).toContain("Eleven skills, one per card. Guess whether entry level or senior software jobs name it more, then scratch the panel.");
+        expect(h).toContain("Spades are the seven languages the weekly page charts.");
+        expect(h).toContain("Clubs are the other four skills.");
+        expect(h).toContain("The weekly page charts 7 languages, the spades. 4 of them are named more often in entry level software jobs");
         expect(h).toContain("we counted <strong>561 entry level software jobs</strong> at 196 employers, and read 559 of them");
         expect(h).toContain("29% against 14%, about twice the share.");
         // The card prints both sets; the caption names them once each (copy rewrite S5, 15 Oct 2026).
@@ -121,13 +156,27 @@ describe("the story as rendered", () => {
         expect(h).toMatch(/<button[^>]*class="[^"]*\bpeek\b[^"]*peek-button[^"]*"[^>]*>(?:<svg[^>]*>[\s\S]*?<\/svg>)?Compare your CV<\/button>/);
         expect(h).toContain("How we counted");
         expect(h).toContain("What we can't see:");
+        expect(h).toMatch(/The cards are the English pattern deck from <a href="https:\/\/commons\.wikimedia\.org\/wiki\/File:English_pattern_playing_cards_deck_PLUS_CC0\.svg">Wikimedia Commons<\/a>, dedicated to the public domain \(CC0\)/);
+    });
+
+    it("deals real cards: corners, the panel's two numbers, the betting spots under the card", () => {
+        expect(h).toContain("<b>C++</b>");
+        expect(h).toContain("164 of 559");
+        expect(h).toContain("306 of 2,237");
+        expect(h).toMatch(/share only/);
+        // the pen note sits on the page beside the lime table, not on the card or the cloth
+        expect(h).toMatch(/<\/div><\/div><p class="[^"]*note[^"]*pen[^"]*" aria-hidden="true">at 65 employers, so not one company's habit<\/p>/);
+        expect(h).not.toMatch(/foil/i);
     });
 
     it("draws the cover from the same numbers", () => {
         const svg = pickASideCover();
         expect(svg).toContain(">29%<");
-        expect(svg).toContain(">164 jobs<");
-        expect(svg).toContain("of 2,237 senior software jobs");
+        expect(svg).toContain(">14%<");
+        expect(svg).toContain(">164 of 559<");
+        expect(svg).toContain(">306 of 2,237<");
+        expect(svg).toContain(`href="${BACK_SRC}"`);
+        expect(svg).not.toMatch(/Foil|#f5532a/);
     });
 
     it("gives the hub its card line from the numbers", () => {

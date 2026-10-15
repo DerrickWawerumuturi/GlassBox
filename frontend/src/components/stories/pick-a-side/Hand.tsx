@@ -5,16 +5,18 @@ import {GlassboxWordmark} from "@/components/brand/Logo";
 import {Source} from "@/components/stories/StoryParts";
 import {fmt} from "@/lib/market-page";
 import {YEARS_PATH} from "@/lib/market-names";
-import {Card, lean, Lean, PICK, PICK_A_SIDE} from "@/lib/stories/pick-a-side";
+import {Card, lean, Lean, PICK, PICK_A_SIDE, suit} from "@/lib/stories/pick-a-side";
 import {inWords, storyWeek} from "@/lib/stories/story";
 import {cn} from "@/lib/utils";
 import {TOPIC} from "@/lib/years-answer";
+import {Index} from "./Face";
 import s from "./pick.module.css";
 
 /*
- * The hand face up (eleven small cards sorted by the way they lean, read
- * aloud by its label, with a table twin) and the back of the deck box: what
- * else the count says about these jobs. Server rendered; no script needed.
+ * The hand face up (eleven small playing cards on one table, sorted by the
+ * way they lean, read aloud by its label, with a table twin) and the back of
+ * the deck box, its flap printed with the deck's back: what else the count
+ * says about these jobs. Server rendered; no script needed.
  */
 
 const GROUPS: Array<[Lean, string]> = [["entry", "Lean to entry level"], ["draw", "A point apart"], ["senior", "Lean to senior"]];
@@ -25,25 +27,31 @@ const group = (l: Lean) => PICK.deck.filter((d) => lean(d) === l).sort((a, b) =>
 
 export function handLabel() {
     return `All ${inWords(PICK.deck.length)} cards face up, as the share of ${fmt(PICK.readable)} entry level software jobs and of ${fmt(PICK.senior)} senior software jobs. `
-        + GROUPS.filter(([l]) => group(l).length).map(([l, label]) => `${label}: ${group(l).map((d) => `${d.name} ${d.e.share}% and ${d.s.share}%`).join(", ")}.`).join(" ");
+        + "Spades are languages, clubs the other skills. "
+        + GROUPS.filter(([l]) => group(l).length).map(([l, label]) => `${label}: ${group(l).map((d) => `${d.name}, a ${suit(d)}, ${d.e.share}% and ${d.s.share}%`).join("; ")}.`).join(" ");
 }
 
-const Mini = ({d}: {d: Card}) => (
-    <div className={cn(s.mini, d.key === PICK.beats.lime && s.lime)}>
+/** A small playing card: its corners, its name, the entry level share in ink over the senior share in grey. Each set down at a slight angle. */
+const Mini = ({d, i}: {d: Card; i: number}) => (
+    <div className={cn(s.mini, d.key === PICK.beats.lime && s.lime)} style={{"--t": `${(i % 2 ? 1 : -1) * (1 + (i % 3) * .6)}deg`} as React.CSSProperties}>
+        <Index c={d} at={"tl"} /><Index c={d} at={"br"} />
         <span className={s.nm}>{d.name}</span>
-        <span className={s.two}><b>{d.e.share}%</b><i /><b className={s.s}>{d.s.share}%</b></span>
+        <span className={s.two}><b>{d.e.share}%</b><b className={s.s}>{d.s.share}%</b></span>
     </div>
 );
 
+/** The whole hand on one table. */
 export function Hand() {
     return (
-        <div className={s.hand} role={"img"} aria-label={handLabel()}>
-            {GROUPS.filter(([l]) => group(l).length).map(([l, label]) => (
-                <div key={l} className={cn(s.group, s[l])}>
-                    <h4>{label} · {group(l).length}</h4>
-                    <div className={s.minis}>{group(l).map((d) => <Mini key={d.key} d={d} />)}</div>
-                </div>
-            ))}
+        <div className={s.rail}>
+            <div className={cn(s.felt, s.hand)} role={"img"} aria-label={handLabel()}>
+                {GROUPS.filter(([l]) => group(l).length).map(([l, label]) => (
+                    <div key={l} className={cn(s.group, s[l])}>
+                        <h4>{label} · {group(l).length}</h4>
+                        <div className={s.minis}>{group(l).map((d, i) => <Mini key={d.key} d={d} i={i} />)}</div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -78,6 +86,7 @@ export function BoxBack() {
     return (
         <figure>
             <div className={s.box}>
+                <div className={s.flap} aria-hidden />
                 <div className={s.brandline}><GlassboxWordmark /><h3>Entry level software · week of {storyWeek(PICK_A_SIDE)}</h3></div>
                 <dl>
                     <dt>In the box</dt><dd>{fmt(jobs)} jobs at {fmt(employers)} employers. {fmt(readable)} long enough to read.</dd>

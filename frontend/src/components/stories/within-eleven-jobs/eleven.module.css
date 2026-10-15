@@ -7,6 +7,7 @@
  * The yards are SVG strings, so their parts are styled by plain classes under the root.
  */
 .root {
+  --person-ground: var(--paper); /* the cast's paper fills (components/people) */
   --stencil: var(--font-allerta-stencil), var(--font-space-grotesk), sans-serif;
   --gap-beat: 150px; --pen: oklch(0.6 0.19 35); --panel: #fffdf9;
   background: var(--paper); color: var(--ink); font: 400 20px/1.65 var(--essay); -webkit-font-smoothing: antialiased; overflow-x: clip;

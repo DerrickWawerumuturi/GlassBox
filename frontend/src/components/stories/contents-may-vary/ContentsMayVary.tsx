@@ -2,6 +2,8 @@ import React from "react";
 import Link from "next/link";
 
 import {HOW} from "@/components/market-page/StoryEnd";
+import joon from "@/components/people/art/joon-scene";
+import Person from "@/components/people/Person";
 import StoryCvAsk from "@/components/stories/StoryCvAsk";
 import {Crumbs, LiveLine, Scope, Source, StoryPage} from "@/components/stories/StoryParts";
 import {fmt} from "@/lib/market-page";
@@ -61,6 +63,8 @@ function Ending() {
     return (
         <section className={s.col}>
             <h2>So what is in the box?</h2>
+            {/* Joon climbs out of a box beside the answer: whatever the side says. */}
+            <Person art={joon} width={150} />
             <p>Whatever the side says. In the week of {week}: {llm.name} in {llm.jobs} of the {fmt(readable)} jobs we could read, {py.name} in {py.jobs},
                 {" "}{agents.name} in {agents.jobs}, and no programming language at all in {NO_LANGUAGE}. The front says AI on all of them.</p>
             <StoryCvAsk story={story} className={s.cta} />

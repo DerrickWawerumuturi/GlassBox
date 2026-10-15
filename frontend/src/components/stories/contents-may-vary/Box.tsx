@@ -2,7 +2,6 @@
 
 import React, {createContext, useCallback, useContext, useEffect, useRef, useState} from "react";
 
-import {dollSvg} from "@/components/stories/doll";
 import {storyInteracted} from "@/lib/analytics";
 import {fmt} from "@/lib/market-page";
 import {CONTENTS, NO_LANGUAGE} from "@/lib/stories/contents-may-vary";
@@ -56,7 +55,7 @@ export function BoxTable({children}: {children: React.ReactNode}) {
     return <BoxCtx.Provider value={{opened, torn, lit, open, light, tear}}>{children}</BoxCtx.Provider>;
 }
 
-/** The hero's pack shot and the one doll, reading the side. The lid tears when the hero's button is pressed. */
+/** The hero's pack shot. The lid tears when the hero's button is pressed. */
 export function HeroPack() {
     const {torn} = useBox();
     return (
@@ -64,7 +63,6 @@ export function HeroPack() {
             <div className={cn(s.packshot, torn && s.torn)} aria-hidden>
                 <svg viewBox={"0 0 400 480"} dangerouslySetInnerHTML={{__html: packshot("cmv", {lidFlat: s.lidFlat, lidTorn: s.lidTorn, pop: s.pop})}} />
             </div>
-            <div className={s.reader} aria-hidden dangerouslySetInnerHTML={{__html: dollSvg({i: 5, role: "ai"})}} />
         </>
     );
 }

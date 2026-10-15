@@ -8,14 +8,12 @@ import s from "./product.module.css";
 
 /**
  * The close of /product and /about: the CV card from the market home, its
- * question, Add your CV and Sign up. `character` stands above the question
- * (/product's doll); /about leaves the spot empty until the ink cast is drawn.
+ * question, Add your CV and Sign up.
  */
-export default function CvClose({where, character}: {where: CtaPlace; character?: React.ReactNode}) {
+export default function CvClose({where}: {where: CtaPlace}) {
     return (
         <section className={`${s.close} ${s.wrap}`}>
             <div className={s.cvcard}>
-                {character}
                 <h2>{P.closing}</h2>
                 <div className={s.acts}>
                     <AddCvButton label={P.cta} reading={P.reading} where={where} />

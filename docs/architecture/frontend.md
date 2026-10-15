@@ -87,8 +87,15 @@ src/
                                  also on /dashboard/scan), useCvScan.tsx (the sheet and the scan, for
                                  every public page, the header and /analysis)
     stories/                     the visual stories: StoryParts (page, crumbs, source line, the week line, scope),
-                                 StoryCvAsk, OpenMethod, doll.ts, share.tsx (share images), covers/ (a cover per
-                                 story for the hub), and a folder per story (its CSS module, server parts, small client parts)
+                                 StoryCvAsk, OpenMethod, share.tsx (share images), covers/ (a cover per
+                                 story for the hub), and a folder per story (its CSS module, server parts, small client parts);
+                                 Pick a side's deck art is CC0, in public/stories/pick-a-side with its LICENSES.md
+    people/                      the hand drawn cast (Open Peeps, Open Doodles, CC0: LICENSES.md): art/ one module per
+                                 drawing, draw.ts personSvg (and the dark theme's line art filter), Person.tsx (floated
+                                 into the text beside a paragraph; Chapter takes one as `person`)
+    years/                       the years page's woodpile ("Count the rings"): logs.ts (one log end, canvas or SVG),
+                                 pile.ts (rack, key, sort, reading a log), Woodpile.tsx (client), Figures.tsx (server
+                                 SVG: specimens, ringed logs, rounds), years.module.css (the wood's --w-* colours)
     market-hub/                  the /market grid: hub.module.css, HubFilter (the chips), HubCv (the CV card), covers.ts
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
@@ -120,7 +127,8 @@ src/
     market-story.ts              every sentence on a market page, templates over the counts (tested on market-story.fixture.json)
     market-page.ts               numbers, dates, copied facts' links, title level chips
     market-faq.ts                a market page's questions, each answered with this week's count (and FAQPage markup)
-    years-answer.ts              the years of experience page's sentences, chart rows and questions
+    years-answer.ts              the years of experience page's sentences, rows, questions and the woodpile's lines
+                                 (kicker, stamp, captions, ringed and rounds lines, which parts the week can fill)
     stories/                     a data module per story (one week's numbers, a comment per figure) and its tests;
                                  story.ts (types, addresses, the week), route.ts (metadata), index.ts (the list)
     market-hub.ts                the /market grid's cards, in order, and its filters (tested)

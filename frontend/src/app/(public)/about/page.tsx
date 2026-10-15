@@ -5,6 +5,9 @@ import CountSteps from "@/components/about/CountSteps";
 import {DRAWINGS, HATCH_DEFS, heroAbout, VALUE_ICONS} from "@/components/about/drawings";
 import Ledger from "@/components/about/Ledger";
 import a from "@/components/about/about.module.css";
+import mateo from "@/components/people/art/mateo-scene";
+import tomas from "@/components/people/art/tomas-figure";
+import Person from "@/components/people/Person";
 import Chapter from "@/components/product/Chapter";
 import CountCard from "@/components/product/CountCard";
 import CvClose from "@/components/product/CvClose";
@@ -21,6 +24,14 @@ export const metadata = publicPage("/about", {
 
 // Static, with this week's count on the receipt; the weekly publication rebuilds it (lib/revalidate.ts).
 export const revalidate = false;
+
+/** Two of the cast, each beside the sentence it adds to, on the side of the words away from the drawing. */
+const PEOPLE: Record<string, {at: number; node: React.ReactNode}> = {
+    // "Both are tiring.": Mateo hauls a coffee as big as he is.
+    why: {at: 2, node: <Person art={mateo} flip width={124} />},
+    // "We show where you stand": Tomas, standing.
+    "we-show": {at: 0, node: <Person art={tomas} side={"left"} width={70} />},
+};
 
 /**
  * Why Glassbox exists, in the editorial look of /product (founder, 15 Oct
@@ -47,13 +58,13 @@ export default async function AboutPage() {
                     <a key={c.id} className={s.chip} href={`#${c.id}`} style={{"--c": `var(--${c.stage})`} as React.CSSProperties}><i>{i + 1}</i>{c.chip ?? c.name}</a>
                 ))}
             </nav>
-            <Chapter c={why} n={1} flip={false} drawing={DRAWINGS[why.id]} />
+            <Chapter c={why} n={1} flip={false} drawing={DRAWINGS[why.id]} person={PEOPLE.why} />
             <CountSteps c={count} n={2} />
             <CountCard receipt={receipt} links={A.count.links} />
             {rest.map((c, i) => (
                 <React.Fragment key={c.id}>
                     {/* The picture chapters alternate sides; the counting steps between them run full width. */}
-                    <Chapter c={c} n={i + 3} flip={i % 2 === 0} drawing={DRAWINGS[c.id]} />
+                    <Chapter c={c} n={i + 3} flip={i % 2 === 0} drawing={DRAWINGS[c.id]} person={PEOPLE[c.id]} />
                     {c.id === "your-data" && <Ledger />}
                 </React.Fragment>
             ))}

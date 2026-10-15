@@ -6,6 +6,7 @@
  * prototype (docs/local/editorial-sprint/stories/contents-may-vary/story.css and box.css).
  */
 .root {
+  --person-ground: var(--ground); /* the cast's paper fills (components/people) */
   --pack: var(--font-bungee), var(--font-space-grotesk), sans-serif; --gap-beat: 150px;
   --ground: #fff6e5; --ink: #161411; --muted: #645d52; --line: #e6dcc8; --counter: #f4e8d2; --slip: #fffdf8; --piece: #161411;
   --magenta: #ff3d8f; --magenta-deep: #d9226f; --cyan: #1fb6ff; --cyan-deep: #0c8fd0; --lime: #d7ee4c; --hatch: #b5ab9d; --pen: var(--orange);
@@ -45,8 +46,6 @@
 .heroText { grid-area: text; align-self: end; padding: 0; max-width: none; }
 .root p.heroCue { grid-area: cue; align-self: start; margin: 28px 0 0; }
 .packshot svg { width: 100%; height: auto; display: block; overflow: visible; }
-.reader { position: absolute; right: 2%; bottom: 7.5%; width: 12%; }
-.reader svg { width: 100%; height: auto; display: block; }
 .root .shelfNote { position: absolute; right: 0; top: 0; transform: rotate(-8deg); }
 .root p.cue { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
 .cueText { font: 500 15px var(--essay); color: var(--muted); }

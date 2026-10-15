@@ -4,7 +4,10 @@ import FIXTURE from "./market-story.fixture.json";
 import {MARKET_PAGES, MarketBody, YearsCount} from "./market-pages";
 import {marketFaq} from "./market-faq";
 import {dek, glance, headline} from "./market-story";
-import {softwareLine, unstatedShare, yearsAnswer, yearsCounts, yearsFaq, yearsHeadline, yearsLabel} from "./years-answer";
+import {
+    kicker, logKinds, logWords, pileCaption, pileGroups, ringedHeading, ringedLine, roundsLine, softwareLine, stamp, unstatedShare, yardLead, yearsAnswer,
+    yearsCounts, yearsFaq, yearsHeadline, yearsLabel, yearsRows, yearsSections,
+} from "./years-answer";
 
 const ENTRY = FIXTURE["entry-level-software"] as unknown as MarketBody;
 const years = (counts: number[], unstated: number): YearsCount => ({
@@ -58,6 +61,65 @@ describe("the years of experience page, written from the count", () => {
         expect(yearsCounts(page())).toBeNull();
         expect(yearsCounts(null)).toBeNull();
         expect(yearsCounts(page({titled: years([0, 0, 0, 0, 0, 0], 0), software: REAL.software}))).toBeNull();
+    });
+});
+
+// Two made up weeks, the prototype's (docs/local/editorial-sprint/years-page/data.js): not counts, only to prove the page holds.
+const MORE = {titled: years([40, 90, 70, 30, 20, 12], 150), software: years([30, 60, 240, 300, 170, 1600], 1300)};
+const THIN = {titled: years([0, 0, 0, 0, 0, 0], 41), software: years([0, 0, 0, 0, 0, 0], 0)};
+
+describe("Count the rings: the lines the woodpile adds, written from the count", () => {
+    const c = yearsCounts(page(REAL))!, [titled, software] = yearsRows(c);
+
+    it("stamps the week and the count", () => {
+        expect(kicker(c)).toBe("Count the rings · week of 12 October 2026");
+        expect(stamp(c)).toBe("306 of 328");
+    });
+
+    it("gives every job one log, its kind from its bucket, and a sealed end for each that states no number", () => {
+        const logs = logKinds(c.titled);
+        expect(logs.length).toBe(328);
+        expect(logs.filter((t) => t < 0).length).toBe(306);
+        expect(logs.filter((t) => t === 1).length).toBe(10);
+        expect(logKinds(c.software).filter((t) => t === 5).length).toBe(1420);
+    });
+
+    it("keys each pile top layer first, leaving out a kind with no jobs", () => {
+        expect(pileGroups(titled).map((g) => [g.name, g.n])).toEqual([["None stated", 306], ["2 years or less", 17], ["3 or 4 years", 4], ["5 years or more", 1]]);
+        expect(pileGroups(software).map((g) => g.n)).toEqual([1544, 254, 378, 1420]);
+        const one = yearsRows(yearsCounts(page(THIN))!)[0];
+        expect(pileGroups(one).map((g) => g.key)).toEqual(["none"]);
+    });
+
+    it("writes the captions, the ringed heading and every line from the counts", () => {
+        expect(pileCaption(titled)).toBe("Each log end is one of the 328 software jobs with an early career title. Its rings are the years the job asks for. A sealed grey end states no number.");
+        expect(pileCaption(software)).toBe("Each log end is one of the 3,596 software jobs in the weekly count, whatever the title. Same rings, same paint.");
+        expect(ringedHeading(c)).toBe("The 22 that state a number");
+        expect(ringedLine(c)).toBe("17 of the 22 early career jobs that state a number ask for two years or less.");
+        expect(yardLead(c)).toBe("The same rings on all 3,596 software jobs in the weekly count, whatever the title.");
+        expect(roundsLine(titled)).toBe("Early career titles: of the 22 that state a number, 17 ask for two years or less and 1 for five or more.");
+        expect(roundsLine(software)).toBe("All software jobs: of the 2,052 that state a number, 254 ask for two years or less and 1,420 for five or more.");
+        expect([-1, 0, 1, 3, 5].map(logWords)).toEqual(["This job states no number of years.", "This job asks for no experience. A bare log, no rings.",
+            "This job asks for 1 year.", "This job asks for 3 years.", "This job asks for five years or more."]);
+        expect(yearsSections(c)).toEqual({ringed: true, yard: true});
+    });
+
+    it("flips the headline in a week where most early career jobs state a number", () => {
+        const more = yearsCounts(page(MORE))!;
+        expect(yearsHeadline(more)).toBe("Most entry level software jobs ask for two years or less");
+        expect(stamp(more)).toBe("150 of 412");
+        expect(ringedLine(more)).toBe("200 of the 262 early career jobs that state a number ask for two years or less.");
+        expect(yearsSections(more)).toEqual({ringed: true, yard: true});
+    });
+
+    it("leaves out what a thin week can't fill, and agrees in the singular", () => {
+        const thin = yearsCounts(page(THIN))!;
+        expect(yearsHeadline(thin)).toBe("Most entry level software jobs don't ask for a number of years");
+        expect(yearsSections(thin)).toEqual({ringed: false, yard: false});
+        expect(yearsRows(thin).map(roundsLine)).toEqual(["Early career titles: none of the 41 state a number."]);
+        const one = yearsCounts(page({titled: years([0, 1, 0, 0, 0, 0], 3), software: years([0, 0, 0, 0, 0, 0], 0)}))!;
+        expect(ringedHeading(one)).toBe("The one that states a number");
+        expect(ringedLine(one)).toBe("1 of the 1 early career job that states a number asks for two years or less.");
     });
 });
 

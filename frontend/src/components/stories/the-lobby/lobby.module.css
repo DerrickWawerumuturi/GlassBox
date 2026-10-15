@@ -57,7 +57,7 @@
 .key b { font: 500 14px var(--mono); }
 
 /* Inside: the marble lobby. A brass lintel marks the door. */
-.inside { background: var(--cream); color: var(--ink); margin-top: var(--gap-beat); padding: 110px 0 120px; border-top: 8px solid var(--brass); box-shadow: inset 0 2px 0 var(--brass-dk); }
+.inside { --person-ground: var(--cream); background: var(--cream); color: var(--ink); margin-top: var(--gap-beat); padding: 110px 0 120px; border-top: 8px solid var(--brass); box-shadow: inset 0 2px 0 var(--brass-dk); }
 .inside p { color: color-mix(in oklab, var(--ink) 90%, var(--cream)); }
 .inside h2, .inside strong, .inside b { color: var(--ink); }
 .root .inside section.first { margin-top: 0; }

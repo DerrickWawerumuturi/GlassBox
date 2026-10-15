@@ -1,4 +1,3 @@
-import {dollAt} from "@/components/stories/doll";
 import {fmt} from "@/lib/market-page";
 
 /*
@@ -48,9 +47,8 @@ export function methodCover(): string {
       ${T(34, 362, 32, "every job counted once", {w: 500, f: "#4a4744", ff: "var(--hand)", t: "rotate(-3 34 362)"})}`);
 }
 
-/** The CV card's picture: someone holding up a CV, its skills marked in green ("on your CV"). */
+/** The CV card's picture: a CV, its skills marked in green ("on your CV"). */
 export function cvPicture(): string {
-    return svg("transparent", `${dollAt({i: 11, role: "web"}, 118, 22, 86)}
-      <g transform="rotate(7 262 120)"><rect x="210" y="40" width="104" height="138" rx="4" fill="#fff" stroke="${INK}" stroke-width="2"/>${T(226, 68, 16, "CV", {w: 800})}
+    return svg("transparent", `<g transform="translate(-62 0) rotate(7 262 120)"><rect x="210" y="40" width="104" height="138" rx="4" fill="#fff" stroke="${INK}" stroke-width="2"/>${T(226, 68, 16, "CV", {w: 800})}
         <rect x="226" y="80" width="70" height="5" fill="#cfc8bb"/><rect x="226" y="94" width="56" height="5" fill="#cfc8bb"/><rect x="224" y="106" width="44" height="11" fill="#5fd39a" opacity=".8"/><rect x="226" y="124" width="64" height="5" fill="#cfc8bb"/><rect x="224" y="136" width="36" height="11" fill="#5fd39a" opacity=".8"/><rect x="226" y="154" width="58" height="5" fill="#cfc8bb"/></g>`, 200);
 }

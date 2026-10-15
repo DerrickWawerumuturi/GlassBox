@@ -1,64 +1,73 @@
+import {BACK_SRC, NAVY} from "./icons";
+
 /*
- * The foil: a canvas over a card's two numbers, painted as pastel holographic
- * foil (a gradient, fine etch lines, a sheen, nine sparkles, the box O) and
- * rubbed away under the pointer with a round brush whose edge flakes. A
- * coarse grid counts what is cleared; past 40% the card is revealed and the
- * rest fades. Nothing is stored.
+ * The scratch panel: a canvas over a card's two numbers, printed with the
+ * deck's own back (the middle of it, cropped to the panel) and a small
+ * "scratch" label, and rubbed away under the pointer with a round brush whose
+ * edge flakes. A coarse grid counts what is cleared; past 40% the card is
+ * revealed and the rest fades. Nothing is stored.
  */
 
-/** What the foil reads from a pointer event. */
+/** What the panel reads from a pointer event. */
 type Point = {clientX: number; clientY: number; pointerId: number};
 
-const BRUSH = 20, COLS = 16, ROWS = 8, CLEARED = .4;
-
-const seeded = (s: number) => () =>
-    ((s = Math.imul(s ^ (s >>> 15), 2246822507) ^ Math.imul(s ^ (s >>> 13), 3266489909)) >>> 0) / 4294967296;
+const BRUSH = 18, COLS = 16, ROWS = 8, CLEARED = .4;
 const ratio = () => Math.min(window.devicePixelRatio || 1, 3);
+
+/** The back, decoded once for every panel on the page. Until it decodes (or if it never does) a panel is plain navy. */
+let back: HTMLImageElement | null = null, decoded: Promise<unknown> | null = null;
+function loadBack() {
+    if (!decoded) {
+        back = new Image();
+        back.src = BACK_SRC;
+        decoded = back.decode().catch(() => null);
+    }
+    return decoded;
+}
 
 type Paint = {g: CanvasRenderingContext2D; w: number; h: number};
 
-function paint(cv: HTMLCanvasElement, seed: number): Paint | null {
-    const box = cv.parentElement!.getBoundingClientRect(), dpr = ratio(), w = box.width, h = box.height;
+function paint(cv: HTMLCanvasElement): Paint | null {
+    // Layout size, not the bounding box: the card may still be turned or tilted mid deal.
+    const box = cv.parentElement!, dpr = ratio(), w = box.clientWidth, h = box.clientHeight;
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     const g = cv.getContext("2d");
     if (!g) return null;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const lg = g.createLinearGradient(0, 0, w, h);
-    lg.addColorStop(0, "#9fd3ff"); lg.addColorStop(.38, "#c9b8ff"); lg.addColorStop(.7, "#ffd6e5"); lg.addColorStop(1, "#9fd3ff");
-    g.fillStyle = lg; g.fillRect(0, 0, w, h);
-    g.strokeStyle = "rgba(255,255,255,.3)"; g.lineWidth = 1;
-    for (let x = -h; x < w; x += 5) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + h, 0); g.stroke(); }
-    const rg = g.createRadialGradient(w * .22, h * .15, 2, w * .22, h * .15, w * .75);
-    rg.addColorStop(0, "rgba(255,255,255,.6)"); rg.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = rg; g.fillRect(0, 0, w, h);
-    const q = seeded(seed);
-    g.fillStyle = "rgba(255,255,255,.95)";
-    for (let k = 0; k < 9; k++) {
-        const x = 8 + q() * (w - 16), y = 8 + q() * (h - 16), s = 2 + q() * 3;
-        g.beginPath(); g.moveTo(x, y - s * 2); g.quadraticCurveTo(x, y, x + s * 2, y); g.quadraticCurveTo(x, y, x, y + s * 2);
-        g.quadraticCurveTo(x, y, x - s * 2, y); g.quadraticCurveTo(x, y, x, y - s * 2); g.fill();
+    g.fillStyle = NAVY; g.fillRect(0, 0, w, h);
+    if (back?.complete && back.naturalWidth) {
+        const iw = back.naturalWidth, ih = back.naturalHeight, sx = iw * .06, sw = iw * .88, sh = Math.min(ih * .86, sw * h / w);
+        g.drawImage(back, sx, (ih - sh) / 2, sw, sh, 0, 0, w, h);
     }
-    g.strokeStyle = "rgba(255,255,255,.92)"; g.lineWidth = 3; g.strokeRect(w / 2 - 11, h / 2 - 11, 22, 22);
-    g.fillRect(w / 2 - 4, h / 2 - 4, 8, 8);
+    g.strokeStyle = NAVY; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3);
+    // next/font names the face itself; the page carries that name in --font-jetbrains-mono.
+    const mono = getComputedStyle(cv).getPropertyValue("--font-jetbrains-mono").trim() || "ui-monospace";
+    g.font = `600 11px ${mono}, monospace`; g.textAlign = "center"; g.textBaseline = "middle";
+    const label = "scratch", tw = g.measureText(label).width + 22;
+    g.fillStyle = "#fffdf8"; g.beginPath(); g.roundRect(w / 2 - tw / 2, h / 2 - 12, tw, 24, 12); g.fill();
+    g.strokeStyle = NAVY; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = NAVY; g.fillText(label, w / 2, h / 2 + .5);
     // From here on every stroke erases.
     g.globalCompositeOperation = "destination-out"; g.fillStyle = "#000"; g.strokeStyle = "#000";
     g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = BRUSH * 2;
     return {g, w, h};
 }
 
-/** One card's foil. `onCleared` runs once, when enough of it is rubbed away. */
-export class Foil {
+/** One card's scratch panel. `onCleared` runs once, when enough of it is rubbed away. */
+export class ScratchPanel {
     private p: Paint | null = null;
     private cleared = new Set<number>();
     private last: [number, number] | null = null;
     private drawing = false;
 
-    constructor(private cv: HTMLCanvasElement, private seed: number, private onCleared: () => void) {
+    constructor(private cv: HTMLCanvasElement, private onCleared: () => void) {
         this.repaint();
+        // Print the back once it decodes, unless the reader has already started rubbing.
+        loadBack().then(() => { if (this.cleared.size === 0 && this.cv.isConnected) this.repaint(); });
     }
 
     repaint() {
-        this.p = paint(this.cv, this.seed);
+        this.p = paint(this.cv);
         this.cleared.clear();
     }
 
@@ -83,7 +92,8 @@ export class Foil {
 
     private brush(e: Point) {
         if (!this.p) return;
-        const r = this.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, g = this.p.g;
+        const r = this.cv.getBoundingClientRect(), g = this.p.g;
+        const x = (e.clientX - r.left) * this.p.w / (r.width || 1), y = (e.clientY - r.top) * this.p.h / (r.height || 1);
         if (this.last) { g.beginPath(); g.moveTo(this.last[0], this.last[1]); g.lineTo(x, y); g.stroke(); }
         g.beginPath(); g.arc(x, y, BRUSH, 0, 7); g.fill();
         // Two flakes off the brush's edge, so the scratch looks torn rather than stamped.

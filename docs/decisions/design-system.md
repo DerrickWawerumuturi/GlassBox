@@ -159,6 +159,16 @@ file on every page (measured: /about preloaded all eleven), so they load only
 where a page uses them, in the fallback until then. Each story keeps its own ground and palette; orange still only
 acts, lime is the one highlight per chart, green stays "on your CV".
 
+The years page ("Count the rings", founder, 16 Oct 2026) sets every sentence in
+Hanken Grotesk and adds **Alfa Slab One** (OFL, reserved name "Alfa Slab", so
+uncut, only wrapped as woff2; `app/fonts/alfa-slab-one.ts`, OFL beside it) for
+what is stamped on wood: the planks, the kicker and the big count, in lumber crayon
+blue. It loads on that route only and does not preload. Its ground is sawdust paper
+(`#f3ece1`), a warm night in dark (`#1b1713`); the wood's colours are `--w-*`
+variables in `components/years/years.module.css`, read by the canvas and used by
+the SVG figures. Lime paint marks two years or less (the one highlight); a sealed
+grey hatched end is a job that states no number, never "no experience".
+
 **2026-10-15: /product in the editorial look** (founder: "the product page
 needs the new look, to match the market"). /product sets its headings and
 reading text in Hanken Grotesk (the stories' module), labels in JetBrains Mono,
@@ -179,9 +189,8 @@ closing CV card. Six chapters on stages (butter, sky, lavender, pink, mint and a
 sixth, peach), each drawn: the wall of one ad, the four counting steps as cards
 on one stage, a map with no route, three crossed out stamps, The Count sealed.
 What is kept signed in sits on two paper sheets beside "Never kept from your
-CV"; the values as four signed cards. The prototype's dashed "character" boxes
-are left out until the ink cast is drawn: `Chapter` and `CvClose` take a
-`character` slot, empty on /about (the product's close keeps its doll).
+CV"; the values as four signed cards. The prototype's dashed "character" spots
+are gone; two of the cast sit in the text instead (see "Illustrated people" below).
 
 ## Editorial figure grammar (market pages, 2026-10-07)
 
@@ -322,3 +331,80 @@ when signed in, Dashboard sit on the right, as before.
 - **Gone with the menus:** the desktop "Try it out" that sat in the Product
   menu (`cta_clicked` `where: header`), the menu lines in `FEATURES.nav` and
   `NAV`, and `components/ui/navigation-menu.tsx`, which nothing else used.
+
+## Illustrated people: the hand drawn cast (2026-10-15, placed 2026-10-16)
+
+Founder, 15 Oct 2026, on the prototype in `docs/local/editorial-sprint/mascots-v2/`:
+"This is the direction, love them. Most are straight from the library, not ours,
+but it's okay for now." On 16 Oct, on the first placement (a person in each story's
+picture and on each CV card, on a paper arch in dark): "I don't like that white
+border around them; I'd prefer them to be just the cast, not in some bubble. Place
+them somewhere in the content rather than at the top or near an image. No need for
+every one to have one." Then: "I choose Peak Python and Within eleven jobs to have
+some of the icons; some still look bad in dark mode but it will do."
+
+- **The cast.** Hand drawn people from Pablo Stanley's **Open Peeps** and **Open
+  Doodles**, both public domain under **CC0 1.0** (no credit required; we credit
+  anyway in `frontend/src/components/people/LICENSES.md`, beside the CC0 legal
+  code). Drawn as the library drew them: only the colours change (ink, paper, the
+  doodles' pink to ink, lime for one box). The colourful dolls (`stories/doll.ts`)
+  are gone.
+- **In the text, a few only.** A person is a margin drawing: floated beside the
+  paragraph it adds to, on the side of the words away from any picture. Never in a
+  hero, never at the top of a page, never beside a chart, screenshot or story
+  object, never on a CV card. Only where it adds to the sentence next to it:
+  - /about, "Both are tiring.": Mateo hauling a coffee as big as he is.
+  - /about, "We show where you stand against today's jobs": Tomas, standing.
+  - /product, "Move each one along: applied, screening, interview, offer": Kofi
+    walking, phone in hand.
+  - The lobby, "Going up?", beside the jobs "waiting in the lobby": Rosa pointing up.
+  - Contents may vary, "So what is in the box? Whatever the side says.": Joon
+    climbing out of a box.
+  - Peak Python, "The ridge almost every job stands on" (a section of words alone):
+    Amina, standing.
+  - Within eleven jobs, "What they mean for you is yours to read.": Tomas reading
+    on a chair.
+  Pick a side and the /market card have none.
+- **No backing.** Nothing is drawn behind or around a person: no arch, blob, card,
+  outline or panel. In light the ink is `#21201c` and the paper fills take the
+  ground they stand on (`--person-ground`, else the page background), so the
+  drawing sits on the page itself.
+- **Dark mode: line art.** In `.dark` the drawing goes into an SVG filter as white
+  ink on black paper. Eroding the ink finds the inside of solid shapes (hair,
+  trousers); the ink minus that, grown a touch, is every line plus the edge of every
+  solid, drawn in the paper colour `#f7f3ef`. The rest is clear, so the dark ground
+  shows through the solids: clean line art, not an inverted photo. Lime passes
+  through. A ground that stays light in both themes (the lobby's cream inside)
+  keeps the light drawing (`ground="light"`).
+- **On a phone** a person is 70% of its desktop width, still floated, so the line
+  beside it stays readable.
+- **How they ship.** One module per drawing in `components/people/art/` (made by
+  `docs/local/editorial-sprint/mascots-v2/export.py`: ids dropped, numbers rounded,
+  15 to 29 KB each), inlined by `personSvg()` or `<Person>`, decorative and
+  `aria-hidden`, all on server rendered parts, so none reaches a client bundle.
+- **Still open:** the drawings are the library's, not ours. Adapt them (our own
+  heads, clothes, props) or commission a cast.
+
+## Pick a side: a real deck (2026-10-16)
+
+Founder, 16 Oct 2026: "use an actual deck of cards rather than the generic blue/purple
+background ... get publicly available assets for that rather than making your own."
+Then yes to the recommendations: spades and clubs, the blue back, one table per figure,
+no joker.
+
+- **The asset.** English pattern playing cards deck PLUS CC0 (Wikimedia Commons, CC0
+  1.0): the blue back is Loren Osborn's own drawing (not David Bellot's LGPL backs), the
+  spade and club pips are from Dmitry Fomin's faces. Self hosted: the back as WebP in
+  `frontend/public/stories/pick-a-side/` (a small PNG beside it for the share image),
+  the pips as paths in `components/stories/pick-a-side/icons.ts`, with `LICENSES.md`
+  and the CC0 legal code beside the back. Credited in the story's "How we counted".
+- **Look.** The words sit on the page (paper, or charcoal in dark); each figure is a
+  card table, green baize with a fine nap and a wooden rail, a shade darker in dark.
+  Cards are white stock with the deck's corner radius, rank and pip in two corners and
+  a court frame holding the skill's glyph in a medallion. The scratch panel is printed
+  with the deck's back. The betting spots ("Entry level", "Senior") are printed on the
+  felt under each card, the pen ring round the pick.
+- **Colour roles hold.** Every pip is ink: suits say what kind of skill a card is
+  (spades the seven charted languages, clubs the other four), never the lean, and red
+  suits would put red on data. Orange only acts: no orange text on the cloth, so the
+  C++ pen note sits on the page beside its table. Lime is the C++ card's court alone.

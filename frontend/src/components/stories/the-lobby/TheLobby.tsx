@@ -2,6 +2,8 @@ import React from "react";
 import Link from "next/link";
 
 import {HOW} from "@/components/market-page/StoryEnd";
+import rosa from "@/components/people/art/rosa-figure";
+import Person from "@/components/people/Person";
 import StoryCvAsk from "@/components/stories/StoryCvAsk";
 import {Crumbs, LiveLine, Scope, Source, StoryPage} from "@/components/stories/StoryParts";
 import {fmt} from "@/lib/market-page";
@@ -151,6 +153,8 @@ function Ending() {
     return (
         <section className={s.col}>
             <h2>Going up?</h2>
+            {/* Rosa points up beside the jobs "waiting in the lobby"; the inside stays cream in both themes. */}
+            <Person art={rosa} flip width={78} ground={"light"} />
             <p>The plainest title in software mostly means senior: {fmt(levels.senior)} of the {fmt(jobs)} jobs. Among the {fmt(years.stated)} that state a number of
                 years, the most common ask is {bandWords(top)}: {fmt(top.jobs)} of them. And the biggest floor states no number at all: {fmt(years.unstated)} jobs,
                 waiting in the lobby.</p>

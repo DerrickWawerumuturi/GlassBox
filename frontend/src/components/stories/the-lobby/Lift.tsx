@@ -2,7 +2,6 @@
 
 import React, {createContext, useCallback, useContext, useEffect, useRef, useState} from "react";
 
-import {dollSvg} from "@/components/stories/doll";
 import t from "@/components/stories/story.module.css";
 import {storyInteracted} from "@/lib/analytics";
 import {fmt} from "@/lib/market-page";
@@ -151,7 +150,6 @@ export function LiftCar() {
                 <div className={l.doors}>
                     <svg className={l.cor} viewBox={"0 0 300 320"} aria-hidden dangerouslySetInnerHTML={{__html: shown === null ? "" : corridor(FLOORS[shown].jobs)}} />
                     <div className={cn(l.door, l.l)} /><div className={cn(l.door, l.r)} />
-                    <div className={l.attendant} dangerouslySetInnerHTML={{__html: dollSvg({i: 7, role: "general"})}} />
                 </div>
                 <div ref={panel} className={l.panel} role={"group"} aria-label={"Lift buttons, one per band of years"} onKeyDown={keys}>
                     {ORDER.map((i) => (

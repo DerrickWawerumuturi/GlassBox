@@ -1,4 +1,3 @@
-import {dollSvg} from "@/components/stories/doll";
 import {C, INK, iso, shade} from "./iso";
 
 /*
@@ -54,8 +53,7 @@ export function drawYard(cfg: YardConfig, W: number) {
     let ripples = "";
     for (let y = Yq + 1.6 * u; y < Hpx; y += 1.1 * u) for (let x = (y * 7) % 40; x < W; x += 54) ripples += `M${g(x)} ${g(y)}h${g(1.4 * u)}`;
     const cabX = X0 + 1.1 * u, cabY = Ysp + .1 * u;
-    const defs = `<defs><linearGradient id="${id}-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3bce0"/><stop offset="1" stop-color="#f0dccf"/></linearGradient>${I.patterns(COL)}
-        <clipPath id="${id}-win"><rect x="${g(cabX + .2 * u)}" y="${g(cabY + .4 * u)}" width="${g(2.2 * u)}" height="${g(1.3 * u)}"/></clipPath></defs>`;
+    const defs = `<defs><linearGradient id="${id}-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3bce0"/><stop offset="1" stop-color="#f0dccf"/></linearGradient>${I.patterns(COL)}</defs>`;
     const sky = `${defs}<rect width="${W}" height="${Hpx}" fill="url(#${id}-sky)"/><circle cx="${g(W * .8)}" cy="${g(Ygnd - 3.4 * u)}" r="${g(2.1 * u)}" fill="#f6e3a6"/>
         <g transform="translate(0 ${g(Ygnd)})">${[.06, .3, .62, .9].map((k) => far(k * W / 4 - 4, 0, "#a9a2c6")).join("")}</g>
         <rect y="${g(Ygnd)}" width="${W}" height="${g(Yq - Ygnd)}" fill="#c9c4bb"/>
@@ -78,12 +76,11 @@ export function drawYard(cfg: YardConfig, W: number) {
         + [bx0, bx0 + bw - 1.2 * u].map((x) => [0, 1, 2].map((k) => `<path d="M${g(x + k * .45 * u)} ${g(Ysp)}l${g(.35 * u)} ${g(-1.2 * u)}" stroke="${INK}" stroke-width="${g(.2 * u)}"/>`).join("")).join("");
     const craneFront = leg(u, Xl, Yfront, Ysp, OW) + leg(u, Xr, Yfront, Ysp, OW) + bridge;
 
-    // The trolley: its carriage, the cab hanging beside the cables (the operator looks out in the first yard), the spreader and plate.
-    const operator = cfg.hero ? `<g clip-path="url(#${id}-win)">${dollSvg({i: 7, role: "general"}).replace('<svg class="d"', `<svg x="${g(cabX + .1 * u)}" y="${g(cabY + .18 * u)}" width="${g(2.4 * u)}" height="${g(4.48 * u)}"`)}</g>` : "";
+    // The trolley: its carriage, the cab hanging beside the cables, the spreader and plate.
     const carriage = `<rect x="${g(X0 - 1.5 * u)}" y="${g(Ysp - 3 * u)}" width="${g(3 * u)}" height="${g(1.1 * u)}" rx="2" fill="${DK}"/>`
         + `<rect x="${g(X0 - 1.1 * u)}" y="${g(Ysp - 3.2 * u)}" width="${g(.5 * u)}" height="${g(.3 * u)}" fill="${DK}"/><rect x="${g(X0 + .6 * u)}" y="${g(Ysp - 3.2 * u)}" width="${g(.5 * u)}" height="${g(.3 * u)}" fill="${DK}"/>`;
     const cab = `<rect x="${g(cabX)}" y="${g(cabY)}" width="${g(2.6 * u)}" height="${g(2.5 * u)}" rx="2" fill="${OW}" stroke="${INK}" stroke-width=".8"/>`
-        + `<rect x="${g(cabX + .2 * u)}" y="${g(cabY + .4 * u)}" width="${g(2.2 * u)}" height="${g(1.3 * u)}" fill="#2a2e38"/>${operator}`
+        + `<rect x="${g(cabX + .2 * u)}" y="${g(cabY + .4 * u)}" width="${g(2.2 * u)}" height="${g(1.3 * u)}" fill="#2a2e38"/>`
         + `<path d="M${g(cabX)} ${g(cabY + 2.05 * u)}H${g(cabX + 2.6 * u)}" stroke="${INK}" stroke-width="${g(.2 * u)}"/>`;
     const py = Ysp + .5 * u + 8;
     const spreader = `<rect x="${g(X0 - 1.6 * u)}" y="${g(Ysp)}" width="${g(3.2 * u)}" height="${g(.5 * u)}" rx="1.5" fill="${DK}"/>`

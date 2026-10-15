@@ -1,6 +1,8 @@
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 
+import {alfaSlabOne} from "@/app/fonts/alfa-slab-one";
+import {hankenGrotesk} from "@/app/fonts/hanken-grotesk";
 import YearsArticle from "@/components/market-page/YearsArticle";
 import {fmt} from "@/lib/market-page";
 import {YEARS_PATH} from "@/lib/market-names";
@@ -37,5 +39,6 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 
 export default async function YearsPage({params}: Props) {
     if ((await params).page !== PAGE) notFound();
-    return <YearsArticle c={yearsCounts(await marketForPage(PAGE))} />;
+    // Hanken Grotesk and Alfa Slab One load on this route only (app/fonts).
+    return <YearsArticle c={yearsCounts(await marketForPage(PAGE))} fonts={`${hankenGrotesk.variable} ${alfaSlabOne.variable}`} />;
 }

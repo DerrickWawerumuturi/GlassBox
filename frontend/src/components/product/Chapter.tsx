@@ -22,11 +22,11 @@ const CV_DRAWING: Drawing = {svg: cvFlow(), label: PRODUCT_PAGE.drawn.cvLabel};
  * One chapter of /product or /about: the picture on its coloured stage (a
  * cropped screenshot with a pen note, or a drawing: the CV's by default),
  * then the numbered tag, the heading, the words and an italic caption.
- * Every other one is flipped. `character`: a spot on the stage for a
- * character from the ink cast, once it is drawn; none stands there yet.
+ * Every other one is flipped. `person`: someone from the cast, set into
+ * the words just before paragraph `at`, beside the sentence they add to.
  */
-export default function Chapter({c, n, flip = n % 2 === 0, drawing = CV_DRAWING, character}: {
-    c: ProductChapter; n: number; flip?: boolean; drawing?: Drawing; character?: React.ReactNode;
+export default function Chapter({c, n, flip = n % 2 === 0, drawing = CV_DRAWING, person}: {
+    c: ProductChapter; n: number; flip?: boolean; drawing?: Drawing; person?: {at: number; node: React.ReactNode};
 }) {
     const old = OLD_ANCHORS[c.id];
     return (
@@ -36,7 +36,6 @@ export default function Chapter({c, n, flip = n % 2 === 0, drawing = CV_DRAWING,
                 <figure className={s.stage}>
                     <Shot name={c.shot.name} alt={c.shot.alt} />
                     {c.pen && <p className={s.pen} data-at={c.id}>{c.pen}</p>}
-                    {character}
                 </figure>
             ) : (
                 <figure className={`${s.stage} ${s.drawn}`}>
@@ -48,13 +47,14 @@ export default function Chapter({c, n, flip = n % 2 === 0, drawing = CV_DRAWING,
                     ) : (
                         <div className={s.pic} role={"img"} aria-label={drawing.label} dangerouslySetInnerHTML={{__html: drawing.svg}} />
                     )}
-                    {character}
                 </figure>
             )}
             <div className={s.words}>
                 <p className={s.tag}><b>{String(n).padStart(2, "0")}</b> {c.name}</p>
                 <h2>{c.title}</h2>
-                {c.paragraphs.map((p) => <p key={p} className={s.text}>{p}</p>)}
+                {c.paragraphs.map((p, i) => (
+                    <React.Fragment key={p}>{person?.at === i && person.node}<p className={s.text}>{p}</p></React.Fragment>
+                ))}
                 {c.quote && <blockquote>{c.quote}</blockquote>}
                 {c.caption && <p className={s.cap}>{c.caption}{c.link && <> <Link href={c.link.href}>{c.link.label}</Link>.</>}</p>}
             </div>

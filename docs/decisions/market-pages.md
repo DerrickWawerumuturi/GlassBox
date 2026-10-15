@@ -386,6 +386,34 @@ the first publication after the push (19 Oct), or a `publish --now` for the
 current week. Until then the page says the count isn't here yet and the
 sitemap entry has no lastmod.
 
+**Count the rings (founder, 16 Oct 2026).** The page keeps its address, data,
+H1, dek, FAQ (as text, with its FAQPage markup), canonical, share image,
+sitemap entry and weekly rebuild, and takes a new look (prototype:
+`docs/local/editorial-sprint/years-page/`): a woodpile seen end on, one log end
+per job, its rings the years the job asks for. Lime paint is two years or less,
+bare wood three or four, dark heartwood five or more (the old chart's cut
+points). A **sealed grey end** is a job that states no number and a **bare log**
+(only its pith) one that asks for none, so "states no number never means asks
+for none" is in the picture. Pile one is the early career titles, opened mixed;
+pile two is every software job, opened stacked by rings. "Stack by rings" sorts
+a pile into layers; a tap, a hover or the arrow keys read one log aloud. Then
+the 22 that state a number (one big log each; above 60, one per group with its
+count), the rows as logs on their side cut by share (the fair comparison, since
+the piles differ in size), the table twin, the questions, the CV ask, the method.
+
+Still a weekly page: every number and sentence is a function of the week's
+`experience` counts in `lib/years-answer.ts` (`kicker`, `stamp`, `pileCaption`,
+`ringedHeading`, `ringedLine`, `yardLead`, `roundsLine`, `logWords`,
+`pileGroups`, `yearsSections` beside the existing ones). A part the counts can't
+fill leaves the page: no early career job states a number, no ringed logs; no
+all software count, no yard; one kind of log, no "Stack by rings". The tests try
+the prototype's two made up weeks (most state a number: the H1 flips; a thin
+week: the ringed logs and the yard go). The piles draw on a canvas once script
+runs (`components/years/pile.ts`); the key, the counts, the labels, the table
+and the small figures render on the server as text and SVG. No new data, no new
+calls. Alfa Slab One (OFL) stamps the planks, the kicker and the big count, and
+loads on this page only. The /market card keeps its tags cover and title for now.
+
 ### Analytics
 
 `cta_clicked {where}` (the page's name; `years` for the years page; `story_<slug>` for a story and `market` for the
@@ -431,6 +459,18 @@ learning), "Within eleven jobs" (DevOps).
   by kind; the Essays filter appears when an essay joins (the two years essay,
   after its recount). The hub still reads the publication for the live links,
   the years card and the week, rebuilt as before.
+- **Pick a side, as a real deck (founder, 16 Oct 2026).** The cards are playing
+  cards from the CC0 English pattern deck on Wikimedia Commons (the blue back by
+  Loren Osborn, the pips from Dmitry Fomin's faces; licence and source in
+  `frontend/public/stories/pick-a-side/LICENSES.md`), dealt on green baize with a
+  wooden rail, one table per figure, the words on the page's own paper or
+  charcoal. The scratch panel is printed with the deck's back. Spades are the
+  seven languages the weekly page charts and clubs the other four skills, said in
+  one line under "The first card" and derived from `PICK.charted.languages`, so
+  the hand's sentence and the pips cannot disagree; a suit never marks the lean
+  (it shows before the guess). No joker for Java. Every number, the guess then
+  scratch (touch and keyboard), the tally, the table twin and reduced motion are
+  unchanged; the foil is gone.
 - **The weekly page** lists its story first under "Also this week". The hub
   pills say "Story" and the filter "Stories"; each card links "Latest count:
   {page} jobs" ("Live count" read as real time; copy rewrite, 15 Oct 2026).

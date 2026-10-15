@@ -78,7 +78,7 @@
 .tag b { background: var(--stage); border-radius: 999px; padding: 1px 8px; font: 700 12px var(--mono); }
 .words h2 { font: 800 clamp(30px, 3.4vw, 42px)/1.06 var(--essay); letter-spacing: -.03em; margin: 0 0 18px; }
 .text { color: color-mix(in oklab, var(--ink) 88%, var(--paper)); }
-.words blockquote { margin: 6px 0 18px; padding: 0 0 0 16px; border-left: 3px solid var(--stage); font: 700 22px/1.3 var(--essay); letter-spacing: -.01em; }
+.words blockquote { display: flow-root; margin: 6px 0 18px; padding: 0 0 0 16px; border-left: 3px solid var(--stage); font: 700 22px/1.3 var(--essay); letter-spacing: -.01em; }
 .page .cap { font: italic 400 15px/1.55 var(--essay); color: var(--muted); margin: 18px 0 0; }
 .page .cap a, .page .rlinks a { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
 
@@ -96,12 +96,10 @@
 .rline + .rline { margin-top: -6px; }
 .page .rlinks { display: flex; flex-direction: column; gap: 4px; font-size: 16px; margin: 0; }
 
-/* The close: the CV card from the market home, with a doll. */
+/* The close: the CV card from the market home. */
 .close { margin-top: 150px; display: flex; justify-content: center; }
 .cvcard { display: flex; flex-direction: column; align-items: center; text-align: center; background: var(--card-bg); border: 1.5px dashed var(--line); border-radius: 18px;
   padding: 32px 28px; width: min(100%, 560px); }
-.doll { width: 64px; }
-.doll :global(svg) { display: block; width: 100%; height: auto; }
 .cvcard h2 { font: 800 clamp(26px, 3vw, 32px)/1.12 var(--essay); letter-spacing: -.02em; margin: 14px 0 22px; max-width: 14em; }
 .acts { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .page .plain { font: 600 15px var(--essay); color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }

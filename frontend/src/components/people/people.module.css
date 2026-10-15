@@ -1,0 +1,20 @@
+/*
+ * A person from the cast, floated into the text (Person.tsx), with no shape behind it.
+ * Light: the library's ink, and paper fills in the ground it stands on (--person-ground,
+ * else the page's background), so it reads as a drawing on the page itself.
+ * Dark: the drawing goes in as white ink on black paper and draw.ts's filter turns it
+ * into line art in the paper colour, its solids hollow, the ground showing through.
+ */
+.person { line-height: 0; color: #21201c; --pp: var(--person-ground, var(--background)); width: var(--w); }
+.person :global(svg) { display: block; width: 100%; height: auto; }
+.person :global(feFlood) { flood-color: #f7f3ef; }
+.right { float: right; margin: 6px 0 10px 22px; }
+.left { float: left; margin: 6px 22px 10px 0; }
+:global(.dark) .person:not(.onLight) { color: #fff; --pp: #000; }
+:global(.dark) .person:not(.onLight) :global(.ink) { filter: var(--line-art); }
+
+/* A phone: smaller, so a paragraph beside it keeps a readable line. */
+@media (max-width: 640px) {
+  .person { width: calc(var(--w) * .7); }
+  .right { margin-left: 14px; } .left { margin-right: 14px; }
+}

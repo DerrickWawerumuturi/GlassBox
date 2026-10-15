@@ -18,8 +18,6 @@
 .door::after { content: ""; position: absolute; inset: 30px 26px; border: 1px solid var(--brass-hi); opacity: .5; }
 .door.l { left: 0; border-right: 2px solid var(--brass-dk); } .door.r { right: 0; border-left: 2px solid var(--brass-dk); }
 .lf.open .door.l { transform: translateX(-101%); } .lf.open .door.r { transform: translateX(101%); }
-.attendant { position: absolute; left: 6px; bottom: -6px; width: 54px; z-index: 3; }
-.attendant svg { display: block; width: 100%; height: auto; overflow: visible; }
 
 /* The panel: round brass buttons with the band in Limelight, the count beside in mono. */
 .panel { background: linear-gradient(180deg, var(--brass-hi), var(--brass) 30%, var(--brass-dk)); border-radius: 8px; padding: 12px 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .28), inset 0 0 0 5px rgba(61, 45, 15, .3), 0 20px 36px -24px rgba(0, 0, 0, .6); }
@@ -65,7 +63,6 @@
   .doorway { grid-template-columns: minmax(0, 1fr) 104px; gap: 10px; } /* room for "1,207" beside its button */
   .panel { padding: 8px 6px; gap: 6px; }
   .fb i { width: 44px; height: 44px; font-size: 17px; } .fb { min-height: 44px; font-size: 12.5px; gap: 6px; }
-  .attendant { width: 44px; }
   .lf p.ro { font-size: 16px; } .ro b { font-size: 28px; }
   .allfloors td.what { display: none; }
 }
