@@ -20,8 +20,9 @@ import {reuseError, useLatestCV} from "@/lib/latest-cv";
 export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPage} = {}) {
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
-    const {latest, signedIn, forget} = useLatestCV();
     const [open, setOpen] = useState(false);
+    // The header carries this sheet on every page: the kept CV is read when it opens, not on load.
+    const {latest, signedIn, forget} = useLatestCV(open);
     const [ask, setAsk] = useState<Ask | null>(null);
     const [state, dispatch] = useReducer(scanStep, IDLE);
 

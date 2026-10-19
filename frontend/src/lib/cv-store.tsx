@@ -1,8 +1,10 @@
 'use client'
 
-import React, {createContext, useCallback, useContext, useMemo, useState, useEffect} from "react";
+import React, {createContext, useCallback, useContext, useMemo, useRef, useState, useEffect} from "react";
+import {usePathname} from "next/navigation";
 import {useSession} from "next-auth/react";
 import { CvBreakdown } from "@/types/jobradar"
+import {shouldSyncAccount} from "@/lib/account-sync";
 import {GetCV, StoreCV} from "@/lib/api";
 
 interface CvContextProps {
@@ -14,31 +16,43 @@ interface CvContextProps {
 const CVKEY = "cv-store";
 const CvContext = createContext<CvContextProps | null>(null)
 
+function readCached(): CvBreakdown | null {
+    try {
+        const raw = localStorage.getItem(CVKEY)
+        return raw ? JSON.parse(raw) : null
+    } catch {
+        try { localStorage.removeItem(CVKEY) } catch {}
+        return null
+    }
+}
+
 
 export default function CVProvider({children}: { children: React.ReactNode }) {
     const {status: authStatus} = useSession();
     const [cv, setCv] = useState<CvBreakdown | null>(null);
+    const sync = shouldSyncAccount(authStatus, usePathname());
+    const synced = useRef(false);
 
+    // Local cache paints immediately — the server round-trip must
+    // never leave the app looking empty while it's in flight.
     useEffect(() => {
-        let cancelled = false;
+        const cached = readCached()
+        if (cached) setCv(cached)
+    }, []);
+
+    // The account's CV, once per page load, on the product's pages only (lib/account-sync.ts).
+    useEffect(() => {
+        if (!sync || synced.current) return
+        synced.current = true
+        let cancelled = false
+        let done = false
 
         async function hydrate() {
-            // Local cache paints immediately — the server round-trip must
-            // never leave the app looking empty while it's in flight.
-            let cached: CvBreakdown | null = null;
-            try {
-                const raw = localStorage.getItem(CVKEY)
-                if (raw) cached = JSON.parse(raw)
-            } catch {
-                try { localStorage.removeItem(CVKEY) } catch {}
-            }
-            if (cached && !cancelled) setCv(cached)
-
-            if (authStatus !== "authenticated") return
-
             // undefined = request failed (keep the cache), null = server has none.
             const remote = await GetCV().catch(() => undefined)
+            done = true
             if (cancelled) return
+            const cached = readCached()
             if (remote) {
                 setCv(remote)
                 try { localStorage.setItem(CVKEY, JSON.stringify(remote)) } catch {}
@@ -50,8 +64,9 @@ export default function CVProvider({children}: { children: React.ReactNode }) {
         }
 
         hydrate()
-        return () => { cancelled = true }
-    }, [authStatus]);
+        // Left before the answer came: the next product page asks again.
+        return () => { cancelled = true; if (!done) synced.current = false }
+    }, [sync]);
 
     const saveCv = useCallback((next: CvBreakdown) => {
         setCv(next)

@@ -1,8 +1,10 @@
 'use client'
 
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
+import {usePathname} from "next/navigation";
 import {useSession} from "next-auth/react";
 import {JobRadarAnalysis} from "@/types/jobradar";
+import {shouldSyncAccount} from "@/lib/account-sync";
 import {GetAnalysis, StoreAnalysis} from "@/lib/api";
 
 const STORAGE_KEY = "jobradar";
@@ -29,6 +31,21 @@ function isAnalysis(value: unknown): value is JobRadarAnalysis {
     );
 }
 
+/** This browser's copy of the scan. A response cached from an older backend shape would crash the dashboard on mount, so anything unrecognised is discarded. */
+function readCached(): JobRadarAnalysis | null {
+    try {
+        const cached = localStorage.getItem(STORAGE_KEY);
+        if (!cached) return null;
+        const parsed: unknown = JSON.parse(cached);
+        if (isAnalysis(parsed)) return parsed;
+        localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+        console.error("Discarding unreadable cached analysis:", e);
+        try { localStorage.removeItem(STORAGE_KEY) } catch {}
+    }
+    return null;
+}
+
 /**
  * Holds the analysis for the whole app. It lives here rather than in a page
  * component because every analysis route reads it, and a 5-minute analysis
@@ -43,37 +60,31 @@ export function AnalysisProvider({children}: { children: React.ReactNode }) {
     // Set once a scan finishes in THIS tab, so the server fetch below never
     // overwrites a fresher local result with an older stored one.
     const localIsFresh = useRef(false);
+    const sync = shouldSyncAccount(authStatus, usePathname());
+    const synced = useRef(false);
 
     useEffect(() => {
-        let local: JobRadarAnalysis | null = null;
-        try {
-            const cached = localStorage.getItem(STORAGE_KEY);
-            if (cached) {
-                const parsed: unknown = JSON.parse(cached);
-                // A response cached from an older backend shape would crash the
-                // dashboard on mount, so anything unrecognised is discarded.
-                if (isAnalysis(parsed)) {
-                    local = parsed;
-                    setAnalysis(parsed);
-                    setStatus("ready");
-                    setFileName(localStorage.getItem(`${STORAGE_KEY}:file`));
-                } else {
-                    localStorage.removeItem(STORAGE_KEY);
-                }
-            }
-        } catch (e) {
-            console.error("Discarding unreadable cached analysis:", e);
-            try { localStorage.removeItem(STORAGE_KEY) } catch {}
-        } finally {
-            setHydrated(true);
+        const local = readCached();
+        if (local) {
+            setAnalysis(local);
+            setStatus("ready");
+            setFileName(localStorage.getItem(`${STORAGE_KEY}:file`));
         }
+        setHydrated(true);
+    }, []);
 
-        // The account's stored scan follows the user across browsers.
-        if (authStatus !== "authenticated") return;
+    // The account's stored scan follows the user across browsers. Fetched once
+    // per page load, on the product's pages only (lib/account-sync.ts).
+    useEffect(() => {
+        if (!sync || synced.current) return;
+        synced.current = true;
         let cancelled = false;
+        let done = false;
         void (async () => {
             const remote = await GetAnalysis().catch(() => undefined);
+            done = true;
             if (cancelled || localIsFresh.current) return;
+            const local = readCached();
             if (remote && isAnalysis(remote.data)) {
                 setAnalysis(remote.data);
                 setStatus("ready");
@@ -88,8 +99,9 @@ export function AnalysisProvider({children}: { children: React.ReactNode }) {
                     .catch((e) => console.error("Migrating local analysis failed:", e));
             }
         })();
-        return () => { cancelled = true };
-    }, [authStatus]);
+        // Left before the answer came: the next product page asks again.
+        return () => { cancelled = true; if (!done) synced.current = false };
+    }, [sync]);
 
     const save = useCallback((next: JobRadarAnalysis, name: string) => {
         localIsFresh.current = true;

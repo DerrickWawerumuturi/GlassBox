@@ -30,8 +30,12 @@ export function reuseError(error: unknown): string {
     return error instanceof Error ? error.message : "Scan failed. Try again.";
 }
 
-/** The kept CV for the signed-in user; null when signed out or nothing is kept. */
-export function useLatestCV() {
+/**
+ * The kept CV for the signed-in user; null when signed out or nothing is kept.
+ * Read only while `when` is true: the CV sheet passes its open state, so a page
+ * that merely carries the sheet never wakes the API (lib/account-sync.ts).
+ */
+export function useLatestCV(when = true) {
     const {status} = useSession();
     const [latest, setLatest] = useState<LatestCV | null>(null);
     const [loaded, setLoaded] = useState(false);
@@ -47,8 +51,8 @@ export function useLatestCV() {
         }
     }, []);
     useEffect(() => {
-        if (status === "authenticated") void load();
+        if (status === "authenticated" && when) void load();
         else if (status === "unauthenticated") { setLatest(null); setLoaded(true); }
-    }, [status, load]);
+    }, [status, when, load]);
     return {latest, loaded, signedIn: status === "authenticated", reload: load, forget: () => setLatest(null)};
 }

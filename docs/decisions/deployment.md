@@ -18,7 +18,7 @@ The ACA configuration lives in the portal, not in this repository. Nothing here
 declares it, which is why the sizing fault in
 `docs/changelog/2026-08-25-container-oom.md` was invisible to code review.
 
-## Sizing: 2 vCPU / 4 GiB
+## Sizing: 1 vCPU / 2 GiB (2 vCPU / 4 GiB until 2026-10-19)
 
 Driven by memory, not by CPU. `main.py:7` triggers the module-level singleton at
 `JobRadarAgent.py:92`, and **uvicorn does not bind its port until that import
@@ -54,6 +54,12 @@ size has not been re-measured since; it is now generous, not tight.
 `decisions/embeddings.md`). Measured locally with the analysis stack loaded:
 490 MiB before, 251 MiB after (`docker stats`). The size is unchanged; whether
 to shrink it is the founder's call.
+
+**Since 2026-10-19** the app runs at 1 vCPU / 2 GiB (revision `--0000052`,
+founder's yes, `az containerapp update --cpu 1.0 --memory 2.0Gi`). 251 MiB fits
+eight times over. Half the price of every awake second; a scan's CPU bound
+parts may take longer, to be watched on the next scans. `deploy.yml` sets only
+the image, so a deploy keeps the size.
 
 Consumption locks CPU and memory to a fixed ratio (0.5→1Gi, 1→2Gi, 1.5→3Gi,
 2→4Gi), so memory cannot be bought without CPU. The 2 vCPU is wanted anyway —
@@ -115,7 +121,8 @@ Fix, frontend: every public page and the fetch now `revalidate` once a day
 still prerenders them all. Locally, after a build, visits to `/`, `/about`,
 `/market`, a market page, the sitemap and a share image made no API call. The
 browser's only call on public pages is `GET /health` when the CV sheet opens
-(`wakeApi`), which is the visitor asking to scan.
+(`wakeApi`), which is the visitor asking to scan. That held for signed out
+visitors only until 2026-10-19 (below).
 
 ### Public pages read the database, not the API (2026-10-12, GitHub issue #5)
 
@@ -190,6 +197,27 @@ The pull time on Azure after deploy is to be read from the same system logs
 
 Not changed, the founder's call: `cooldownPeriod` (300 s, the floor on every
 wake) and the 2 vCPU / 4 GiB size. Both are Azure settings, not code.
+
+### Signed in page loads stop waking the API (2026-10-19, GitHub issue #15)
+
+Measured from the container app's logs, 12 to 19 Oct: 59 wakes. 18 were
+scanners asking for `.env` and `.git/config` (all 404), 18 signed in page loads,
+13 the old market rebuilds (all on 12 Oct, none since), 10 health checks.
+Each wake lasts about 6 minutes: the 300 s cooldown after the last request.
+
+A signed in visit to any page, public ones included, asked for three things:
+`GET /analysis` (`AnalysisProvider`) and `GET /cv` (`CVProvider`), both in the
+root layout, and `GET /cv/latest` from the header's CV sheet (`useCvScan`), which
+every page carries. Now (`frontend/src/lib/account-sync.ts`):
+
+- The two stores fetch only on the product's pages (`/dashboard`, `/analysis`,
+  `/onboarding`), once per page load. Public pages paint from this browser's
+  copy, which the product pages and every scan keep current.
+- The CV sheet reads the kept CV when it opens, not when the page loads. Opening
+  it already wakes the API (`wakeApi`).
+
+Calls a day: fewer, never more. Each avoided wake saves about 6 awake minutes
+(about $0.02 at 1 vCPU) and about 0.025 Neon compute hours.
 
 ## Probes: startup and readiness, no liveness
 
