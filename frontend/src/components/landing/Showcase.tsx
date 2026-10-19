@@ -3,6 +3,7 @@
 import React, {useMemo, useState} from "react";
 import Link from "next/link";
 import {PeekGlyph} from "@/components/brand/Peek";
+import PhoneHandoff from "@/components/cv-ask/PhoneHandoff";
 
 import {Button} from "@/components/ui/button";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
@@ -124,6 +125,7 @@ export default function Showcase({look, reduce, onCv}: {look: Look; reduce: bool
                         <Button className={"peek peek-button"} onClick={onCv}><PeekGlyph />{I.cta}</Button>
                         <Button variant={"link"} className={"textlink"} nativeButton={false} render={<Link href={"/sign-in"} />}>{I.signUp}</Button>
                     </div>
+                    <PhoneHandoff where={"inside"} className={"mt-2"} />
                 </div>
             </div>
             <Tabs className={"app-tokens"} value={TABS[stepper.step]} onValueChange={(v) => stepper.jump(TABS.indexOf(v as typeof TABS[number]))}>

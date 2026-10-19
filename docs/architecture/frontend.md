@@ -85,7 +85,8 @@ src/
                                  CvSheet (bottom sheet on a phone, panel from 640px: idle, reading,
                                  result, error), CvPicker (choose or drop a PDF; it starts the scan;
                                  also on /dashboard/scan), useCvScan.tsx (the sheet and the scan, for
-                                 every public page, the header and /analysis)
+                                 every public page, the header and /analysis), PhoneHandoff (phone and
+                                 tablet only, by handoff.css: the line, Copy link, Send to yourself)
     stories/                     the visual stories: StoryParts (page, crumbs, source line, the week line, scope),
                                  StoryCvAsk, OpenMethod, share.tsx (share images), covers/ (a cover per
                                  story for the hub), and a folder per story (its CSS module, server parts, small client parts);
@@ -113,6 +114,8 @@ src/
     latest-cv.ts                 the kept CV skills: hook, dates, reuse errors, the privacy line
     cv-ask.ts                    the CV ask's words, which skills it asks about, k of N, the one ask rule,
                                  the sheet's states and honest reading steps, the file check (tested)
+    cv-handoff.ts                the phone handoff: its words, the link (utm_medium=phone-handoff), copy and
+                                 share, each counted as cv_handoff (tested)
     analytics.ts                 PostHog: the only events, property allowlists, scrub, visit source (decisions/analytics.md)
     seo.ts                       root metadata, publicPage() (canonical, og:url, share block), sitemap entries, home JSON-LD
     skill-bridges.ts             what Bridges reads: skill pairs, reach, most connected, roles

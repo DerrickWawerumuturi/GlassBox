@@ -17,7 +17,7 @@ import {Ask, ASK} from "@/lib/cv-ask";
  * place, "story_pick_a_side"), the scan the market page's name.
  */
 
-type MarketAsk = {ask: Ask; scanning: boolean; find: () => void};
+type MarketAsk = {ask: Ask; scanning: boolean; find: () => void; where: CtaPlace};
 const Ctx = createContext<MarketAsk | null>(null);
 
 function useMarketAsk(): MarketAsk {
@@ -30,7 +30,7 @@ export function MarketAskProvider({ask, page, where = page, children}: {ask: Ask
     const scan = useCvScan({from: page});
     const find = () => { track("cta_clicked", {where}); scan.open(ask); };
     return (
-        <Ctx.Provider value={{ask, scanning: scan.scanning, find}}>
+        <Ctx.Provider value={{ask, scanning: scan.scanning, find, where}}>
             {children}
             {scan.sheet}
         </Ctx.Provider>
@@ -47,13 +47,13 @@ export function MarketAskProvider({ask, page, where = page, children}: {ask: Ask
 export default function MarketCvAsk({className = "mt-20 items-start text-left sm:mt-28", note = ASK.doneNote, lead = false}: {
     className?: string; note?: string | null; lead?: boolean;
 }) {
-    const {ask, scanning, find} = useMarketAsk();
+    const {ask, scanning, find, where} = useMarketAsk();
     if (useHave() === null) {
-        if (!lead) return <CompareCv onClick={find} scanning={scanning} className={className} />;
+        if (!lead) return <CompareCv onClick={find} scanning={scanning} where={where} className={className} />;
         return (
             <div className={"mt-20 sm:mt-28"}>
                 <p className={"m-0 mb-4 max-w-[600px] font-read text-[18px] leading-[1.5] sm:text-[19px]"}>{ASK.lead(ask)}</p>
-                <CompareCv onClick={find} scanning={scanning} className={"items-start text-left"} />
+                <CompareCv onClick={find} scanning={scanning} where={where} className={"items-start text-left"} />
             </div>
         );
     }

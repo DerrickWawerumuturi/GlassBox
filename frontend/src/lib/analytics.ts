@@ -21,7 +21,7 @@ export type MarketPage = MarketName;
 // the closing CV card of /product, /about. A market page's button says the page's name; a story's says "story_" and
 // its address ("story_pick_a_side").
 const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years", "market", "about", ...STORY_SLUGS.map(storyPlace)] as const;
-/** Where a "Compare your CV" or "Try it out" click came from. */
+/** Where a "Compare your CV" or "Try it out" click, or a phone's cv_handoff (lib/cv-handoff.ts), came from. */
 export type CtaPlace = (typeof CTA_PLACES)[number] | MarketPage;
 /**
  * A story's interactions, by a short name: the first one a reader uses in a page view is story_interacted
@@ -50,6 +50,7 @@ type Events = {
     cta_clicked: {where: CtaPlace};
     fact_copied: {page: MarketPage};
     story_interacted: {story: StorySlug; kind: StoryKind};
+    cv_handoff: {how: "copy" | "share"; where: CtaPlace};
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
@@ -63,6 +64,7 @@ const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
     cta_clicked: ["where"],
     fact_copied: ["page"],
     story_interacted: ["story", "kind"],
+    cv_handoff: ["how", "where"],
 };
 
 export const DEFAULT_HOST = "https://us.i.posthog.com";
@@ -75,6 +77,7 @@ const NAMED: Partial<Record<keyof Events, Record<string, readonly string[]>>> = 
     cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES]},
     story_interacted: {story: STORY_SLUGS, kind: STORY_KINDS},
     scan_failed: {stage: ["upload", "reuse"], reason: FAIL_REASONS}, file_refused: {reason: REFUSALS},
+    cv_handoff: {how: ["copy", "share"], where: [...CTA_PLACES, ...MARKET_NAMES]},
 };
 
 /** Only an event's allowed properties survive, and a page name only when it is one we know; anything else is dropped. */

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {ArchiveIcon, ArrowRightIcon, ScanTextIcon, Trash2Icon} from "lucide-react";
 
 import {PeekGlyph} from "@/components/brand/Peek";
+import PhoneHandoff from "@/components/cv-ask/PhoneHandoff";
 import {Button} from "@/components/ui/button";
 import {LookFamily, normSkill} from "@/lib/landing/look";
 import {COPY} from "./copy";
@@ -14,7 +15,7 @@ const ICONS = [ScanTextIcon, ArchiveIcon, Trash2Icon];
 
 export interface PreviewAsk {key: string; name: string; n: number}
 
-/** The closing CV section: the ask ("Find out"), what we keep, and the current ad's asks marked once a CV is in. */
+/** The closing CV section: the ask ("Find out"), on a phone the link to take to a laptop, what we keep, and the current ad's asks marked once a CV is in. */
 export default function CvSection({asks, data, have, scanning, onCv}: {
     asks: PreviewAsk[]; data: LookFamily; have: Set<string> | null; scanning: boolean; onCv: () => void;
 }) {
@@ -42,6 +43,7 @@ export default function CvSection({asks, data, have, scanning, onCv}: {
                         </>
                     )}
                 </div>
+                {!have && !scanning && <PhoneHandoff where={"closing"} className={"mt-3"} />}
                 {!have && <p className={"lead"}>{V.lead}</p>}
                 <ul className={"trustrow"}>
                     {V.trust.map((t, i) => {

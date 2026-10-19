@@ -37,6 +37,7 @@ changed with `NEXT_PUBLIC_POSTHOG_HOST`.
 | `cta_clicked` | `where`: `hero`, `inside` or `closing` (the landing page's CV asks; `hero` since 2026-10-12), `header` (Try it out in the desktop Product menu, 12 to 15 Oct 2026: the menu became a plain link) or `menu` (the same in the phone menu, since 2026-10-12), `product` (/product) or `about` (/about, since 2026-10-15), a market page's name (`entry-level-software`), `years` (the years of experience page, since 2026-10-12), a story's place (`story_pick_a_side`, `story_the_lobby`, `story_contents_may_vary`, `story_peak_python`, `story_within_eleven_jobs`) or `market` (the /market grid's CV card), both since 2026-10-15. A story's scan events carry its market page's name in `from`; its visit source rides on the pageview, as on the market pages. Retired 12 Oct with the question ask: `count`, `sticky`, and the `ask` property (`card` or `sticky`) |
 | `fact_copied` | `page`: the market page whose fact was copied (`entry-level-software`); never the sentence |
 | `story_interacted` | `story`: the story's address (`pick-a-side`, `the-lobby`, `contents-may-vary`, `peak-python`, `within-eleven-jobs`); `kind`: the first interaction the reader used, by a short name: `pick_side`, `scratch`, `reveal_all` (Pick a side), `lift`, `all_floors` (the lobby), `open_box`, `ingredient`, `show_none` (Contents may vary), `arm`, `peak_list` (Peak Python), `crane`, `fly_over` (Within eleven jobs). Once per page view (`storyInteracted` in `lib/analytics.ts`), so it counts readers who play, not taps; never a guess, a pick or a skill. Not sent when the box opens by itself as it scrolls into view. Since 2026-10-15. A story's page view carries the visit's `ref_domain` and `utm_*` the way every page does (the provider sits in the root layout) |
+| `cv_handoff` | `how`: `copy` (the link reached the clipboard) or `share` (the phone's share sheet sent it; a closed sheet sends nothing); `where`: the same place names as `cta_clicked`. The phone handoff beside a CV button on a phone or tablet (`lib/cv-handoff.ts`, `decisions/cv-ask.md`). Never the link, the page's query or where it was sent. Since 2026-10-16. The laptop visit it starts carries `utm_medium=phone-handoff` on its first pageview, with the original `utm_source` kept (see below) |
 | `signed_up` | none; sent once, on the response that created the account (see below) |
 
 PostHog adds its own context: browser, OS, device type, screen size,
@@ -56,6 +57,10 @@ from, and nothing more. The first pageview of a page load carries:
 - `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, each
   trimmed to 100 characters. A value that looks like an address or an email
   (`://`, `?`, `&`, `=`, `#`, `@`) is dropped.
+- `utm_medium=phone-handoff` (since 2026-10-16) marks a visit that started
+  from a link a phone visitor copied or shared to themselves (`cv_handoff`).
+  The link keeps the visit's `utm_source`, so a LinkedIn visit taken to a
+  laptop reads `linkedin` + `phone-handoff`.
 
 `visitSource` builds them; `scrub` checks them again before sending:
 `ref_domain` must be a bare hostname and every utm value passes the same rule,

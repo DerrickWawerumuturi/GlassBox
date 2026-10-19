@@ -22,7 +22,7 @@ export default function HubCv() {
         <li className={`${s.card} ${s.cvcard}`} data-kind={"cv"}>
             <div className={s.cvpic} dangerouslySetInnerHTML={{__html: cvPicture()}} />
             <h2 className={s.cvq}>{CV_QUESTION}</h2>
-            <CompareCv onClick={() => { track("cta_clicked", {where: "market"}); scan.open(); }} scanning={scan.scanning} />
+            <CompareCv onClick={() => { track("cta_clicked", {where: "market"}); scan.open(); }} scanning={scan.scanning} where={"market"} />
             <p className={s.fine}>Your file is deleted after it&apos;s read.</p>
             {scan.sheet}
         </li>

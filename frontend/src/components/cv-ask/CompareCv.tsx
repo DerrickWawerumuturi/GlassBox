@@ -3,7 +3,9 @@
 import React from "react";
 
 import {PeekGlyph} from "@/components/brand/Peek";
+import PhoneHandoff from "@/components/cv-ask/PhoneHandoff";
 import {Button} from "@/components/ui/button";
+import type {CtaPlace} from "@/lib/analytics";
 import {ASK} from "@/lib/cv-ask";
 import {cn} from "@/lib/utils";
 
@@ -15,15 +17,18 @@ import {cn} from "@/lib/utils";
  * one status line says so. White text on the orange in both themes (founder,
  * 12 Oct); landing.css lets it past the landing's `color: inherit`. The look
  * is the peek family's (founder's pick, 13 Oct, issue #6): brand/Peek.tsx.
+ * On a phone or tablet the link to take to a laptop sits under it
+ * (PhoneHandoff), counted with `where`, the same place as the click.
  */
-export default function CompareCv({onClick, scanning, className}: {onClick: () => void; scanning: boolean; className?: string}) {
+export default function CompareCv({onClick, scanning, where, className}: {onClick: () => void; scanning: boolean; where: CtaPlace; className?: string}) {
     return (
         <div className={cn("flex flex-col items-center gap-2 text-center", className)}>
             <Button className={"peek peek-button cv-compare text-white"} onClick={onClick} disabled={scanning}>
                 <PeekGlyph />
                 {ASK.compare}
             </Button>
-            {scanning && <p className={"m-0 font-mono text-[12px] text-muted-foreground"} role={"status"}>{ASK.reading}</p>}
+            {scanning ? <p className={"m-0 font-mono text-[12px] text-muted-foreground"} role={"status"}>{ASK.reading}</p>
+                : <PhoneHandoff where={where} />}
         </div>
     );
 }

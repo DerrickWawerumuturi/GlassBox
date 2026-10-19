@@ -6,7 +6,8 @@ CV" button per page (founder; see "One button, no question" below). **Founder's 
 question"). **Code:** `frontend/src/lib/cv-ask.ts` (words, which skills, the
 count, the scan's states and steps; tested in `cv-ask.test.ts`),
 `frontend/src/components/cv-ask/` (`CompareCv` the button, `AskCard` the
-answer, the sheet, the picker, the scan hook).
+answer, the sheet, the picker, the scan hook, `PhoneHandoff` the phone's
+link to a laptop; see the last section).
 
 ## What changed
 
@@ -203,3 +204,42 @@ over 2 to 3 weeks, read in PostHog as home `$pageview` → `cta_clicked` (by
 new `file_refused` and `scan_failed.reason` to see where people drop between
 the click and the result. If the sample is still too small at 3 weeks, we say
 so rather than call it.
+
+## Phone visitors: take the link to your laptop (16 Oct 2026)
+
+**Why.** In PostHog's two weeks to 15 Oct, phone and tablet visitors did not
+click "Compare your CV" at all, while desktop visitors clicked and finished
+scans. A CV file usually lives on a laptop, and the LinkedIn post and the
+story launch send mostly phone visitors. The founder approved a small phone
+path on 16 Oct.
+
+**What a phone or tablet visitor sees** under every CV button that has not
+been used yet (the landing's hero, "Inside Glassbox" and closing section, a
+market page, the years page, each story, the /market grid's card, the close
+of /product and /about):
+
+- one line: "Your CV is probably on your laptop. Comparing it there takes a minute."
+- "Copy link", and "Send to yourself" where the phone has a share sheet
+  (`navigator.share`). "Link copied" confirms in a live region; a failed copy
+  says "That didn't copy. Use the address bar instead."
+
+The button above still works for a CV on the phone, and the line goes while a
+scan runs. Nothing is asked for: no email, no phone number. The link is this
+page's address with its query kept (so `utm_source`), `utm_medium` set to
+`phone-handoff` and no hash (`handoffUrl`).
+
+**Phone or tablet, decided by CSS.** `components/cv-ask/handoff.css` shows the
+block only under `(pointer: coarse) and (max-width: 1024px)`. The server sends
+it to everyone and a desktop never displays it, so the first paint is right
+with no layout shift and no user agent guess. A narrow desktop window (fine
+pointer) stays as before. "Send to yourself" is in the server HTML and hides
+after hydration on the few phones without a share sheet.
+
+**Not on it:** the header and phone menu's "Try it out", the example banner on
+/analysis and the dashboard's own scan page. They are reached after a visitor
+already chose to look, and have no room for a line.
+
+**Counted:** `cv_handoff` with `how` (`copy` or `share`) and `where` (the same
+place as the button's `cta_clicked`), only when the link really left the page
+(`decisions/analytics.md`). Read it with the laptop visits that follow:
+`$pageview` with `utm_medium = phone-handoff`, by `utm_source`.

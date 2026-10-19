@@ -15,7 +15,11 @@ import {COPY} from "./copy";
 import Hero from "./Hero";
 
 const ask: Ask = {skills: Array.from({length: 10}, (_, i) => ({key: `s${i}`, name: `S${i}`})), what: "skills backend jobs ask for most", jobs: 304, subject: "backend"};
-const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el).replace(/<!-- -->/g, "").replace(/&#x27;/g, "'");
+// The phone handoff under the button (founder, 16 Oct 2026) shows only on a phone or tablet (cv-ask/handoff.css, tested in
+// lib/cv-handoff.test.ts), so the desktop's "nothing under it" is checked without it.
+const HANDOFF = /<div class="cv-handoff[^"]*">[\s\S]*?role="status"[^>]*>[^<]*<\/span><\/div>/g;
+const raw = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el).replace(/<!-- -->/g, "").replace(/&#x27;/g, "'");
+const html = (el: ReturnType<typeof createElement>) => raw(el).replace(HANDOFF, "");
 const hero = (a: Ask | null) => html(createElement(Hero, {total: "9,722", ask: a, scanning: false, onFind: () => {}}));
 // A button's label, past the peek glyph that may sit before it.
 const buttons = (h: string) => [...h.matchAll(/<button[^>]*>(?:<svg[^>]*>[\s\S]*?<\/svg>)?([^<]*)<\/button>/g)].map((m) => m[1]);
@@ -31,6 +35,7 @@ describe("the hero", () => {
         expect(h).toContain(COPY.hero.lede);
         expect(buttons(h)).toEqual(["Compare your CV"]);
         expect(nothingUnder(h)).toBe(true);
+        expect(raw(createElement(Hero, {total: "9,722", ask, scanning: false, onFind: () => {}}))).toContain(`<div class="cv-handoff">`);
         expect(peeks(h)).toBe(true);
         expect(h).not.toContain("Free. No account needed.");
         expect(h).not.toMatch(/\?\s*of\b/);
