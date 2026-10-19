@@ -114,13 +114,25 @@ describe("the sentences the numbers must bear out", () => {
         expect(by("senior")).toEqual(["Distributed systems", "Kubernetes", "AWS", "TypeScript", "Go"]);
         expect(by("draw")).toEqual(["Java"]);
     });
+
+    it("'Python is the most named of the seven languages on both sides'", () => {
+        const langs = PICK.charted.languages.map(card);
+        const top = (side: "e" | "s") => [...langs].sort((a, b) => b[side].share - a[side].share)[0].key;
+        expect([top("e"), top("s")]).toEqual([PICK.beats.first, PICK.beats.first]);
+    });
+
+    it("'they lean towards languages, and senior jobs lean towards systems'", () => {
+        // Most charted languages lean to entry level; every systems card (the turn) leans to senior.
+        expect(PICK.charted.leanEntry * 2).toBeGreaterThan(PICK.charted.languages.length);
+        for (const k of PICK.beats.turn) expect(lean(card(k))).toBe("senior");
+    });
 });
 
 describe("the story as rendered", () => {
     const h = html();
 
     it("says the week it counts near the top, fixed to it, and links the live page", () => {
-        const top = h.slice(0, h.indexOf("The first card."));
+        const top = h.slice(0, h.indexOf("Start with the favourite."));
         expect(top).toContain("By the Glassbox team · the week of 12 October 2026");
         expect(top).toContain("This story keeps to one week, 12 October 2026.");
         expect(top).toMatch(/<a href="\/market\/entry-level-software">The entry level software page<\/a> starts a new count every Monday/);
@@ -145,6 +157,16 @@ describe("the story as rendered", () => {
         expect(h).toContain("5 of the 11 cards lean to entry level: Python, C++, Git, JavaScript and C. 5 lean to senior: TypeScript, Go, distributed systems, Kubernetes and AWS. Java is a point apart.");
         expect(h).toContain("five are named more often in entry level software jobs and five in senior ones. One is a point apart.");
         expect(h).toContain("306 of the 328 software jobs with an early career title state no number of years.");
+        // The rewrite of 19 Oct 2026: the reader's question first, what the pattern is, what it can't show.
+        expect(h).toContain("Do entry level jobs just ask for less than senior ones? Eleven cards to find out.");
+        expect(h).toContain("238 of the 561 entry level jobs are internships.");
+        expect(h).toContain("Python is the most named of the seven languages on both sides.");
+        expect(h).toContain("The jobs show that it leans. They don't say why.");
+        expect(h).toContain("Here the languages split: JavaScript and C lean to entry level, TypeScript and Go to senior, and Java is a point apart.");
+        expect(h).toContain("They lean towards languages, and senior jobs lean towards systems.");
+        expect(h).toContain("or why C++ leans to entry level.");
+        expect(h).toContain("So, which side have you been preparing for?");
+        expect(h).not.toMatch(/It is a different list\.|entry level list|senior list/);
     });
 
     it("ends with the question, the CV button and how we counted, scope included", () => {

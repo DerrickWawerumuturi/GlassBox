@@ -4,15 +4,15 @@ import Link from "next/link";
 import {fmt, levelLabel, weekDate, weekStart} from "@/lib/market-page";
 import {MARKET_NAMES, MARKET_PAGES, MarketBody, MarketName, marketPath} from "@/lib/market-pages";
 import {citeLine, Ctx, readLine, topic} from "@/lib/market-story";
-import {storyFor} from "@/lib/stories";
+import {storiesFor} from "@/lib/stories";
 import {storyPath, storyWeek} from "@/lib/stories/story";
 import {SITE_URL} from "@/lib/site";
 
 /*
  * The end of a market page and its rail: how we counted, the jobs in a fold
  * and a cite line; then "This page counts" and "Also this week", which sits
- * beside the article on a desktop and under it on a phone. The page's story,
- * one week's count told visually (lib/stories), leads "Also this week".
+ * beside the article on a desktop and under it on a phone. The page's stories,
+ * each one week's count told visually (lib/stories), lead "Also this week".
  */
 
 export const HOW = {
@@ -71,7 +71,7 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
         ...(page.internships ? [["Internships", fmt(page.internships)] as [string, string]] : []),
         ["Remote", fmt(page.remote)], ["Week of", day(weekStart(page))],
     ];
-    const more = MARKET_NAMES.filter((n) => n !== info.name), story = storyFor(info.name);
+    const more = MARKET_NAMES.filter((n) => n !== info.name), stories = storiesFor(info.name);
     const h3 = "m-0 mb-1.5 font-heading text-[14px] font-bold uppercase tracking-[0.06em]";
     const link = "font-heading text-[16px] font-semibold leading-[1.3] no-underline hover:underline hover:underline-offset-[3px]";
     const item = "grid grid-cols-[30px_1fr] gap-3 border-b border-border py-[13px] before:grid before:size-[26px] before:place-items-center before:rounded-full before:border-[1.5px] before:border-foreground before:font-mono before:text-[12px] before:font-semibold before:content-[counter(m)] [counter-increment:m]";
@@ -94,8 +94,8 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
                 <nav aria-label={"Also this week"} className={"mt-[30px] border-t-2 border-foreground pt-3"}>
                     <h3 className={h3}>Also this week</h3>
                     <ol className={"m-0 list-none p-0 [counter-reset:m]"}>
-                        {story && <li className={item}><span><Link href={storyPath(story)} className={link}>{story.title}</Link>
-                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>a story fixed to the week of {storyWeek(story)}</small></span></li>}
+                        {stories.map((story) => <li key={story.slug} className={item}><span><Link href={storyPath(story)} className={link}>{story.title}</Link>
+                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>a story fixed to the week of {storyWeek(story)}</small></span></li>)}
                         {more.map((n) => (
                             <li key={n} className={item}>
                                 <span>

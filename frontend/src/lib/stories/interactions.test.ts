@@ -22,15 +22,18 @@ describe("story_interacted", () => {
             "contents-may-vary show_none"]);
         expect(calls("peak-python/Range.tsx")).toEqual(["peak-python arm", "peak-python peak_list"]);
         expect(calls("within-eleven-jobs/Yard.tsx")).toEqual(["within-eleven-jobs crane", "within-eleven-jobs fly_over"]);
+        expect(calls("is-entry-level-dead/Guess.tsx")).toEqual(["is-entry-level-dead guess", "is-entry-level-dead show_count"]);
     });
 
     it("uses only kinds analytics knows", () => {
-        const files = ["pick-a-side/Cards.tsx", "the-lobby/Lift.tsx", "contents-may-vary/Box.tsx", "peak-python/Range.tsx", "within-eleven-jobs/Yard.tsx"];
+        const files = ["pick-a-side/Cards.tsx", "the-lobby/Lift.tsx", "contents-may-vary/Box.tsx", "peak-python/Range.tsx", "within-eleven-jobs/Yard.tsx", "is-entry-level-dead/Guess.tsx"];
         for (const k of files.flatMap(calls).map((c) => c.split(" ")[1])) expect(STORY_KINDS as readonly string[]).toContain(k);
     });
 
     it("never fires on its own: the box opening as it scrolls into view is not a reader's use", () => {
         // Counter opens the box from an IntersectionObserver; only the buttons report.
         expect(src("contents-may-vary/Box.tsx")).not.toMatch(/const open = useCallback\(\(\) => \{[^}]*storyInteracted/);
+        // The guess shows our count when the ladder scrolls into view; only the button and the keys report it.
+        expect(src("is-entry-level-dead/Guess.tsx")).toMatch(/new IntersectionObserver\(\(es\) => \{ if \(es\.some\(\(e\) => e\.isIntersecting\)\) setShown\(true\); \}/);
     });
 });

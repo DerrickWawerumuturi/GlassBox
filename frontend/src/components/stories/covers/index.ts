@@ -1,4 +1,5 @@
 import {contentsMayVaryCover} from "@/components/stories/covers/contents-may-vary";
+import {isEntryLevelDeadCover} from "@/components/stories/covers/is-entry-level-dead";
 import {peakPythonCover} from "@/components/stories/covers/peak-python";
 import {pickASideCover} from "@/components/stories/covers/pick-a-side";
 import {theLobbyCover} from "@/components/stories/covers/the-lobby";
@@ -7,6 +8,7 @@ import type {StorySlug} from "@/lib/stories/story";
 
 /** Each story's square cover for the market hub, by its address (each drawn from its story's data module). */
 export const STORY_COVERS: Record<StorySlug, () => string> = {
+    "is-entry-level-dead": isEntryLevelDeadCover,
     "pick-a-side": pickASideCover,
     "the-lobby": theLobbyCover,
     "contents-may-vary": contentsMayVaryCover,

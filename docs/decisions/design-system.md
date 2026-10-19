@@ -408,3 +408,24 @@ no joker.
   (spades the seven charted languages, clubs the other four), never the lean, and red
   suits would put red on data. Orange only acts: no orange text on the cloth, so the
   C++ pen note sits on the page beside its table. Lime is the C++ card's court alone.
+
+## Is entry level dead?: drawn people with photo heads (2026-10-19)
+
+Founder, 19 Oct 2026: the approved direction A (drawn people with photo heads, The
+Pudding's NBA piece) and Pexels heads; no paper shapes behind anyone in dark mode.
+
+- **The crowd** is tiny naive marker people: wobbly ink lines from a seeded random,
+  flat pastel shirts, five skin tones, six hairs. One drawn person is 10 jobs on a wide
+  screen and 25 on a phone, rounded, said on every picture. Drawn on one canvas from
+  sprite sheets so 454 people tween at 60fps; the SVG people in the guess and the
+  characters share the same geometry (`components/stories/is-entry-level-dead/marker.ts`).
+- **Featured characters** are cut out Pexels photo heads (WebP, 480 px) on small drawn
+  bodies, clipped to an ellipse, bobbing 2.5 degrees about the chin by CSS (still under
+  reduced motion). Credited by name on the page and in
+  `frontend/public/stories/is-entry-level-dead/heads/CREDITS.md`. None in the guess.
+- **Colour roles hold.** Lime once per picture: our count in the guess, then the
+  internships and their quoted titles' slips. Orange rings the reader's picks, writes
+  the Caveat notes and acts (links, the CV button); never a data mark. The ladder is
+  flat wood; the weekly points are a quiet blue, with no shaded range (we have none).
+- **Dark.** The warm charcoal ground; people keep their fills and stand straight on it,
+  no backing shapes; only the marker ink goes from `#1a1a1a` to `#4a443b`.

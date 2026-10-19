@@ -1,0 +1,163 @@
+/*
+ * Is entry level dead? One world: drawn people on a naive wooden ladder on paper (ported from
+ * docs/local/editorial-sprint/stories/entry-level-dead/story.css). Hanken Grotesk for what we write,
+ * Caveat for the pen notes. The crowd is tiny marker people with flat pastel shirts; the characters
+ * are photo heads on small drawn bodies. Lime only for our count in the guess and the internships;
+ * orange only acts (links, the CV button), rings the reader's picks and writes the notes. Dark is the
+ * warm charcoal: the people keep their fills and stand straight on it, no paper shapes behind them
+ * (founder, 19 Oct); only the marker ink is a little lighter, so outlines still read.
+ */
+.root {
+  --page: var(--paper); --rule: var(--line); --card: #fffdf9; --pen: #e0471f;
+  --point: #4a6fa5; --point-edge: #34527e; --wood-a: #d39a5f; --wood-b: #8a5a2b; --glow: #ffe9a3; --shadow: rgba(60, 45, 20, .28);
+  --marker: #1a1a1a; --slip: #fffdf9; --slip-ink: #b9b2a7; --string: #6b6257; --peg: #d39a5f;
+  position: relative; isolation: isolate; overflow-x: clip;
+  background: var(--page); color: var(--ink); font: 400 20px/1.6 var(--essay); -webkit-font-smoothing: antialiased;
+}
+:global(.dark) .root {
+  --page: var(--charcoal); --ink: var(--charcoal-ink); --muted: var(--charcoal-muted); --rule: #4a463f; --card: #2a2723; --pen: #ff7a4d;
+  --point: #8fb0e0; --point-edge: #c4d6f1; --wood-a: #b57d45; --wood-b: #6a4320; --glow: #5c4b1a; --shadow: rgba(0, 0, 0, .6);
+  --marker: #4a443b; --slip: #f7f3ef; --string: #c9c0b3;
+}
+.crumbs { color: var(--muted); }
+.root p { margin: 0 0 1.1em; }
+.root a { color: var(--orange); text-underline-offset: 3px; }
+.col { max-width: 600px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.root h1 { font: 700 clamp(40px, 6vw, 64px)/1.02 var(--essay); letter-spacing: -.025em; margin: 0 0 22px; }
+.root h2 { font: 650 clamp(28px, 3.4vw, 38px)/1.15 var(--essay); letter-spacing: -.015em; margin: 0 0 18px; }
+.root p.dek { font-size: clamp(20px, 2.1vw, 23px); line-height: 1.5; color: var(--muted); max-width: 24em; margin-left: auto; margin-right: auto; }
+.root p.by { font-size: 15px; color: var(--muted); margin-top: 24px; }
+.root p.live { font-size: 15px; color: var(--muted); }
+.root p.lead { font-size: clamp(21px, 2.3vw, 24px); line-height: 1.5; }
+.note { font: 500 24px/1.1 var(--hand); color: var(--pen); margin: 0; }
+.root .cap { font: italic 400 15px/1.55 var(--essay); color: var(--muted); margin: 16px 0 0; max-width: 46em; }
+.root .src { font: 400 12.5px/1.5 var(--mono); color: var(--muted); margin: 6px 0 0; }
+.root .src a { color: inherit; }
+.root p.hint { font-size: 16.5px; color: var(--muted); }
+.root p.aside { font-size: 17px; color: var(--muted); }
+.root p.srcline { font-size: 13.5px; line-height: 1.45; color: var(--muted); margin-top: -.6em; }
+.root .srcline a { color: var(--muted); }
+.hero { margin-top: 56px; text-align: center; }
+
+/* 0. The pinned ad */
+.open { margin-top: 64px; }
+.pinwrap { margin: 0 auto 44px; max-width: 600px; padding: 0 22px; display: flex; flex-direction: column; align-items: center; }
+.ad { position: relative; width: min(100%, 380px); background: var(--card); padding: 34px 28px 22px; transform: rotate(-1.6deg);
+  box-shadow: 0 24px 40px -26px var(--shadow), 0 1px 0 var(--shadow); border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent); }
+.pin { position: absolute; left: 50%; top: -22px; width: 30px; height: 45px; margin-left: -15px; transform: rotate(8deg); filter: drop-shadow(0 3px 2px var(--shadow)); }
+.root .ad p { margin: 0; }
+.root p.adKick { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+.root p.adTitle { font: 700 27px/1.1 var(--essay); letter-spacing: -.02em; margin: 0 0 6px; }
+.root p.adCo { font: 500 17px var(--essay); margin: 0 0 20px; }
+.adLines { display: flex; flex-direction: column; gap: 9px; }
+.adLines i { display: block; height: 7px; border-radius: 4px; background: color-mix(in oklab, var(--ink) 12%, var(--card)); }
+.adLines i.gap { height: 4px; background: none; }
+.root p.adFoot { font: italic 400 12.5px var(--essay); color: var(--muted); margin: 22px 0 0; }
+
+/* 1. Guess first: 100 drawn people under one slider; picks get a pen ring; our count raises a hand in lime */
+.guess { margin-top: 140px; }
+.guessfig { margin: 36px auto 0; max-width: 980px; padding: 0 22px; }
+.gwrap { width: min(100%, 440px); margin: 0 auto; }
+.root p.glab { font: 600 15px var(--essay); color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; gap: 10px; }
+.glab b { color: var(--ink); font-weight: 700; }
+.grid { position: relative; aspect-ratio: 1; touch-action: pan-y; /* a vertical swipe still scrolls the page on a phone */ cursor: pointer; user-select: none; -webkit-user-select: none; border-radius: 8px; }
+.grid svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.grid[aria-disabled="true"] { cursor: default; }
+.root p.cue { margin: 14px 0 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 44px; }
+.ghost { appearance: none; font: 600 15px var(--essay); background: transparent; color: var(--ink); border: 1.5px solid var(--ink); border-radius: 12px; padding: 0 18px; min-height: 44px; cursor: pointer; }
+.ghost:hover { background: color-mix(in oklab, var(--ink) 7%, transparent); }
+.yousaid { margin-left: auto; transform: rotate(-2deg); }
+.root p.reveal { margin: 18px 0 0; min-height: 1.4em; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; outline: none; }
+.root p.reveal[hidden] { display: none; }
+.reveal .big { font: 700 clamp(56px, 8vw, 88px)/.9 var(--essay); letter-spacing: -.04em; }
+.reveal span:not(.big) { font-size: 19px; max-width: 30em; line-height: 1.45; }
+.shown :global(.eld-lime) { animation: pop .45s cubic-bezier(.2, .9, .3, 1.3) backwards; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* The drawings: marker ink and flat fills, the same in both themes */
+.root :global(.eld-line) { stroke: var(--marker); stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; fill: none; }
+.root :global(.eld-line.eld-thin) { stroke-width: 1.1; }
+.root :global(.eld-feat .eld-line) { stroke-width: 1.8; }
+.root :global(.eld-feat .eld-line.eld-thin) { stroke-width: 1.5; }
+.root :global(.eld-tiny .eld-line) { stroke-width: 1; }
+.root :global(.eld-tiny .eld-line.eld-thin) { stroke-width: .8; }
+.root :global(.eld-pack) { fill: #f7f3ef; stroke: var(--marker); stroke-width: 1; stroke-linejoin: round; }
+.root :global(.eld-tiny.eld-lime .eld-pack) { fill: #fffdf9; }
+.root :global(.eld-ring) { fill: none; stroke: var(--pen); stroke-width: 2.2; stroke-linecap: round; }
+.root :global(.eld-slip) { fill: var(--slip); stroke-width: 1; }
+.root :global(.eld-slip.eld-lime) { fill: #d7ee4c; }
+.root :global(.eld-peg) { fill: var(--peg); stroke: var(--marker); stroke-width: .9; stroke-linejoin: round; }
+.root :global(.eld-string) { fill: none; stroke: var(--string); stroke-width: 1.1; }
+.root :global(text.eld-hand) { font-family: var(--hand); font-weight: 500; fill: #21201c; }
+.root :global(text.eld-mute) { fill: #56641e; }
+/* A head bobs 2.5 degrees about its chin, the group's own origin; reduced motion stills it (story.module.css). */
+.root :global(.eld-bob) { transform-origin: 0 0; animation: bob 3.6s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+
+/* 2 to 8. The ladder: steps on the left, one sticky frame on the right */
+.scrolly { margin: 150px auto 0; max-width: 1160px; padding: 0 22px; display: grid; grid-template-columns: minmax(280px, 390px) minmax(0, 640px); gap: 56px; justify-content: center; align-items: start; }
+.steps { padding-bottom: 20vh; }
+.step { min-height: 82vh; display: flex; flex-direction: column; justify-content: center; padding: 10px 0; font-size: 19.5px; opacity: .38; transition: opacity .4s; }
+.step.on { opacity: 1; }
+.step p { max-width: 24em; }
+.perPhone { display: none; }
+.stage { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+.frame { position: relative; width: min(100%, calc((100vh - 72px) * 640 / 680)); aspect-ratio: 640 / 680; margin: 0 auto; }
+.frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pframe, .psrc { display: none; }
+.stageSrc { text-align: center; }
+.ov { position: absolute; opacity: 0; visibility: hidden; transition: opacity .5s, visibility 0s .5s; }
+.ov.show { opacity: 1; visibility: visible; transition: opacity .5s .4s, visibility 0s; }
+.chars { inset: 0; pointer-events: none; }
+.chars svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.linkcard { left: 10%; right: 10%; top: 17%; background: var(--card); border: 1.5px solid var(--ink); border-radius: 14px; padding: 18px 22px 16px; box-shadow: 0 16px 30px -22px var(--shadow); }
+.root .linkcard p { margin: 0; }
+.root p.lcKick { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.root p.lcTitle { font: 700 26px/1.1 var(--essay); letter-spacing: -.02em; margin: 6px 0 4px; }
+.lcTitle a { text-decoration-thickness: 2px; }
+.root p.lcSub { font-size: 15.5px; line-height: 1.4; color: var(--muted); }
+
+/* 9. Ending, what we can't see, the CV ask with one character beside it */
+.end { margin-top: 120px; }
+.cta { margin: 44px 0 24px; padding: 26px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.endchar { width: 96px; flex: none; }
+.endchar svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ask { flex: 1 1 14em; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.root .ask p { margin: 0; font-weight: 500; max-width: 18em; flex: 1 1 14em; }
+.fold { margin: 48px 0 0; padding: 22px 24px 8px; background: var(--card); border: 1px solid var(--rule); border-radius: 4px; transform: rotate(.4deg); box-shadow: 0 18px 30px -26px var(--shadow); }
+.root .fold h3 { font: 700 18px var(--essay); margin: 0 0 12px; }
+.fold ul { margin: 0; padding: 0 0 0 20px; list-style: disc; font-size: 16px; line-height: 1.55; color: var(--muted); }
+.fold li { margin: 0 0 10px; }
+.method { margin: 40px 0 0; border-top: 1px solid var(--rule); padding-top: 14px; font-size: 16px; line-height: 1.6; color: var(--muted); }
+.method summary { cursor: pointer; font: 700 18px var(--essay); color: var(--ink); }
+.method[open] summary { margin-bottom: 12px; }
+.root p.credit { font-size: 13px; color: var(--muted); margin: 40px 0 120px; }
+.root .credit a { color: inherit; }
+
+/* Phone: the steps stack, one still frame under each step's words, no sticky stepper. */
+@media (max-width: 760px) {
+  .root { font-size: 18px; }
+  .hero { margin-top: 36px; }
+  .open { margin-top: 48px; }
+  .guess { margin-top: 100px; }
+  .reveal .big { font-size: 56px; }
+  .scrolly { margin-top: 110px; display: block; padding: 0 16px; }
+  .steps { padding-bottom: 0; }
+  .step { min-height: 0; opacity: 1; display: block; padding: 0; margin-top: 64px; font-size: 18px; }
+  .step:first-child { margin-top: 0; }
+  .step p { max-width: none; }
+  .perWide { display: none; }
+  .perPhone { display: inline; }
+  .stage { display: none; }
+  .pframe { display: block; width: 100%; margin: 20px 0 0; }
+  .psrc { display: block; }
+  .psrc .src { margin-top: 8px; }
+  .linkcard { left: 6%; right: 6%; padding: 12px 14px 10px; }
+  .root p.lcTitle { font-size: 20px; }
+  .root p.lcSub { font-size: 13px; }
+  .root p.lcKick { font-size: 10px; }
+  .end { margin-top: 90px; }
+  .cta { align-items: flex-start; }
+  .root .ask p { flex-basis: 100%; }
+  .fold { padding: 18px 16px 6px; }
+}

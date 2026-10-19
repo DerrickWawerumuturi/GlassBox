@@ -77,7 +77,7 @@ function Seat({c, delay}: {c: CardData; delay: number}) {
     const said = open ? outcome(c, g) : null;
     const scratch = (
         <canvas ref={canvas} className={cn(s.scratch, open && s.gone)} tabIndex={open ? -1 : 0} role={"button"} aria-hidden={open || undefined}
-                aria-label={`Scratch panel over the two numbers for ${c.name}. Rub it with a finger or the mouse, or press Enter, to show them.`}
+                aria-label={`Scratch panel over the two numbers for ${c.name}, entry level on the left and senior on the right. Rub each side with a finger or the mouse, or press Enter, to show them.`}
                 onPointerDown={down} onPointerMove={(e) => panel.current?.move(e)}
                 onPointerUp={() => panel.current?.stop()} onPointerCancel={() => panel.current?.stop()} onLostPointerCapture={() => panel.current?.stop()}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); storyInteracted("pick-a-side", "scratch"); reveal(c.key); } }} />
@@ -87,7 +87,7 @@ function Seat({c, delay}: {c: CardData; delay: number}) {
             <div className={s.pc}><div className={s.flip}><Face c={c} panel={scratch} hidden={!open} /><div className={s.back} /></div></div>
             {/* The two betting spots, printed on the felt under the card. */}
             <div className={s.bet}>
-                <p className={s.ask} hidden={open}>{g ? "Now scratch the panel." : "Which side names it more? Tap one."}</p>
+                <p className={s.ask} hidden={open}>{g ? "Now scratch both sides." : "Which side names it more? Tap one."}</p>
                 <div className={s.spots}>
                     {(["entry", "senior"] as const).map((side) => (
                         <button key={side} type={"button"} className={s.spot} aria-pressed={g === side} disabled={open} onClick={() => { storyInteracted("pick-a-side", "pick_side"); pick(c.key, side); }}>

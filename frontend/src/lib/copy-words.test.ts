@@ -6,8 +6,8 @@ import {describe, expect, it} from "vitest";
 /*
  * UI copy says "jobs", never "postings" (founder, 2026-10-05). This reads
  * every string literal and every run of JSX text under src and fails on
- * "posting"/"postings". Code identifiers (JobPosting, posting.title) and
- * comments are not copy, so they are ignored.
+ * "posting"/"postings". Code identifiers (JobPosting, posting.title),
+ * comments and web addresses (a source's own URL) are not copy, so they are ignored.
  */
 
 const SRC = join(__dirname, "..");
@@ -27,7 +27,7 @@ function copyIn(source: string): string[] {
     const strings = [...code.matchAll(/"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g)]
         .map((m) => m[1] ?? m[2] ?? m[3] ?? "");
     const jsxText = [...code.matchAll(/>([^<>{}]+)</g)].map((m) => m[1]);
-    return [...strings, ...jsxText];
+    return [...strings, ...jsxText].map((t) => t.replace(/https?:\/\/\S+/g, ""));
 }
 
 const POSTING = /\bpostings?\b/i;
@@ -36,6 +36,7 @@ describe("copy words", () => {
     it("finds the word in copy, not in code", () => {
         expect(copyIn(`const a = "12 postings"; <p>Each posting counts</p>`).filter((t) => POSTING.test(t))).toHaveLength(2);
         expect(copyIn(`// postings here\nconst posting: JobPosting = row.posting; posting.title`).filter((t) => POSTING.test(t))).toHaveLength(0);
+        expect(copyIn(`const url = "https://hiringlab.indeed.com/2026/07/08/ai-and-job-postings-from-destruction-to-creation/";`).filter((t) => POSTING.test(t))).toHaveLength(0);
     });
 
     it("never says posting or postings in UI copy", () => {

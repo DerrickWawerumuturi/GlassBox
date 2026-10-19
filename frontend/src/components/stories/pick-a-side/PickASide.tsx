@@ -34,6 +34,19 @@ const mid = (c: Card) => c.inline ?? c.name;
 const leaning = (l: Lean) => (l === "senior" ? [...more, ...turn, first, lime, same] : [first, lime, same, ...more, ...turn])
     .map(card).filter((c) => lean(c) === l);
 
+/** How a set of cards splits: "JavaScript and C lean to entry level, TypeScript and Go to senior, and Java is a point apart." */
+function splitLine(cards: Card[]): string {
+    const by = (l: Lean) => cards.filter((c) => lean(c) === l).map(mid);
+    const verb = (names: string[], one: string, many: string) => (names.length === 1 ? one : many);
+    const [entry, senior, draw] = [by("entry"), by("senior"), by("draw")];
+    const parts = [
+        entry.length ? `${list(entry)} ${verb(entry, "leans", "lean")} to entry level` : "",
+        senior.length ? `${list(senior)} to senior` : "",
+        draw.length ? `${list(draw)} ${verb(draw, "is", "are")} a point apart` : "",
+    ].filter(Boolean);
+    return parts.length > 1 ? `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}.` : `${parts[0] ?? ""}.`;
+}
+
 /** What the suits mean, in one line: a fact about each skill, never the answer. */
 function Suits() {
     const spades = PICK.deck.filter((c) => suit(c) === "spade"), clubs = PICK.deck.filter((c) => suit(c) === "club");
@@ -68,7 +81,7 @@ function Hero() {
             <p className={cn(s.note, s.heroNote)} aria-hidden>guess, then scratch</p>
             <div className={s.col}>
                 <h1>{story.title}</h1>
-                <p className={s.dek}>{cap(inWords(n))} skills, one per card. Guess whether entry level or senior software jobs name it more, then scratch the panel.</p>
+                <p className={s.dek}>Do entry level jobs just ask for less than senior ones? {cap(inWords(n))} cards to find out.</p>
                 <p className={s.by}>By the Glassbox team · the week of {week} · a four minute play</p>
                 <LiveLine story={story} className={s.live} />
             </div>
@@ -82,19 +95,19 @@ function Beats() {
     return (
         <>
             <section className={s.beat}>
-                <div className={s.col}><h2>The first card.</h2>
-                    <p>Tap the side you think names it more. Then scratch the panel with a finger or the mouse, and both numbers show.</p>
+                <div className={s.col}><h2>Start with the favourite.</h2>
+                    <p>Tap the side you think names it more. Then scratch each side of the panel with a finger or the mouse: entry level on the left, senior on the right.</p>
                     <Suits /></div>
                 <figure><Deal keys={[first]} />
                     <Caption>{py.name}: {py.e.jobs} of the {fmt(PICK.readable)} entry level software jobs we read, and {fmt(py.s.jobs!)} of the {fmt(PICK.senior)} senior
-                        ones. Mentioned by jobs at {py.employers} employers.</Caption></figure>
+                        ones. Mentioned by jobs at {py.employers} employers. {py.name} is the most named of the {inWords(PICK.charted.languages.length)} languages on both sides.</Caption></figure>
             </section>
             <section className={s.beat}>
-                <div className={s.col}><h2>The lime card.</h2><p>{cpp.name} has a reputation as the hard one. Pick a side anyway.</p></div>
+                <div className={s.col}><h2>Next, the hard one.</h2><p>{cpp.name} has a reputation. Pick a side anyway.</p></div>
                 <figure className={s.withPen}><Deal keys={[lime]} />
                     {cpp.employers && <p className={cn(s.note, s.pen)} aria-hidden>at {cpp.employers} employers, so not one company&apos;s habit</p>}
                     <Caption>{cpp.name}: {cpp.e.jobs} of the {fmt(PICK.readable)} entry level software jobs we read, and {fmt(cpp.s.jobs!)} of the {fmt(PICK.senior)} senior
-                        ones: {cpp.e.share}% against {cpp.s.share}%, about twice the share. The senior count is the bigger number. The share is what leans.</Caption></figure>
+                        ones: {cpp.e.share}% against {cpp.s.share}%, about twice the share. The senior count is the bigger number. The share is what leans. The jobs show that it leans. They don&apos;t say why.</Caption></figure>
             </section>
             <section className={s.beat}>
                 <div className={s.col}><h2>{git.name} leans the same way.</h2></div>
@@ -102,7 +115,8 @@ function Beats() {
                     <Caption>{git.name}: {git.e.jobs} of the {fmt(PICK.readable)} entry level software jobs we read, and {fmt(git.s.jobs!)} of the {fmt(PICK.senior)} senior ones.</Caption></figure>
             </section>
             <section className={s.beat}>
-                <div className={s.col}><h2>Then the turn.</h2><p>{cap(inWords(turned.length))} cards dealt together. All {inWords(turned.length)} lean the other way.</p></div>
+                <div className={s.col}><h2>Then the turn.</h2><p>{cap(inWords(turned.length))} cards dealt together. All {inWords(turned.length)} lean the other way.</p>
+                    <p>They are systems skills: software spread over many machines, the tool that runs it there, and Amazon&apos;s cloud.</p></div>
                 <figure><Deal keys={turn} />
                     <Caption>{head.name}: {head.e.jobs} of the {fmt(PICK.readable)} entry level software jobs we read, and {fmt(head.s.jobs!)} of the {fmt(PICK.senior)} senior ones.
                         {rest.map((c) => <React.Fragment key={c.key}> {c.name}: {c.e.jobs} and {fmt(c.s.jobs!)}{c.s.jobs === PICK.readable && ", which happens to match the entry level total"}.</React.Fragment>)}</Caption></figure>
@@ -113,7 +127,7 @@ function Beats() {
                 <figure><Deal keys={more} />
                     <Caption>Of the {fmt(PICK.readable)} entry level software jobs we could read: {langs.map((c) => `${c.name} ${c.e.jobs}`).join(", ")}. Of
                         the {fmt(PICK.senior)} senior software jobs, as shares: {langs.map((c) => `${c.s.share}%`).join(", ")}. Jobs
-                        at {list(langs.map((c) => String(c.employers)))} employers name them.</Caption></figure>
+                        at {list(langs.map((c) => String(c.employers)))} employers name them. Here the languages split: {splitLine(langs)}</Caption></figure>
             </section>
         </>
     );
@@ -127,7 +141,7 @@ function WholeHand() {
                 <p>{entry.length} of the {PICK.deck.length} cards lean to entry level: {list(entry.map((c) => c.name))}. {senior.length} lean to
                     senior: {list(senior.map(mid))}.{draw.length > 0 && ` ${list(draw.map((c) => c.name))} ${draw.length === 1 ? "is" : "are"} a point apart.`}</p>
                 <p>The weekly page charts {PICK.charted.languages.length} languages, the spades. {PICK.charted.leanEntry} of them are named more often in entry level software jobs than in
-                    senior software jobs. The beginner list is not the senior list made smaller. It is a different list.</p></div>
+                    senior software jobs. Entry level jobs don&apos;t ask for a smaller version of what senior jobs ask for. They lean towards languages, and senior jobs lean towards systems.</p></div>
             <figure><Hand />
                 <Caption>Each small card: the share of the {fmt(PICK.readable)} entry level software jobs we could read in ink, the share of {fmt(PICK.senior)} senior
                     software jobs in grey. Sorted by the way they lean.</Caption></figure>
@@ -144,10 +158,12 @@ function Ending() {
     const entry = leaning("entry").length, senior = leaning("senior").length, draw = leaning("draw").length;
     return (
         <section className={s.col}>
-            <h2>So which list is it?</h2>
-            <p>Not a shorter senior list. Of the {inWords(PICK.deck.length)} skills on these cards, {inWords(entry)} are named more often in entry level software
-                jobs and {inWords(senior)} in senior ones.{draw > 0 && ` ${cap(inWords(draw))} ${draw === 1 ? "is" : "are"} a point apart.`} This is one week&apos;s
-                count. We deal again every Monday.</p>
+            <h2>So, less or different?</h2>
+            <p>Different. Of the {inWords(PICK.deck.length)} skills on these cards, {inWords(entry)} are named more often in entry level software
+                jobs and {inWords(senior)} in senior ones.{draw > 0 && ` ${cap(inWords(draw))} ${draw === 1 ? "is" : "are"} a point apart.`}</p>
+            <p>What the cards show is what this week&apos;s jobs name at each end. What they can&apos;t show is what gets anyone hired, how strictly a job
+                holds to its list, or why {card(lime).name} leans to entry level. This is one week&apos;s count. We deal again every Monday.</p>
+            <p className={s.lead}>So, which side have you been preparing for?</p>
             <StoryCvAsk story={story} className={s.cta} />
             <LiveLine story={story} className={s.live} short />
             <details className={s.method} id={"method"}>
@@ -172,11 +188,12 @@ export default function PickASide({fonts}: {fonts: string}) {
             <PickTable>
                 <Hero />
                 <section className={s.col}>
-                    <p className={s.lead}>People assume the entry level list is the senior list with the hard parts taken out. We counted. The two lists lean different ways.</p>
+                    <p className={s.lead}>If you&apos;re aiming for a first software job, it&apos;s easy to assume you need a smaller copy of what senior engineers know. We counted what the jobs name, at both ends.</p>
                     <p>In the week of {week} we counted <strong>{fmt(PICK.jobs)} entry level software jobs</strong> at {fmt(PICK.employers)} employers, and
                         read {fmt(PICK.readable)} of them for the skills each one names. The senior side of every card is {fmt(PICK.senior)} senior software jobs,
-                        counted the same way.</p>
-                    <p>A guess is about the jobs, not about you. Nothing is stored and nothing is ranked.</p>
+                        counted the same way. {fmt(PICK.internships.jobs)} of the {fmt(PICK.jobs)} entry level jobs are internships.</p>
+                    <p>{cap(inWords(PICK.deck.length))} skills, one per card. Guess whether entry level or senior software jobs name it more, then scratch the panel.
+                        A guess is about the jobs, not about you. Nothing is stored and nothing is ranked.</p>
                     <p className={s.cue}><RevealAll /><span>every card at once, if you would rather read than play</span></p>
                 </section>
                 <Beats />

@@ -27,9 +27,10 @@ export type CtaPlace = (typeof CTA_PLACES)[number] | MarketPage;
  * A story's interactions, by a short name: the first one a reader uses in a page view is story_interacted
  * (docs/decisions/analytics.md). Pick a side: pick_side, scratch, reveal_all. The lobby: lift, all_floors.
  * Contents may vary: open_box, ingredient, show_none. Peak Python: arm, peak_list. Within eleven jobs: crane, fly_over.
+ * Is entry level dead?: guess (setting a guess), show_count (asking for our count; not the reveal on scrolling past).
  */
 export const STORY_KINDS = ["pick_side", "scratch", "reveal_all", "lift", "all_floors", "open_box", "ingredient", "show_none",
-    "arm", "peak_list", "crane", "fly_over"] as const;
+    "arm", "peak_list", "crane", "fly_over", "guess", "show_count"] as const;
 export type StoryKind = (typeof STORY_KINDS)[number];
 /** Why a chosen file was refused before anything was sent. */
 export const REFUSALS = ["not_pdf", "too_big"] as const;

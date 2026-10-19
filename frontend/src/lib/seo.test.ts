@@ -43,7 +43,7 @@ describe("sitemap", () => {
         const urls = sitemapEntries().map((e) => e.url);
         expect(urls).toEqual([SITE_URL, `${SITE_URL}/product`, `${SITE_URL}/about`, `${SITE_URL}/privacy`, `${SITE_URL}/your-cv`,
             `${SITE_URL}/market`, `${SITE_URL}/market/entry-level-software`, `${SITE_URL}/market/entry-level-software/years-of-experience`,
-            `${SITE_URL}/market/entry-level-software/pick-a-side`,
+            `${SITE_URL}/market/entry-level-software/is-entry-level-dead`, `${SITE_URL}/market/entry-level-software/pick-a-side`,
             `${SITE_URL}/market/software-engineering`, `${SITE_URL}/market/software-engineering/the-lobby`,
             `${SITE_URL}/market/ai`, `${SITE_URL}/market/ai/contents-may-vary`,
             `${SITE_URL}/market/machine-learning`, `${SITE_URL}/market/machine-learning/peak-python`,

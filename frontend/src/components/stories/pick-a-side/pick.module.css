@@ -104,7 +104,10 @@
 .num i { display: block; font: 600 9.5px/1.4 var(--mono); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: var(--card-muted); }
 .num b { display: block; font: 400 54px/.95 var(--stat); letter-spacing: .01em; margin-top: 4px; }
 .num small { display: block; font: 500 11px/1.3 var(--mono); color: var(--card-muted); margin-top: 3px; white-space: nowrap; }
-.num.sen { background: repeating-linear-gradient(45deg, rgba(138, 143, 153, .22) 0 1.5px, transparent 1.5px 6px); }
+/* A ruled line between the two sides, so the panel reads as two answers, not one (founder, 19 Oct 2026). */
+.num.sen { background: repeating-linear-gradient(45deg, rgba(138, 143, 153, .22) 0 1.5px, transparent 1.5px 6px);
+  border-left: 2px solid rgba(26, 26, 26, .55); border-radius: 0 6px 6px 0; padding-left: 5px; }
+@media (max-width: 420px) { .num small { font-size: 10px; } }
 .num.sen b { color: var(--senior); }
 .num small.only { display: inline-block; padding: 0 6px; border: 1px dashed var(--senior); border-radius: 4px; background: #fff; }
 .scratch { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; border-radius: 8px;

@@ -23,12 +23,23 @@ beforeEach(() => { h.click = null; h.open.mockClear(); h.track.mockClear(); });
 
 describe("Compare your CV", () => {
     it("on each story says which story, and asks about the skills that story counts", () => {
-        for (const story of STORIES) {
+        for (const story of STORIES.filter((s) => s.ask.length)) {
             renderToStaticMarkup(createElement(StoryCvAsk, {story}));
             h.click!();
             expect(h.track).toHaveBeenLastCalledWith("cta_clicked", {where: `story_${story.slug.replaceAll("-", "_")}`});
             expect(h.open).toHaveBeenLastCalledWith(expect.objectContaining({skills: story.ask, jobs: story.readable, what: "skills this story counts"}));
         }
+    });
+
+    it("on a story that names no skills, opens the sheet about the latest jobs, as the /market grid does", () => {
+        const none = STORIES.filter((s) => !s.ask.length);
+        expect(none.map((s) => s.slug)).toEqual(["is-entry-level-dead"]);
+        const html = renderToStaticMarkup(createElement(StoryCvAsk, {story: none[0], question: "Thanks for taking your time to read, I hope we have provided value for you."}));
+        // Never "0 skills": the question is the story's own.
+        expect(html).toContain("<p>Thanks for taking your time to read, I hope we have provided value for you.</p>");
+        h.click!();
+        expect(h.track).toHaveBeenLastCalledWith("cta_clicked", {where: "story_is_entry_level_dead"});
+        expect(h.open).toHaveBeenLastCalledWith();
     });
 
     it("on the /market grid says market, and opens the sheet about today's jobs", () => {

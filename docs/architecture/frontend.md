@@ -30,8 +30,9 @@ src/
                                  and Source Serif 4 (font-read), loaded on these pages only
     market/[page]/years-of-experience  how many years entry level software jobs ask for, from the entry level page's
                                  `experience` counts (lib/years-answer.ts); any other page name is a 404
-    market/[page]/<story>        a story per market page (pick-a-side, the-lobby, contents-may-vary, peak-python,
-                                 within-eleven-jobs): one week's count, static, its own share image and faces
+    market/[page]/<story>        one or more stories per market page (is-entry-level-dead, pick-a-side, the-lobby,
+                                 contents-may-vary, peak-python, within-eleven-jobs): one week's count, static, its own
+                                 share image and faces
                                  (components/stories, lib/stories, decisions/market-pages.md "Stories")
     market/page.tsx              /market, the grid of stories: covers, a plain link to each live page, the years card from the
                                  live count, how we count, the CV card (components/market-hub, lib/market-hub.ts); own share image
@@ -90,7 +91,9 @@ src/
     stories/                     the visual stories: StoryParts (page, crumbs, source line, the week line, scope),
                                  StoryCvAsk, OpenMethod, share.tsx (share images), covers/ (a cover per
                                  story for the hub), and a folder per story (its CSS module, server parts, small client parts);
-                                 Pick a side's deck art is CC0, in public/stories/pick-a-side with its LICENSES.md
+                                 Pick a side's deck art is CC0, in public/stories/pick-a-side with its LICENSES.md;
+                                 Is entry level dead?'s canvas crowd (marker.ts, sprites.ts, layouts.ts, stage.ts),
+                                 SVG people (people.ts) and Pexels heads in public/stories/is-entry-level-dead/heads
     people/                      the hand drawn cast (Open Peeps, Open Doodles, CC0: LICENSES.md): art/ one module per
                                  drawing, draw.ts personSvg (and the dark theme's line art filter), Person.tsx (floated
                                  into the text beside a paragraph; Chapter takes one as `person`)
@@ -133,7 +136,8 @@ src/
     years-answer.ts              the years of experience page's sentences, rows, questions and the woodpile's lines
                                  (kicker, stamp, captions, ringed and rounds lines, which parts the week can fill)
     stories/                     a data module per story (one week's numbers, a comment per figure) and its tests;
-                                 story.ts (types, addresses, the week), route.ts (metadata), index.ts (the list)
+                                 story.ts (types, addresses, the week), route.ts (metadata), index.ts (the list,
+                                 storiesFor: a page's stories, newest first)
     market-hub.ts                the /market grid's cards, in order, and its filters (tested)
     method-copy.ts               /method's words, each section naming the code it describes
     dashboard-data.ts            opportunity rows, tier labels, date and age labels

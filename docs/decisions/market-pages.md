@@ -424,9 +424,9 @@ in on it.
 
 ## Stories (2026-10-15, founder)
 
-Five visual stories, one per market page, each telling one week's count with
+Visual stories, at least one per market page, each telling one week's count with
 its own object and style (prototypes: `docs/local/editorial-sprint/stories/`):
-"Pick a side" (entry level software), "The lobby is the biggest floor"
+"Is entry level dead?" and "Pick a side" (entry level software), "The lobby is the biggest floor"
 (software engineering), "Contents may vary" (AI), "Peak Python" (machine
 learning), "Within eleven jobs" (DevOps).
 
@@ -471,9 +471,29 @@ learning), "Within eleven jobs" (DevOps).
   (it shows before the guess). No joker for Java. Every number, the guess then
   scratch (touch and keyboard), the tally, the table twin and reduced motion are
   unchanged; the foil is gone.
-- **The weekly page** lists its story first under "Also this week". The hub
+- **The weekly page** lists its stories first under "Also this week". The hub
   pills say "Story" and the filter "Stories"; each card links "Latest count:
   {page} jobs" ("Live count" read as real time; copy rewrite, 15 Oct 2026).
+- **A page may have more than one story (19 Oct 2026).** `lib/stories/index.ts`
+  lists them in the market pages' order, newest first within a page;
+  `storiesFor(page)` gives them all, so the weekly page's rail links each one,
+  the hub has a card for each (the newest story leads the grid, the next follows
+  the years card) and the sitemap lists each after its page
+  (`lib/stories/index.test.ts`).
+- **Is entry level dead? (19 Oct 2026).** The entry level page's second story,
+  its first chapter (Pick a side is chapter two, linked from step 7). Week of 19
+  October 2026: the entry level page of publication id 4
+  (`pages.entry-level-software`), with weeks 5 and 12 October (ids 1 and 3) for
+  the three weekly points; the two outside facts (Stanford Digital Economy Lab,
+  revised 12 Aug 2026; Indeed Hiring Lab, 8 Jul 2026) are linked where they are
+  used. One real ad pinned, a guess (100 drawn people, slider keys), then the
+  week's 4,536 software jobs as a crowd of drawn people (one per 10 jobs, 25 on
+  a phone, rounded) that sorts onto a ladder; the bottom step splits into
+  internships and the rest, the titled jobs wear name tags, three weekly points
+  say "too early to tell". Featured characters are Pexels photo heads on drawn
+  bodies (credited on the page and in `public/stories/is-entry-level-dead/heads/CREDITS.md`).
+  It names no skills, so its CV button opens the sheet about the latest jobs, as
+  the hub's CV card does, with the founder's own line before it.
 
 ## Two misreads fixed (requirements-v6)
 
