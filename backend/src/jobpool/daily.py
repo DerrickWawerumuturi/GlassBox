@@ -160,7 +160,9 @@ def take_snapshot() -> None:
     # the run's summary page and keeps the run green.
     try:
         written = snapshot.take()
-        if written is not None:
+        if written == 0:
+            print("snapshot: today's is taken already")
+        elif written is not None:
             print(f"snapshot: {written} families")
     except Exception as err:
         print(f"::warning title=Market snapshot not taken::{_annotation(f'{type(err).__name__}: {err}')}")

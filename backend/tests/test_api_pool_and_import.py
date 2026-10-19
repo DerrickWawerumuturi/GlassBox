@@ -153,12 +153,13 @@ def test_a_snapshot_is_one_row_per_family_a_day_and_counts_a_role_once(pool, mon
         with connection() as conn, conn.cursor() as cur:
             cur.execute("select family from job_profiles where job_id = %s", (first,))
             family = cur.fetchone()["family"]
-        assert snapshot.take() > 0
+        assert snapshot.take(again=True) > 0                          # a run by hand: replaces today's
         before = today()
 
         store(posting(1, "Junior Full-Stack Engineer", "Requirements: 1-2 years. React, Node.js and PostgreSQL.", 1,
                       provider=PROVIDER + "c"))                       # the same role, a third board
-        snapshot.take()
+        assert snapshot.take() == 0                                   # the collector's later runs skip the day
+        snapshot.take(again=True)
         again = today()
         assert again.keys() == before.keys()                          # replaced, not appended
         assert again[family]["postings"] == before[family]["postings"]
@@ -168,7 +169,7 @@ def test_a_snapshot_is_one_row_per_family_a_day_and_counts_a_role_once(pool, mon
         readable = ("About us: we build tools for small shops. " * 20
                     + "Requirements: 1-2 years. React, Node.js and PostgreSQL.")
         store(posting(6, "Junior Full-Stack Engineer", readable, 1, company="Beta"))
-        snapshot.take()
+        snapshot.take(again=True)
         after = today()
         react = lambda day: day[family]["skills"].get("react", [0, 0, 0])[0]   # noqa: E731
         assert after[family]["postings"] == before[family]["postings"] + 1

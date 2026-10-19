@@ -97,3 +97,29 @@ def _job():
     from datetime import datetime, timezone
     from src.Agent.utils.types import Job
     return Job(provider="test", external_id="1", title="Analyst", posted_at_utc=datetime.now(timezone.utc).isoformat())
+
+
+def _stored(monkeypatch, already: bool):
+    """take() over a stand-in database: `reads` records each read of the pool."""
+    from contextlib import nullcontext
+    reads, written = [], []
+    monkeypatch.setattr(snapshot, "is_configured", lambda: True)
+    monkeypatch.setattr(snapshot, "connection", lambda: nullcontext(None))
+    monkeypatch.setattr(snapshot.snapshot_repository, "taken", lambda conn, day, version: already)
+    monkeypatch.setattr(snapshot, "pool_rows", lambda conn: reads.append(1) or [row("A", "Analyst")])
+    monkeypatch.setattr(snapshot.snapshot_repository, "upsert", lambda conn, day, version, s: written.append(s) or len(s))
+    return reads, written
+
+
+def test_a_later_run_the_same_day_does_not_read_the_pool_again(monkeypatch):
+    # The pool read is about 15 MB out of Neon; the collector runs 4 times a day.
+    reads, written = _stored(monkeypatch, already=True)
+    assert snapshot.take() == 0
+    assert reads == [] and written == []
+
+
+def test_the_first_run_of_the_day_and_a_run_by_hand_take_it(monkeypatch):
+    reads, written = _stored(monkeypatch, already=False)
+    assert snapshot.take() > 0 and reads == [1]
+    reads, written = _stored(monkeypatch, already=True)
+    assert snapshot.take(again=True) > 0 and reads == [1]

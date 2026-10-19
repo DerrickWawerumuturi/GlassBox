@@ -88,7 +88,9 @@ async def _warm_when_quiet():
 
 @asynccontextmanager
 async def lifespan(_app):
-    tasks = [asyncio.create_task(_warm_when_quiet()), asyncio.create_task(market.keep_fresh())]
+    # No database read here: every wake, a scanner's 404 included, would wake Neon too.
+    # The market count loads on the first /market request (market_look._built).
+    tasks = [asyncio.create_task(_warm_when_quiet())]
     yield
     for task in tasks:
         task.cancel()

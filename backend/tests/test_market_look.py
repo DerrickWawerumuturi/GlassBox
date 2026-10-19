@@ -200,15 +200,25 @@ def test_the_route_sends_cache_control_and_gzip(monkeypatch):
     assert r.headers.get("content-encoding") == "gzip"
 
 
-def test_the_app_builds_the_count_at_startup(monkeypatch):
+def test_startup_reads_nothing_and_the_first_market_request_loads_the_count(monkeypatch):
+    """A wake that never asks for the count (a scanner's 404, /health) must not read the database."""
+    import time
     monkeypatch.setattr(ml, "compute", lambda: {"look": ml.aggregate(ROWS, TAKEN), "pages": {}})
     monkeypatch.setattr(main, "WARM_AFTER_SECONDS", 3600)
+    monkeypatch.setattr(ml, "is_configured", lambda: True)        # a database is set, in both test modes
+    monkeypatch.setattr(ml, "published", lambda known=None: None) # nothing published: the stub count above
+    loads, real = [], ml.refresh
+    monkeypatch.setattr(ml, "refresh", lambda *a, **k: loads.append(1) or real(*a, **k))
     ml.forget()
     with TestClient(main.app) as client:                          # runs the lifespan
+        assert client.get("/health").status_code == 200
+        assert client.get("/.env").status_code == 404
+        time.sleep(0.3)                                           # time for a startup task to have run
+        assert loads == []
         for _ in range(100):
             if client.get("/market/look").status_code == 200:
                 break
-            import time; time.sleep(0.02)
+            time.sleep(0.02)
         assert client.get("/market/look").status_code == 200
     ml.forget()
 

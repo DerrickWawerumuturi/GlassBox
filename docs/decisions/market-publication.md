@@ -48,8 +48,9 @@ cold database (no retry), and the 05:00 cron started 4 to 7 hours late every day
 
 ### Serving
 
-`market_look.refresh()` loads the latest published row at startup and checks
-for a newer id every 10 minutes (one indexed row; the payload is read only when
+`market_look.refresh()` loads the latest published row on the first `/market`
+request (since 2026-10-19; at startup before) and, on a request after 10
+minutes, checks for a newer id (one indexed row; the payload is read only when
 the id changes). A request only reads what is loaded. Once a publication has
 been served the API never counts the pool again; a failed read keeps the last
 one. **Before the first publication exists** the API counts the live pool as it

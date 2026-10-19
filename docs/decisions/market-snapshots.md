@@ -48,8 +48,12 @@ also land in the pool, but they are excluded:
 
 ## Rules
 
-- **Re-running on a day replaces that day's row.** The snapshot describes the
-  pool after the latest refresh; it is not a sighting.
+- **Once a day.** The collector's first run of the UTC day takes it; later runs
+  that day skip it (`snapshot_repository.taken`), because the count reads the
+  whole pool, about 15 MB out of Neon each time, and Neon's free plan allows
+  5 GB out a month (2026-10-19). A run by hand (`python -m src.jobpool.snapshot`)
+  replaces that day's row. The snapshot describes the pool after the day's first
+  refresh; it is not a sighting.
 - **The profiler version is part of the key.** Counts read by different rules are
   not comparable. A rules change starts a new series instead of breaking the old
   one.

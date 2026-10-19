@@ -57,8 +57,10 @@ The pool changes once a day. Building the count reads the whole pool, about 6 s
 on the live database, and the first call after a deploy used to hang until the
 ingress timed out. So **no request ever builds it** (founder, 6 Oct):
 
-- The app builds it in the background at startup (`market.keep_fresh`, started
-  in the lifespan), off the event loop, so health checks stay fast.
+- The first `/market` request builds it in the background, off the event loop,
+  and answers 503 with Retry-After meanwhile, so health checks stay fast. Until
+  2026-10-19 the app built it at startup (`market.keep_fresh`); that read the
+  database on every wake, a scanner's 404 included (`deployment.md`).
 - A timer rebuilds it every 50 minutes, before the hour's browser cache runs out.
 - A request only reads what is built. An old one (over an hour) is still
   served at once while a rebuild starts beside it (stale while revalidate).

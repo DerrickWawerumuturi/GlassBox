@@ -9,7 +9,6 @@ Public market routes: no sign-in, nothing about the visitor is read or kept.
 Kept out of main.py so its routes stay about the signed-in product. The
 decision behind both, including what is never returned: decisions/market-look.md.
 """
-import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.concurrency import run_in_threadpool
@@ -26,13 +25,6 @@ router = APIRouter(prefix="/market")
 class AdRequest(BaseModel):
     text: str | None = None
     url: str | None = None
-
-
-async def keep_fresh():
-    """Started with the app: loads the latest publication now, then checks for a newer one every REFRESH_SECONDS, off the event loop."""
-    while True:
-        await run_in_threadpool(market_look.refresh)
-        await asyncio.sleep(market_look.REFRESH_SECONDS)
 
 
 def _built(read):

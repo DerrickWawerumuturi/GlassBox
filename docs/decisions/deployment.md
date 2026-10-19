@@ -219,6 +219,14 @@ every page carries. Now (`frontend/src/lib/account-sync.ts`):
 Calls a day: fewer, never more. Each avoided wake saves about 6 awake minutes
 (about $0.02 at 1 vCPU) and about 0.025 Neon compute hours.
 
+### A wake reads nothing from Neon unless a request needs it (2026-10-19)
+
+Startup no longer loads the market count (`market.keep_fresh` is gone): it read
+the publication row, about 290 kB, on every wake, a scanner's 404 included. The
+first `/market` request loads it (`market_look._built`, 503 with Retry-After
+meanwhile). Today nothing calls `/market` on a schedule: the site reads Neon
+itself. Calls a day: fewer database reads, no new request.
+
 ## Probes: startup and readiness, no liveness
 
 ```yaml

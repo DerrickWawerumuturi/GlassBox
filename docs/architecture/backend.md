@@ -259,7 +259,7 @@ Three routes need no sign-in (`src/api/market.py`; `decisions/market-look.md`,
 
 - `GET /market/look`: the latest weekly publication's count per technical role
   family (`market_publications`, `src/jobpool/publish.py`), for the landing
-  page. Loaded at startup and checked for a newer one every 10 minutes; it is
+  page. Loaded on the first `/market` request (never at startup, since 2026-10-19) and checked for a newer one on a request after 10 minutes; it is
   counted from the live pool only before the first publication exists. The live pool counted by the snapshot's rules (`snapshot.counted`):
   daily sources only, a cross-posted role once, skills over readable jobs. Per
   family: jobs, readable, seniority in four buckets, the top 150 skills, up to

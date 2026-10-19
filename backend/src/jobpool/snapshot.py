@@ -1,9 +1,10 @@
 """
 What the live pool asks for today, counted per role family and stored.
 
-    python -m src.jobpool.snapshot      take today's snapshot now (re-running replaces it)
+    python -m src.jobpool.snapshot      take today's snapshot now (replaces today's, if taken)
 
-The daily refresh calls take() after profiling (daily.py). Profiles describe a
+The daily refresh calls take() after profiling (daily.py); the first run of the
+UTC day takes it, later runs skip it. Profiles describe a
 posting as it is now and jobs will not be kept forever, so these counts are the
 only record of what the market asked for on a given day: what monthly posts and
 public role pages compare against (decisions/market-snapshots.md).
@@ -86,16 +87,23 @@ def summarise(rows: list[dict]) -> dict[str, dict]:
     return out
 
 
-def take() -> int | None:
-    """Count and store today's snapshot. Returns the families written, None when no database."""
+def take(again: bool = False) -> int | None:
+    """
+    Count and store today's snapshot: the families written, 0 when today's is
+    stored already, None when no database. Once a day: the count reads the whole
+    pool (about 15 MB from Neon, whose free plan allows 5 GB out a month), and
+    the collector runs 4 times a day. `again` replaces today's, as by hand.
+    """
     if not is_configured():
         return None
     with connection() as conn:
-        summaries = summarise(pool_rows(conn))
         taken_on = datetime.now(timezone.utc).date()
+        if not again and snapshot_repository.taken(conn, taken_on, PROFILER_VERSION):
+            return 0
+        summaries = summarise(pool_rows(conn))
         return snapshot_repository.upsert(conn, taken_on, PROFILER_VERSION, summaries)
 
 
 if __name__ == "__main__":
-    written = take()
+    written = take(again=True)
     print("no DATABASE_URL; nothing taken" if written is None else f"snapshot: {written} families")

@@ -199,10 +199,12 @@ def published(known: int | None = None) -> tuple[int, dict] | None:
     return row["id"], {"look": row["look"], "pages": row["pages"]}
 
 
-# One value for the whole process: every visitor sees the same count. Startup
-# loads it in the background, a timer checks for a newer publication every
-# REFRESH_SECONDS, and a request only ever reads what is there. A failed load
-# keeps the last good one. decisions/market-publication.md
+# One value for the whole process: every visitor sees the same count. The first
+# /market request loads it in the background (it answers 503 with Retry-After
+# meanwhile), a request after REFRESH_SECONDS checks for a newer publication
+# beside it, and a request only ever reads what is there. Nothing loads at
+# startup, so a wake that never asks for the count never reads the database.
+# A failed load keeps the last good one. decisions/market-publication.md
 REFRESH_SECONDS = 10 * 60
 CACHE_SECONDS = 3600
 RETRY_SECONDS = 15
