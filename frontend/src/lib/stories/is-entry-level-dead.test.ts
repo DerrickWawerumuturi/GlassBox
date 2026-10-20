@@ -11,7 +11,7 @@ import {existsSync, readFileSync} from "node:fs";
 import {join} from "node:path";
 
 import {isEntryLevelDeadCover} from "@/components/stories/covers/is-entry-level-dead";
-import IsEntryLevelDead from "@/components/stories/is-entry-level-dead/IsEntryLevelDead";
+import IsEntryLevelDead, {GUESS_ASK, TURN_ASK} from "@/components/stories/is-entry-level-dead/IsEntryLevelDead";
 import {makeLayout} from "@/components/stories/is-entry-level-dead/layouts";
 import {HEAD_DIR, HEADS} from "@/components/stories/is-entry-level-dead/people";
 import {drawn, ELD, FINISHED, IS_ENTRY_LEVEL_DEAD, MID, ONE_IN, PER, PER_100, share, TITLED} from "./is-entry-level-dead";
@@ -168,6 +168,17 @@ describe("the story as rendered", () => {
         // 113 + 44 + 25 people, one <use> each.
         expect(svg.match(/<use /g)?.length).toBe(182);
         expect(svg).not.toMatch(/#f5532a/i);
+    });
+
+    it("asks for the CV inside the story, not only at the end (20 Oct: no reader clicked the ending's ask)", () => {
+        // The turn's ask renders with the page; the guess's ask appears once the count is shown, so its wiring is checked in the source.
+        expect(h).toContain("Studying or finished, where does your own CV stand against this week’s jobs?");
+        const src = readFileSync(join(__dirname, "..", "..", "components", "stories", "is-entry-level-dead", "IsEntryLevelDead.tsx"), "utf8");
+        expect(src).toMatch(/after=\{<StoryCvAsk[^>]*place=\{"story_is_entry_level_dead_guess"\}/);
+        expect(src).toContain('place={"story_is_entry_level_dead_turn"}');
+        // Honest scope: the sheet compares a CV with this week's jobs, so no ask claims "these 629".
+        for (const ask of [GUESS_ASK, TURN_ASK]) expect(ask).toMatch(/this week’s jobs\?$/);
+        for (const ask of [GUESS_ASK, TURN_ASK]) expect(ask).not.toMatch(/\d/);
     });
 
     it("gives the hub its card line from the numbers", () => {

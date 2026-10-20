@@ -70,3 +70,12 @@ request off the site, no sideways scroll; keyboard guess (arrows, Page Up, Enter
 ## Words fixed before the push (founder, 19 Oct)
 
 Five edited lines were corrected at the founder's word: the ending now says the bottom step is thin, about 1 in 7 software jobs (it had said 1 in 7 "are software jobs"); step 2 says 4,536, not "around 5000"; the opening reads "advertised a job called Junior Software Engineer. It got us curious about the state of software jobs." and "We decided to investigate. Glassbox counts public job ads every week, so we looked at that data."; the line before the CV button is "Thanks for reading. Curious where your own CV stands against this week's jobs?". The test pins the new sentences and fails on the old ones.
+
+
+## 21 Oct: the CV asked for inside the story
+
+In its first day 7 of 22 readers reached the end and none pressed the ending's "Compare your CV". The story now
+also asks after the guess shows our count ("That's the count. Curious where your own CV stands against this week's
+jobs?") and at the internships turn ("Studying or finished, where does your own CV stand against this week's
+jobs?"). Neither names the 629: the sheet compares a CV with this week's jobs as a whole. Each ask is its own
+`cta_clicked` place (decisions/analytics.md). The test fails without the asks. Cost: none, no new request.

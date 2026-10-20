@@ -28,6 +28,9 @@ import {DEFS, ending, HEADS} from "./people";
  */
 
 const story = IS_ENTRY_LEVEL_DEAD, week = storyWeek(story);
+/** The two asks inside the story. The sheet compares a CV with this week's jobs, not only the 629, so neither names them. */
+export const GUESS_ASK = "That\u2019s the count. Curious where your own CV stands against this week\u2019s jobs?";
+export const TURN_ASK = "Studying or finished, where does your own CV stand against this week\u2019s jobs?";
 const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", {day: "numeric", month: "long", timeZone: "UTC"});
 const [first] = ELD.weeks, last = ELD.weeks[ELD.weeks.length - 1];
@@ -61,6 +64,7 @@ const STEPS: Step[] = [
     {k: 5, src, body: <>
         <p>Look closer, though. {ELD.internships} of the {fmt(ELD.entry)} are internships, for people who are still studying.</p>
         <p>Take those away, and {FINISHED} jobs are left for everyone who has already finished.</p>
+        <StoryCvAsk story={story} className={s.midAsk} place={"story_is_entry_level_dead_turn"} question={TURN_ASK} />
         <Sr>Graphic: the people for the {ELD.internships} internships turn lime, put on backpacks and step to the right; the people for the {FINISHED} other jobs
             stay on the left. A graduate with a mortarboard and an intern with a backpack stand at the ends of the step. {cap(inWords(ELD.internTitles.length))} internship
             titles hang above on lime paper slips, in handwriting: {ELD.internTitles.map((t) => `${t.title} at ${t.employer}`).join("; ")}.</Sr>
@@ -132,7 +136,8 @@ function GuessFirst() {
                 <p className={s.hint}>Tap or drag one person across the people to set your guess. Or keep scrolling, and we’ll show our count anyway.</p>
             </div>
             <figure className={s.guessfig}>
-                <Guess ours={PER_100} revealAt={"eld-step-2"}>
+                <Guess ours={PER_100} revealAt={"eld-step-2"}
+                       after={<StoryCvAsk story={story} className={s.midAsk} place={"story_is_entry_level_dead_guess"} question={GUESS_ASK} />}>
                     {PER_100} of every 100 software jobs advertised this week were entry level: {fmt(ELD.entry)} of the {fmt(ELD.jobs)}.
                 </Guess>
                 <figcaption className={s.gwrap}>

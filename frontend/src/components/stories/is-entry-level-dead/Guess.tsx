@@ -16,7 +16,7 @@ import {guessOurs, guessRest, guessRings} from "./people";
  * not a reader's use, so only the reader's own moves report story_interacted.
  */
 
-export default function Guess({ours, revealAt, children}: {ours: number; revealAt: string; children: React.ReactNode}) {
+export default function Guess({ours, revealAt, after, children}: {ours: number; revealAt: string; after?: React.ReactNode; children: React.ReactNode}) {
     const [guess, setGuess] = useState(0);
     const [shown, setShown] = useState(false);
     const [drag, setDrag] = useState(false);
@@ -81,6 +81,8 @@ export default function Guess({ours, revealAt, children}: {ours: number; revealA
                     <span className={s.big}>{ours}.</span><span>{children}</span>
                 </p>
             </div>
+            {/* The CV ask, once the reader has met the count: the moment they are paying most attention (20 Oct: no reader clicked the ending's ask). */}
+            {shown && after}
         </div>
     );
 }

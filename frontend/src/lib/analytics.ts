@@ -19,8 +19,10 @@ export type MarketPage = MarketName;
 // "hero": the landing page's first screen. "header": Try it out in the desktop Product menu; "menu": the same in the
 // phone menu. "years": the years of experience page. "market": the /market grid's CV card. "product", "about":
 // the closing CV card of /product, /about. A market page's button says the page's name; a story's says "story_" and
-// its address ("story_pick_a_side").
-const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years", "market", "about", ...STORY_SLUGS.map(storyPlace)] as const;
+// its address ("story_pick_a_side"). Is entry level dead? also asks mid story: after the guess ("_guess") and at the
+// internships turn ("_turn"), counted apart so the ending's own clicks stay comparable.
+const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years", "market", "about", ...STORY_SLUGS.map(storyPlace),
+    "story_is_entry_level_dead_guess", "story_is_entry_level_dead_turn"] as const;
 /** Where a "Compare your CV" or "Try it out" click, or a phone's cv_handoff (lib/cv-handoff.ts), came from. */
 export type CtaPlace = (typeof CTA_PLACES)[number] | MarketPage;
 /**

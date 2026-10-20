@@ -7,7 +7,7 @@ import CompareCv from "@/components/cv-ask/CompareCv";
 import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {useHave} from "@/components/landing/useHave";
 import MarketCvAsk, {MarketAskProvider} from "@/components/market-page/MarketCvAsk";
-import {track} from "@/lib/analytics";
+import {CtaPlace, track} from "@/lib/analytics";
 import {CV_QUESTION, StoryInfo, storyAsk, storyPlace} from "@/lib/stories/story";
 
 /*
@@ -31,8 +31,8 @@ function Ending({className, question}: {className?: string; question: string}) {
     );
 }
 
-function Open({story, className, question}: {story: StoryInfo; className?: string; question: string}) {
-    const router = useRouter(), where = storyPlace(story.slug);
+function Open({story, className, question, place}: {story: StoryInfo; className?: string; question: string; place?: CtaPlace}) {
+    const router = useRouter(), where = place ?? storyPlace(story.slug);
     const scan = useCvScan({from: story.page, onDone: () => router.push("/analysis")});
     return (
         <div className={className}>
@@ -43,8 +43,9 @@ function Open({story, className, question}: {story: StoryInfo; className?: strin
     );
 }
 
-export default function StoryCvAsk({story, className, question = CV_QUESTION}: {story: StoryInfo; className?: string; question?: string}) {
-    if (!story.ask.length) return <Open story={story} className={className} question={question} />;
+/** `place` names a second ask inside a story (Is entry level dead? asks after the guess and at the turn); only a story that names no skills has one. */
+export default function StoryCvAsk({story, className, question = CV_QUESTION, place}: {story: StoryInfo; className?: string; question?: string; place?: CtaPlace}) {
+    if (!story.ask.length) return <Open story={story} className={className} question={question} place={place} />;
     return (
         <MarketAskProvider ask={storyAsk(story)} page={story.page} where={storyPlace(story.slug)}>
             <Ending className={className} question={question} />

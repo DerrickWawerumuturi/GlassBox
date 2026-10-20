@@ -168,3 +168,11 @@ PostHog ignores bots, including automated browsers (`navigator.webdriver`,
 "HeadlessChrome"). Browser checks must mask both to see events leave; a real
 browser is unaffected. React's dev mode runs effects twice, so dev sends
 `view_opened` twice; production sends it once.
+
+
+### Asks inside a story (2026-10-21)
+
+Is entry level dead? asks for the CV twice more besides its ending: after the guess shows our count
+(`cta_clicked` where `story_is_entry_level_dead_guess`) and at the internships turn
+(`story_is_entry_level_dead_turn`). Counted apart so the ending's own `story_is_entry_level_dead`
+stays comparable. Why: in its first day 7 of 22 readers reached the end and none clicked the ending's ask.
