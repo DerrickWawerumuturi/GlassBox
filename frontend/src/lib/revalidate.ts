@@ -65,6 +65,7 @@ export async function handleRevalidate(request: Request, secret = process.env.RE
         return Response.json({error: "the publication can't be read; every page kept"}, {status: 503});
     }
     for (const path of MARKET_PATHS) revalidate(path);
+    // The /market layout: every page under it, so the share images, and each past week, whose list gains the new week (#16).
     revalidate("/market", "layout");
     // Its lastmod is the week's; nobody opens it after, and a crawler's visit rebuilds it from the new row.
     revalidate(SITEMAP_PATH);

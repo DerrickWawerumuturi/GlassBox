@@ -14,12 +14,13 @@ import s from "./hub.module.css";
  * The hub's CV card: the question and "Compare your CV" (the peek button
  * family), which opens the CV sheet and scan; the results then open on
  * /analysis, as from the header. The click is cta_clicked, where "market".
+ * `style` carries its place in "By job type" (app/market/page.tsx).
  */
-export default function HubCv() {
+export default function HubCv({style}: {style?: React.CSSProperties}) {
     const router = useRouter();
     const scan = useCvScan({onDone: () => router.push("/analysis")});
     return (
-        <li className={`${s.card} ${s.cvcard}`} data-kind={"cv"}>
+        <li className={`${s.card} ${s.cvcard}`} data-kind={"cv"} style={style}>
             <div className={s.cvpic} dangerouslySetInnerHTML={{__html: cvPicture()}} />
             <h2 className={s.cvq}>{CV_QUESTION}</h2>
             <CompareCv onClick={() => { track("cta_clicked", {where: "market"}); scan.open(); }} scanning={scan.scanning} where={"market"} />

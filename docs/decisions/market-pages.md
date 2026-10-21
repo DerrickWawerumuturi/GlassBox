@@ -459,6 +459,16 @@ learning), "Within eleven jobs" (DevOps).
   by kind; the Essays filter appears when an essay joins (the two years essay,
   after its recount). The hub still reads the publication for the live links,
   the years card and the week, rebuilt as before.
+- **Latest (21 Oct 2026, GitHub issue #16).** The hub opens on Latest: every
+  card newest first by the day it came out (a story's `published`, the years
+  card's week), then by the week it counts; how we count last. A story card's
+  date is that day ("21 Oct 2026", a `<time>`); the years card keeps "Week of
+  19 Oct". "By job type" is the next chip and gives the market pages' order
+  (`hubCards`); the kind chips (Stories, Years, How we count) follow. The page
+  holds the cards newest first, so without script (chips hidden) and for search
+  Latest is the order; By job type sets each card's CSS `order` (`--type`), the
+  CV card fifth in both. Same sticker chips as before (`aria-pressed`), no
+  native control.
 - **Pick a side, as a real deck (founder, 16 Oct 2026).** The cards are playing
   cards from the CC0 English pattern deck on Wikimedia Commons (the blue back by
   Loren Osborn, the pips from Dmitry Fomin's faces; licence and source in
@@ -511,6 +521,63 @@ learning), "Within eleven jobs" (DevOps).
   assistants, mlops), asked after the guess, at the street and at the end, each
   its own `cta_clicked` place; an ask inside the story steps aside once the
   reader has an answer, which stands once, at the end.
+
+## Past weeks (2026-10-21, GitHub issue #16)
+
+Every Monday the live market pages count again, and the week before used to
+disappear. Each published week of each market page now keeps its own page.
+
+- **Address.** `/market/<page>/week/<monday>`, e.g. `/market/ai/week/2026-10-12`
+  (`app/market/[page]/week/[week]`, `weekPath`). The same template
+  (`MarketArticle` with `showing`) and that week's count: the latest published
+  row of that week (12 Oct 2026 has two rows; the later one wins, as `LATEST`).
+- **Dated at the top.** Under the breadcrumb (Market / AI / Week of 12 October
+  2026): "The week of 12 October 2026. This is a past week; the live page counts
+  again every Monday." and "Latest count: AI jobs", the hub's words for the live
+  page. The byline, cite line, copied facts and Article markup name the past
+  week's own address; its questions stay on the page but only the live page
+  carries FAQPage markup. The rail is "Also on Glassbox" without the other
+  pages' counts (those are this week's).
+- **Past weeks.** The live page and every past week end with "Past weeks"
+  (`PastWeeks.tsx`, after how we counted; the byline links to it): the live
+  week first ("latest count", the live page), then each past week, newest
+  first, with the jobs the page counted that week ("569 AI jobs"). The week a
+  page shows is marked, not linked. A page with no past week shows no list.
+- **Which weeks.** `published.WEEKS`: one row per published week (the latest
+  of each), `current` for the week `LATEST` serves, and for each page whose body
+  has a count (jobs > 0 and a story, as `marketForPage` accepts) its jobs. A
+  page's past weeks are those before the live one where it has a count, and a
+  Monday from 5 Oct 2026 (`FIRST_WEEK`) to today (`isWeek`), so no listed link
+  is a 404. A week from before the editorial pages lists no page.
+- **The years page has no archive.** It is a second view of the entry level
+  page's count; the entry level page's past weeks already carry the years
+  section where the week had it, and the years numbers exist only in weeks whose
+  count has `experience`. Adding it would mean a second archive route, list and
+  sitemap block for no number the entry level archive doesn't show.
+- **Search.** Canonical to itself; title "AI engineer skills, counted from 569
+  jobs in the week of 12 October 2026", description from the week's count (it
+  names the week). The site's share image: the page's own draws the live
+  week's finding. In the sitemap after the public pages, with no lastmod (a past
+  week doesn't change).
+- **Built and refreshed (cost guardrails).** `revalidate = false`, no timer.
+  `generateStaticParams` lists every past week of every page at deploy; a week
+  that turns past after a deploy renders on its first visit, then stays cached.
+  `/api/revalidate` already drops the `/market` layout, which drops every page
+  under it, so on Monday the live pages' and past pages' lists gain the new
+  week, and a cached redirect (the old live week) or 404 is rendered again.
+  Not `dynamicParams = false` (`revalidate.test.ts`, as for the live pages).
+  A name that isn't a page, or a week that isn't a Monday from 5 Oct 2026 to
+  today, is a 404 before any read.
+- **Reads.** The weeks list is a few hundred bytes (531 bytes locally with three
+  weeks); a build reads it once per build worker (3 to 4), a server render once
+  per request. A past week's render reads only its page's body
+  (`pages -> name`, about a fifth of the row's `pages` and none of `look`; 12 kB
+  locally, about 61 kB for all five pages of a week, where the whole row is
+  296 kB). Per build: the list a few times plus one body per past week per page
+  (5 × weeks). Outside builds and the Monday refresh: none, except the first
+  visit to a past page after a refresh (the list and one body) and a guessed
+  Monday with no row (the list, once, then a cached 404). Review page:
+  `docs/local/archive-and-latest-review.html`.
 
 ## Two misreads fixed (requirements-v6)
 

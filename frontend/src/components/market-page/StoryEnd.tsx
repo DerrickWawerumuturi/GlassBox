@@ -23,7 +23,7 @@ export const HOW = {
     role: ["The job type comes from the title. Senior means a senior, lead or principal level in the same job type."],
 };
 
-export function Method({c}: {c: Ctx}) {
+export function Method({c, path}: {c: Ctx; path?: string}) {
     const {info, page} = c;
     return (
         <section id={"method"} aria-labelledby={"method-h"} className={"mt-[72px] scroll-mt-[70px] border-t border-border pt-[22px]"}>
@@ -56,7 +56,7 @@ export function Method({c}: {c: Ctx}) {
                 </ul>
             </details>
             <p className={"rounded-lg border border-border bg-card px-3 py-2.5 font-mono text-[12px] leading-[1.6] break-words text-muted-foreground"}>
-                {citeLine(c, new URL(SITE_URL).host)}
+                {citeLine(c, new URL(SITE_URL).host, path)}
             </p>
         </section>
     );
@@ -64,7 +64,8 @@ export function Method({c}: {c: Ctx}) {
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", {day: "numeric", month: "short", timeZone: "UTC"});
 
-export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, MarketBody | null>>}) {
+/** `past`: a past week's page, whose rail links the live pages without this week's counts. */
+export function Rail({c, others, past = false}: {c: Ctx; others: Partial<Record<MarketName, MarketBody | null>>; past?: boolean}) {
     const {info, page} = c;
     const facts: Array<[string, string]> = [
         [`${info.label} jobs`, fmt(page.jobs)], ["Employers", fmt(page.employers)],
@@ -91,8 +92,8 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
                         ))}
                     </dl>
                 </div>
-                <nav aria-label={"Also this week"} className={"mt-[30px] border-t-2 border-foreground pt-3"}>
-                    <h3 className={h3}>Also this week</h3>
+                <nav aria-label={past ? "Also on Glassbox" : "Also this week"} className={"mt-[30px] border-t-2 border-foreground pt-3"}>
+                    <h3 className={h3}>{past ? "Also on Glassbox" : "Also this week"}</h3>
                     <ol className={"m-0 list-none p-0 [counter-reset:m]"}>
                         {stories.map((story) => <li key={story.slug} className={item}><span><Link href={storyPath(story)} className={link}>{story.title}</Link>
                             <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>a story fixed to the week of {storyWeek(story)}</small></span></li>)}
@@ -105,7 +106,7 @@ export function Rail({c, others}: {c: Ctx; others: Partial<Record<MarketName, Ma
                             </li>
                         ))}
                         <li className={item}><span><Link href={"/market"} className={link}>All five pages</Link>
-                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>week of {weekDate(page)}</small></span></li>
+                            <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>{past ? "counted every Monday" : `week of ${weekDate(page)}`}</small></span></li>
                         <li className={item}><span><Link href={"/method"} className={link}>How Glassbox counts</Link>
                             <small className={"mt-[3px] block font-mono text-[12px] text-muted-foreground"}>sources, rules, limits</small></span></li>
                     </ol>

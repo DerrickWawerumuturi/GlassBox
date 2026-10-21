@@ -23,11 +23,16 @@ src/
                                  "Look around first" (components/landing), metadata from its copy, WebSite/Organization JSON-LD
     market/[page]                the five market pages, one editorial template (static like the landing, keeps the last good page; any other
                                  name is a 404): question, dek, byline, one square per job, findings at a glance with copy
-                                 links, finding sections the data supports, the CV ask (one sheet per page), how we counted, the rail; Article and
+                                 links, finding sections the data supports, the CV ask (one sheet per page), how we counted, past weeks, the rail; Article and
                                  BreadcrumbList JSON-LD; title, description and opengraph-image.tsx from the data
                                  (components/market-page, lib/market-pages.ts, lib/market-story.ts, decisions/market-pages.md).
                                  Outside the (public) group so share images keep plain addresses; layout.tsx adds the footer
                                  and Source Serif 4 (font-read), loaded on these pages only
+    market/[page]/week/[week]    a past week of a market page (the week's Monday): the same template with that week's
+                                 latest published row, dated at the top, canonical to itself; built at deploy for every
+                                 past week, a week that turns past after it renders on its first visit; the live week
+                                 redirects to the live page; a name or week that can't be one is a 404 before any read
+                                 (components/market-page/PastWeeks.tsx, decisions/market-pages.md "Past weeks")
     market/[page]/years-of-experience  how many years entry level software jobs ask for, from the entry level page's
                                  `experience` counts (lib/years-answer.ts); any other page name is a 404
     market/[page]/<story>        one or more stories per market page (is-entry-level-dead, pick-a-side, the-lobby,
@@ -35,7 +40,8 @@ src/
                                  share image and faces
                                  (components/stories, lib/stories, decisions/market-pages.md "Stories")
     market/page.tsx              /market, the grid of stories: covers, a plain link to each live page, the years card from the
-                                 live count, how we count, the CV card (components/market-hub, lib/market-hub.ts); own share image
+                                 live count, how we count, the CV card (components/market-hub, lib/market-hub.ts); own share image.
+                                 Opens on Latest (newest first, each card dated); By job type reorders by CSS order
     (public)/method              how Glassbox counts, written from the code (components/site/Explainer.tsx, lib/method-copy.ts)
     (public)/about               why Glassbox exists, in the editorial look of /product (components/about: drawings, the
                                  counting steps, the kept sheets; reuses components/product's chapter, count card and close);
@@ -103,7 +109,7 @@ src/
     years/                       the years page's woodpile ("Count the rings"): logs.ts (one log end, canvas or SVG),
                                  pile.ts (rack, key, sort, reading a log), Woodpile.tsx (client), Figures.tsx (server
                                  SVG: specimens, ringed logs, rounds), years.module.css (the wood's --w-* colours)
-    market-hub/                  the /market grid: hub.module.css, HubFilter (the chips), HubCv (the CV card), covers.ts
+    market-hub/                  the /market grid: hub.module.css, HubFilter (the chips: Latest, By job type, the kinds), HubCv (the CV card), covers.ts
     ui/                          shadcn primitives (@base-ui/react) and registry components
   lib/
     api.ts                       every backend call; `authed()` attaches the token
@@ -129,8 +135,10 @@ src/
     landing/look.ts              GET /market/look and the count's helpers (squares, wall, asks);
                                  look.fixture.json for tests and renders only
     landing/ad.ts                POST /market/ad: a pasted ad or link, read on the server
-    landing/look-server.ts       lookForPage(), marketForPage(), allMarkets(): a published body for a server render; keeps the last page
-    published.ts                 server only: the latest published row from market_publications (MARKET_DATABASE_URL, read only login)
+    landing/look-server.ts       lookForPage(), marketForPage(), allMarkets(), weeksForPage(), marketForWeek(): a published body
+                                 or a page's weeks for a server render; keeps the last page
+    published.ts                 server only: the latest published row from market_publications (MARKET_DATABASE_URL, read only
+                                 login); the published weeks (WEEKS) and one page of one week's row (WEEK)
     market-names.ts              the market pages' names, with no imports (analytics checks page names against it)
     market-pages.ts              which market pages exist, what each counts, and the page body's types
     market-story.ts              every sentence on a market page, templates over the counts (tested on market-story.fixture.json)
@@ -141,7 +149,7 @@ src/
     stories/                     a data module per story (one week's numbers, a comment per figure) and its tests;
                                  story.ts (types, addresses, the week), route.ts (metadata), index.ts (the list,
                                  storiesFor: a page's stories, newest first)
-    market-hub.ts                the /market grid's cards, in order, and its filters (tested)
+    market-hub.ts                the /market grid's cards by job type, latestFirst, and its views (tested)
     method-copy.ts               /method's words, each section naming the code it describes
     dashboard-data.ts            opportunity rows, tier labels, date and age labels
   types/jobradar.ts              API contract

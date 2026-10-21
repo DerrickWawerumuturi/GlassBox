@@ -80,6 +80,9 @@
 }
 @media (prefers-reduced-motion: reduce) { .cover svg, .chip { transition: none; } .card:hover .cover svg { transform: none; } }
 
+/* "By job type": each card at its place in the market pages' order (app/market/page.tsx sets --type). */
+.filtered[data-order="type"] .card { order: var(--type); }
+
 /* A filter shows one kind: the rest of the cards, the CV card among them, step aside. */
 .filtered[data-show="essay"] .card:not([data-kind="essay"]),
 .filtered[data-show="count"] .card:not([data-kind="count"]),

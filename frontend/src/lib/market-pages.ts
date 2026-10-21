@@ -58,6 +58,24 @@ export const MARKET_PAGES: Record<MarketName, MarketInfo> = {
 export const marketPath = (name: MarketName): `/market/${string}` => `/market/${name}`;
 export const isMarketName = (name: string): name is MarketName => (MARKET_NAMES as readonly string[]).includes(name);
 
+/** A past week of a market page, kept as it was published: "/market/ai/week/2026-10-12" (the week's Monday). */
+export const weekPath = (name: MarketName, week: string): `/market/${string}` => `${marketPath(name)}/week/${week}`;
+
+/** The Monday of the first published week (FIRST_PUBLISHED's). */
+export const FIRST_WEEK = "2026-10-05";
+
+/**
+ * Whether a path segment can be a published week: a Monday from the first
+ * published one to today, "2026-10-12". Checked before any read, so a guessed
+ * address costs no database read unless it could be a week.
+ */
+export function isWeek(week: string, today = new Date()): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) return false;
+    const day = new Date(`${week}T00:00:00Z`);
+    return !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === week && day.getUTCDay() === 1
+        && week >= FIRST_WEEK && day <= today;
+}
+
 /** The date the market pages were first published: Article datePublished. */
 export const FIRST_PUBLISHED = "2026-10-07";
 

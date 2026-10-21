@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 
 import FIXTURE from "./market-story.fixture.json";
-import {CV_AT, hubCards, hubFilters} from "./market-hub";
+import {CV_AT, hubCards, hubFilters, latestFirst} from "./market-hub";
 import type {MarketBody} from "./market-pages";
 
 /*
@@ -38,8 +38,9 @@ describe("the hub's cards", () => {
         // A reader can tell a story from a page: the pill and its filter say so (M4).
         for (const c of stories) expect(c.pill).toBe("Story");
         expect(hubFilters(cards).find(([k]) => k === "count")?.[1]).toBe("Stories");
-        // Each story keeps its own week.
-        expect(stories.map((c) => c.when)).toEqual(["Week of 19 Oct", "Week of 12 Oct", "Week of 12 Oct", "Week of 19 Oct", ...Array(3).fill("Week of 12 Oct")]);
+        // Each story keeps its own week, and says the day it came out (GitHub issue #16).
+        expect(stories.map((c) => c.week)).toEqual(["2026-10-19", "2026-10-12", "2026-10-12", "2026-10-19", ...Array(3).fill("2026-10-12")]);
+        expect(stories.map((c) => c.when)).toEqual(["19 Oct 2026", "15 Oct 2026", "15 Oct 2026", "21 Oct 2026", ...Array(3).fill("15 Oct 2026")]);
     });
 
     it("write the years card from the live count, and leave it out when the count has no years", () => {
@@ -53,7 +54,35 @@ describe("the hub's cards", () => {
     it("don't show the essay yet, so its filter doesn't show either", () => {
         const cards = hubCards({"entry-level-software": withYears});
         expect(cards.some((c) => c.kind === "essay")).toBe(false);
-        expect(hubFilters(cards).map(([k]) => k)).toEqual(["all", "count", "years", "method"]);
-        expect(hubFilters([...cards, {...cards[0], kind: "essay"}]).map(([k]) => k)).toEqual(["all", "essay", "count", "years", "method"]);
+        expect(hubFilters(cards).map(([k]) => k)).toEqual(["latest", "type", "count", "years", "method"]);
+        expect(hubFilters([...cards, {...cards[0], kind: "essay"}]).map(([k]) => k)).toEqual(["latest", "type", "essay", "count", "years", "method"]);
+    });
+});
+
+describe("the hub's Latest view (GitHub issue #16)", () => {
+    const cards = hubCards({"entry-level-software": withYears});
+
+    it("opens the hub: Latest is the first view, By job type the second", () => {
+        expect(hubFilters(cards).slice(0, 2)).toEqual([["latest", "Latest"], ["type", "By job type"]]);
+    });
+
+    it("puts the newest first: by the day each came out, then its week; how we count last", () => {
+        const latest = latestFirst(cards);
+        // The years card is dated by its count's week (12 Oct in this fixture), so it follows the stories of 15 Oct.
+        expect(latest.map((c) => c.href)).toEqual(["/market/ai/ai-on-your-cv", "/market/entry-level-software/is-entry-level-dead",
+            "/market/entry-level-software/pick-a-side", "/market/software-engineering/the-lobby", "/market/ai/contents-may-vary",
+            "/market/machine-learning/peak-python", "/market/devops/within-eleven-jobs", "/market/entry-level-software/years-of-experience", "/method"]);
+        const dated = latest.filter((c) => c.date);
+        expect(dated.map((c) => c.date)).toEqual([...dated.map((c) => c.date!)].sort().reverse());
+        // A later day wins over an earlier one whatever the week; the same day, the later week.
+        const story = cards.find((c) => c.kind === "count")!;
+        expect(latestFirst([{...story, href: "a", date: "2026-10-15", week: "2026-10-12"}, {...story, href: "b", date: "2026-10-21", week: "2026-10-05"},
+            {...story, href: "c", date: "2026-10-15", week: "2026-10-14"}]).map((c) => c.href)).toEqual(["b", "c", "a"]);
+    });
+
+    it("dates every card but how we count", () => {
+        const latest = latestFirst(cards);
+        expect(latest.map((c) => c.when)).toEqual(["21 Oct 2026", "19 Oct 2026", "15 Oct 2026", "15 Oct 2026", "15 Oct 2026",
+            "15 Oct 2026", "15 Oct 2026", "Week of 12 Oct", null]);
     });
 });

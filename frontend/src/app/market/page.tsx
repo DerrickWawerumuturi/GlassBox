@@ -14,7 +14,7 @@ import {STORY_COVERS} from "@/components/stories/covers";
 import t from "@/components/stories/story.module.css";
 import {weekDate, weekStart} from "@/lib/market-page";
 import {MARKET_NAMES} from "@/lib/market-pages";
-import {CV_AT, HubCard, hubCards, hubFilters} from "@/lib/market-hub";
+import {CV_AT, HubCard, hubCards, hubFilters, latestFirst} from "@/lib/market-hub";
 import {allMarkets, keepLastPage} from "@/lib/landing/look-server";
 import {publicPage} from "@/lib/seo";
 import type {StorySlug} from "@/lib/stories/story";
@@ -27,6 +27,8 @@ import {cn} from "@/lib/utils";
  * Server rendered from the published count, for the live links, the years
  * card and the week; a failed read during a revalidation keeps the last good
  * hub (look-server.ts). The covers' display faces load here and in their stories only.
+ * The cards are in the page newest first (Latest, GitHub issue #16), each with
+ * its place by job type as a CSS order for that view; the CV card is fifth in both.
  */
 
 const HUB = {
@@ -67,10 +69,14 @@ function Badge() {
     );
 }
 
-function Card({c}: {c: HubCard}) {
+/** A card's place in "By job type": its index there, one further on past the CV card. */
+const byType = (i: number) => ({"--type": i < CV_AT ? i : i + 1}) as React.CSSProperties;
+
+function Card({c, type}: {c: HubCard; type: number}) {
     return (
-        <li className={s.card} data-kind={c.kind}>
-            <div className={s.meta}><span className={s.pill}>{c.pill}</span>{c.when && <span className={s.when}>{c.when}</span>}</div>
+        <li className={s.card} data-kind={c.kind} style={byType(type)}>
+            <div className={s.meta}><span className={s.pill}>{c.pill}</span>
+                {c.when && (c.date ? <time className={s.when} dateTime={c.date}>{c.when}</time> : <span className={s.when}>{c.when}</span>)}</div>
             <div className={s.cover} dangerouslySetInnerHTML={{__html: cover(c)}} />
             <h2><Link href={c.href}>{c.title}</Link></h2>
             <p>{c.line}</p>
@@ -82,7 +88,8 @@ function Card({c}: {c: HubCard}) {
 export default async function MarketHub() {
     const pages = await allMarkets(keepLastPage());
     const counted = MARKET_NAMES.map((n) => pages[n]).find((p) => p !== null) ?? null;
-    const cards = hubCards(pages);
+    const cards = hubCards(pages), latest = latestFirst(cards);
+    const card = (c: HubCard) => <Card key={c.href} c={c} type={cards.indexOf(c)} />;
     return (
         <div className={cn(t.story, FONTS, s.hub)}>
             <div className={s.wrap}>
@@ -95,9 +102,9 @@ export default async function MarketHub() {
                 </section>
                 <HubFilter filters={hubFilters(cards)}>
                     <ol className={s.grid}>
-                        {cards.slice(0, CV_AT).map((c) => <Card key={c.href} c={c} />)}
-                        <HubCv />
-                        {cards.slice(CV_AT).map((c) => <Card key={c.href} c={c} />)}
+                        {latest.slice(0, CV_AT).map(card)}
+                        <HubCv style={{"--type": CV_AT} as React.CSSProperties} />
+                        {latest.slice(CV_AT).map(card)}
                     </ol>
                 </HubFilter>
                 <p className={s.open}>The weekly counts are also open data, as CSV files on{" "}

@@ -362,8 +362,9 @@ export function hiringSection(c: Ctx) {
     };
 }
 
-export const citeLine = (c: Ctx, host: string) =>
-    `Glassbox. "${headline(c) ?? topic(c)}" Counted in the week of ${weekDate(c.page)}. ${host}/market/${c.info.name}`;
+/** `path`: the page cited, the live page unless a past week's. */
+export const citeLine = (c: Ctx, host: string, path = `/market/${c.info.name}`) =>
+    `Glassbox. "${headline(c) ?? topic(c)}" Counted in the week of ${weekDate(c.page)}. ${host}${path}`;
 
 // ------------------------------------------------------------------ search and share
 

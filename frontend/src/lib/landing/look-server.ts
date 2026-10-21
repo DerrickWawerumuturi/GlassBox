@@ -1,8 +1,8 @@
 import "server-only";
 
 import {lookJobs, type Look} from "@/lib/landing/look";
-import {MARKET_NAMES, type MarketBody, type MarketName} from "@/lib/market-pages";
-import {building, currentPublication, type Publication} from "@/lib/published";
+import {isWeek, MARKET_NAMES, type MarketBody, type MarketName} from "@/lib/market-pages";
+import {building, currentPublication, currentWeeks, pastWeeks, type Publication, type PublishedWeek, weekForPage} from "@/lib/published";
 
 /*
  * The published count for a server render, read from the database
@@ -78,4 +78,36 @@ export async function allMarkets(keep = false, load?: () => Promise<Publication 
                                  build?: boolean): Promise<Record<MarketName, MarketBody | null>> {
     const bodies = await Promise.all(MARKET_NAMES.map((name) => marketForPage(name, keep, load, build)));
     return Object.fromEntries(MARKET_NAMES.map((name, i) => [name, bodies[i]])) as Record<MarketName, MarketBody | null>;
+}
+
+/** A week of a page: its Monday and the jobs the page counted. */
+export interface PageWeek {week: string; jobs: number}
+
+/** A page's live week and its past weeks, newest first, for a live or past page. */
+export interface PageWeeks {live: PageWeek | null; past: PageWeek[]}
+
+/**
+ * A page's weeks for the server render. Like the count: a failed read throws
+ * during a revalidation, to keep the last good page, and fails the build; in
+ * dev it lists none.
+ */
+export async function weeksForPage(name: MarketName, keep = keepLastPage(), load: () => Promise<PublishedWeek[]> = currentWeeks,
+                                   build = building()): Promise<PageWeeks> {
+    let weeks: PublishedWeek[];
+    try {
+        weeks = await load();
+    } catch (err) {
+        if (keep) throw new Error(`The ${name} page's past weeks are unavailable; keeping the last good page.`);
+        if (build) throw err;
+        return {live: null, past: []};
+    }
+    const live = weeks.find((w) => w.current);
+    // A week an address can't name (isWeek) is never listed, so no link leads to a 404.
+    return {live: live && name in live.pages ? {week: live.week, jobs: live.pages[name]} : null,
+        past: pastWeeks(weeks, name).filter((w) => isWeek(w.week))};
+}
+
+/** A page's count in a past week: that week's latest row, the page's body only. */
+export function marketForWeek(name: MarketName, week: string, keep?: boolean, build?: boolean): Promise<MarketBody | null> {
+    return marketForPage(name, keep, () => weekForPage(week, name), build);
 }

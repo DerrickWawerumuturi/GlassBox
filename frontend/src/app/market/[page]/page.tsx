@@ -2,7 +2,7 @@ import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 
 import MarketArticle from "@/components/market-page/MarketArticle";
-import {allMarkets, marketForPage} from "@/lib/landing/look-server";
+import {allMarkets, marketForPage, weeksForPage} from "@/lib/landing/look-server";
 import {isMarketName, MARKET_NAMES, MARKET_PAGES, marketPath} from "@/lib/market-pages";
 import {pageDescription, pageTitle} from "@/lib/market-story";
 import {publicPage} from "@/lib/seo";
@@ -35,6 +35,7 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 export default async function MarketPage({params}: Props) {
     const {page: name} = await params;
     if (!isMarketName(name)) notFound();
-    const [page, others] = await Promise.all([marketForPage(name), allMarkets()]);
-    return <MarketArticle info={MARKET_PAGES[name]} page={page} others={others} />;
+    // The past weeks list (GitHub issue #16) is read with the count: a new week shows after the Monday refresh.
+    const [page, others, weeks] = await Promise.all([marketForPage(name), allMarkets(), weeksForPage(name)]);
+    return <MarketArticle info={MARKET_PAGES[name]} page={page} others={others} weeks={weeks} />;
 }

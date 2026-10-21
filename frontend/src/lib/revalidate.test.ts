@@ -1,4 +1,4 @@
-import {readFileSync} from "node:fs";
+import {existsSync, readFileSync} from "node:fs";
 import {join} from "node:path";
 
 import {beforeEach, describe, expect, it, vi} from "vitest";
@@ -56,6 +56,14 @@ describe("POST /api/revalidate", () => {
         expect((await response.json()).revalidated).toEqual(MARKET_PATHS);
     });
 
+    // A past week (GitHub issue #16) has no path of its own here: it sits under the /market layout, which the call drops,
+    // so its Past weeks list and a cached 404 or redirect for a week that has just turned past are rendered again.
+    it("drops every past week with the /market layout", async () => {
+        await handleRevalidate(call(`Bearer ${SECRET}`), SECRET);
+        expect(existsSync(join(__dirname, "..", "app", "market", "[page]", "week", "[week]", "page.tsx"))).toBe(true);
+        expect(revalidatePath).toHaveBeenCalledWith("/market", "layout");
+    });
+
     it("refuses a header too long to be the secret", () => {
         expect(authorized(`Bearer ${"a".repeat(600)}`, SECRET)).toBe(false);
     });
@@ -78,7 +86,7 @@ describe("the pages the publication revalidates", () => {
     // With `dynamicParams = false`, Next 16.3 answered 404 for /market/ai and the
     // years page once /api/revalidate had dropped them (next start, 12 Oct 2026).
     // Unknown names are a 404 from notFound() instead.
-    it.each(["market/[page]/page.tsx", "market/[page]/years-of-experience/page.tsx"])("%s keeps dynamic params", (file) => {
+    it.each(["market/[page]/page.tsx", "market/[page]/years-of-experience/page.tsx", "market/[page]/week/[week]/page.tsx"])("%s keeps dynamic params", (file) => {
         const source = readFileSync(join(__dirname, "..", "app", file), "utf8");
         expect(source).not.toMatch(/^export const dynamicParams = false/m);
         expect(source).toContain("notFound()");

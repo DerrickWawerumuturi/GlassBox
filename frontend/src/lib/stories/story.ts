@@ -40,10 +40,6 @@ export const storyPath = (s: Pick<StoryInfo, "page" | "slug">): `/market/${strin
 /** "12 October 2026": the week a story counts, as every source line names it. */
 export const storyWeek = (s: Pick<StoryInfo, "week">) => longDate(s.week);
 
-/** "12 Oct": the same Monday, short, for the hub card. */
-export const storyDay = (s: Pick<StoryInfo, "week">) =>
-    new Date(s.week).toLocaleDateString("en-GB", {day: "numeric", month: "short", timeZone: "UTC"});
-
 /** The story's CV ask: the skills it names, compared with the jobs it counted. */
 export function storyAsk(s: StoryInfo): Ask {
     return {skills: s.ask, what: STORY_WHAT, jobs: s.readable, subject: MARKET_PAGES[s.page].subject};

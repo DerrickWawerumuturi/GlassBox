@@ -21,6 +21,15 @@ vi.mock("@/lib/published", async (original) => ({
         read.calls++;
         return {id: 1, look: LOOK, pages: PAGES};
     },
+    // The weekly archive's two reads (GitHub issue #16): the weeks list and one past week's page.
+    currentWeeks: async () => {
+        read.calls++;
+        return [{week: "2026-10-12", current: true, pages: {ai: 288}}, {week: "2026-10-05", current: false, pages: {ai: 250}}];
+    },
+    weekForPage: async (week: string, name: string) => {
+        read.calls++;
+        return {id: 0, look: null, pages: {[name]: {...(PAGES as Record<string, object>)[name], week}}};
+    },
 }));
 
 // next/font is the compiler's: outside a build it throws. The hub loads the stories' faces for its covers.
@@ -42,7 +51,7 @@ const readers = routes.filter(([, text]) => text.includes("@/lib/landing/look-se
 describe("public pages", () => {
     it("rebuild only on demand: every page reading the count has revalidate = false", () => {
         expect(readers).toEqual(expect.arrayContaining(["(landing)/page.tsx", "(public)/about/page.tsx", "(public)/product/page.tsx",
-            "market/page.tsx", "market/[page]/page.tsx", "market/[page]/years-of-experience/page.tsx", "sitemap.ts",
+            "market/page.tsx", "market/[page]/page.tsx", "market/[page]/years-of-experience/page.tsx", "market/[page]/week/[week]/page.tsx", "sitemap.ts",
             "market/opengraph-image.tsx", "market/[page]/opengraph-image.tsx", "market/[page]/years-of-experience/opengraph-image.tsx"]));
         for (const [path, text] of routes.filter(([p]) => readers.includes(p))) {
             expect([path, text.match(/^export const revalidate = (.+);/m)?.[1]]).toEqual([path, "false"]);
@@ -76,6 +85,7 @@ describe("rendering a public page", {timeout: 30_000}, () => {
         const hub = await import("@/app/market/page");
         const market = await import("@/app/market/[page]/page");
         const years = await import("@/app/market/[page]/years-of-experience/page");
+        const pastWeek = await import("@/app/market/[page]/week/[week]/page");
         const sitemap = await import("@/app/sitemap");
 
         const homeEl = await home.default() as {props: {children: Array<{props?: {initial?: unknown}}>}};
@@ -87,8 +97,14 @@ describe("rendering a public page", {timeout: 30_000}, () => {
         await market.default(params("ai"));
         await years.generateMetadata(params("entry-level-software"));
         await years.default(params("entry-level-software"));
+        const week = {params: Promise.resolve({page: "ai", week: "2026-10-05"})};
+        expect(await pastWeek.generateStaticParams()).toEqual([{page: "ai", week: "2026-10-05"}]);
+        expect((await pastWeek.generateMetadata(week)).alternates?.canonical).toBe("/market/ai/week/2026-10-05");
+        await pastWeek.default(week);
         const map = await sitemap.default();
         expect(map.find((e) => e.url.endsWith("/market/ai"))?.lastModified).toBeTruthy();
+        // Each past week is in the sitemap, without a lastmod: a past week doesn't change.
+        expect(map.filter((e) => e.url.includes("/week/"))).toEqual([{url: expect.stringMatching(/\/market\/ai\/week\/2026-10-05$/)}]);
 
         expect(fetches).toEqual([]);
         expect(read.calls).toBeGreaterThan(0);

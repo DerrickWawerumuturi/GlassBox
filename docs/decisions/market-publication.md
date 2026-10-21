@@ -87,6 +87,13 @@ from the database and never asks the API for it.
   connecting (postgres.js would send it as a server setting).
 - One read per render: a page, its metadata and its rail share it (React
   `cache`, `currentPublication`).
+- Past weeks (GitHub issue #16, `market-pages.md` "Past weeks") use the same
+  login and table, two more queries: `WEEKS` (one row per published week, the
+  latest of each, with each page's jobs; only dates and numbers leave the
+  database) and `WEEK` (`pages -> $name` of one week's latest published row,
+  parameters, not the row). A build reads `WEEKS` once per worker
+  (`currentWeeks`); the Monday `/api/revalidate` needs no new path: its
+  `/market` layout drop covers every past week.
 - A body with 0 jobs (a page) or no jobs in any job type (the look) is no count:
   refused on the server render and in the browser, never drawn.
 - At `next build` the read retries every 3 s for up to 30 s (`BUILD_WAIT_MS`;

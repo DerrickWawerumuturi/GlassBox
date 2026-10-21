@@ -6,16 +6,18 @@ import CopyFact from "@/components/market-page/CopyFact";
 import Faq from "@/components/market-page/Faq";
 import LeadSquares from "@/components/market-page/LeadSquares";
 import MarketCvAsk, {MarketAskProvider} from "@/components/market-page/MarketCvAsk";
+import PastWeeks, {PAST_WEEKS_ID} from "@/components/market-page/PastWeeks";
 import {ScanStatus} from "@/components/market-page/SkillName";
 import {Method, Rail} from "@/components/market-page/StoryEnd";
 import StorySections, {P} from "@/components/market-page/StorySections";
 import TitleBar from "@/components/market-page/TitleBar";
 import {Ask, marketAskSkills, marketWhat} from "@/lib/cv-ask";
+import type {PageWeeks} from "@/lib/landing/look-server";
 import {weekDate, weekStart} from "@/lib/market-page";
-import {MarketBody, MarketInfo, MarketName, absoluteMarket, marketPath} from "@/lib/market-pages";
+import {MarketBody, MarketInfo, MarketName, marketPath, weekPath} from "@/lib/market-pages";
 import {citeLine, Ctx, dek, findingText, framing, glance, has, headline, skillName, thin, topic, UNAVAILABLE} from "@/lib/market-story";
 import {marketFaq} from "@/lib/market-faq";
-import {marketStructuredData} from "@/lib/seo";
+import {absolute, articleStructuredData, marketStructuredData} from "@/lib/seo";
 import {SITE_URL} from "@/lib/site";
 
 /*
@@ -23,19 +25,36 @@ import {SITE_URL} from "@/lib/site";
  * (docs/decisions/market-pages.md): kicker, what the page counts, the lead
  * finding as the headline, dek, byline with the week counted, the lead
  * visual, a framing paragraph, three findings at a glance, the finding
- * sections the data supports, the CV ask, how we counted, and the rail.
+ * sections the data supports, the CV ask, how we counted, the past weeks
+ * and the rail. A past week (`showing`, GitHub issue #16) is the same page
+ * with that week's count, dated at the top and addressed by its week.
  */
 
 const WRAP = "mx-auto w-full max-w-[1120px] px-4 sm:px-6";
 
-function Head({info, page, c}: {info: MarketInfo; page: MarketBody | null; c: Ctx | null}) {
+/** A past week's line at the top: which week, that the live page has moved on, and the way to it. */
+function PastNote({info, page}: {info: MarketInfo; page: MarketBody}) {
+    return (
+        <p className={"mb-6 max-w-[800px] rounded-[10px] border border-border bg-card px-4 py-3 font-read text-[17px] leading-[1.5]"}>
+            <time dateTime={weekStart(page)}>The week of {weekDate(page)}.</time> This is a past week; the live page counts again every Monday.{" "}
+            <Link href={marketPath(info.name)} className={"whitespace-nowrap text-primary underline underline-offset-4"}>Latest count: {info.subject} jobs</Link>
+        </p>
+    );
+}
+
+function Head({info, page, c, path, showing, past}: {
+    info: MarketInfo; page: MarketBody | null; c: Ctx | null; path: string; showing?: string; past: boolean;
+}) {
     // The headline is the finding; what the page counts is its title when there is none.
     const q = topic({info}), h = c ? headline(c) : null;
     return (
         <>
             <nav aria-label={"Breadcrumb"} className={"mb-3.5 font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-muted-foreground"}>
-                <Link href={"/market"} className={"no-underline hover:text-foreground"}>Market</Link> / <span aria-current={"page"}>{info.label}</span>
+                <Link href={"/market"} className={"no-underline hover:text-foreground"}>Market</Link> / {showing && page
+                    ? <><Link href={marketPath(info.name)} className={"no-underline hover:text-foreground"}>{info.label}</Link> / <span aria-current={"page"}>Week of {weekDate(page)}</span></>
+                    : <span aria-current={"page"}>{info.label}</span>}
             </nav>
+            {showing && page && <PastNote info={info} page={page} />}
             <h1 className={"m-0 max-w-[920px] font-heading text-[36px] font-bold leading-[1.02] tracking-[-0.025em] sm:text-[56px]"}>{h ?? q}</h1>
             <p className={"mt-[26px] max-w-[800px] font-read text-[20px] leading-[1.45] sm:text-[23px]"}>{c ? dek(c) : UNAVAILABLE}</p>
             {page && c && (
@@ -44,19 +63,22 @@ function Head({info, page, c}: {info: MarketInfo; page: MarketBody | null; c: Ct
                         Counted by <b className={"font-heading"}>Glassbox</b>
                         <span className={"mt-0.5 block font-mono text-[12px] text-muted-foreground"}>
                             <time dateTime={weekStart(page)}>Week of {weekDate(page)}</time> · a new count every Monday
+                            {past && <> · <a href={`#${PAST_WEEKS_ID}`} className={"text-primary underline-offset-4 hover:underline"}>Past weeks</a></>}
                         </span>
                     </div>
-                    <BylineActions url={absoluteMarket(info.name)} title={h ?? q} cite={citeLine(c, new URL(SITE_URL).host)} />
+                    <BylineActions url={absolute(path)} title={h ?? q} cite={citeLine(c, new URL(SITE_URL).host, path)} />
                 </div>
             )}
         </>
     );
 }
 
-export default function MarketArticle({info, page, others}: {
+export default function MarketArticle({info, page, others, weeks, showing}: {
     info: MarketInfo; page: MarketBody | null; others: Partial<Record<MarketName, MarketBody | null>>;
+    weeks: PageWeeks; showing?: string;
 }) {
     const c: Ctx | null = page ? {info, page} : null;
+    const path = showing ? weekPath(info.name, showing) : marketPath(info.name);
     const findings = c ? glance(c) : [], faq = c ? marketFaq(c) : [];
     // The skills the figures show, for the line a scan adds: "8 of the 19 skills in these charts are on your CV".
     const story = c?.page.story;
@@ -68,10 +90,13 @@ export default function MarketArticle({info, page, others}: {
     const ask: Ask | null = c ? {skills: marketAskSkills(c.page), what: marketWhat(info.subject), jobs: c.page.readable, subject: info.subject} : null;
     const body = (
         <div className={"pb-24"}>
-            {c && <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(marketStructuredData(info, c.page, dek(c), headline(c), faq))}} />}
+            {c && <script type={"application/ld+json"} dangerouslySetInnerHTML={{__html: JSON.stringify(showing
+                // A past week's markup names its own address; its questions stay with the live page's FAQPage.
+                ? articleStructuredData(path, [[info.label, marketPath(info.name)], [`Week of ${weekDate(c.page)}`, path]], c.page, headline(c) ?? topic({info}), dek(c))
+                : marketStructuredData(info, c.page, dek(c), headline(c), faq))}} />}
             {c && <TitleBar title={headline(c) ?? topic({info})} />}
             <section className={`${WRAP} pt-11`}>
-                <Head info={info} page={page} c={c} />
+                <Head info={info} page={page} c={c} path={path} showing={showing} past={weeks.past.length > 0} />
                 {c && (
                     <div className={"mt-[88px] sm:mt-[132px]"}>
                         <LeadSquares c={c} />
@@ -98,7 +123,7 @@ export default function MarketArticle({info, page, others}: {
                                                 <React.Fragment key={j}>{part}{j < all.length - 1 && <b className={"font-heading"}>{f.bold}</b>}</React.Fragment>
                                             ))}{f.href && <>{" "}<Link href={f.href} className={"text-primary underline-offset-4 hover:underline"}>Years of experience</Link></>}</span>
                                             <span className={"col-start-2 sm:col-start-3"}>
-                                                <CopyFact fact={findingText(f)} page={info.name} path={marketPath(info.name)} hash={f.id} />
+                                                <CopyFact fact={findingText(f)} page={info.name} path={path} hash={f.id} />
                                             </span>
                                         </li>
                                     ))}
@@ -111,9 +136,10 @@ export default function MarketArticle({info, page, others}: {
                         <StorySections c={c} />
                         <Faq items={faq} week={weekDate(c.page)} />
                         <MarketCvAsk lead />
-                        <Method c={c} />
+                        <Method c={c} path={path} />
+                        <PastWeeks info={info} weeks={weeks} showing={showing} />
                     </article>
-                    <Rail c={c} others={others} />
+                    <Rail c={c} others={others} past={Boolean(showing)} />
                 </div>
             )}
         </div>
