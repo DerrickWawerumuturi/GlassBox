@@ -31,6 +31,31 @@ never `non_tech`, `other` or `ai_data`):
 Top level: `taken_at`, `profiler_version`, and `skills`, a display name for
 every skill key anywhere in the body.
 
+### `ai_titles` (publication only, since 2026-10-21)
+
+Jobs with AI in the title, in **every** family, `non_tech` and `other` too:
+"AI Product Counsel" is a lawyer, and the AI age stories and the barometer show
+that (`backend/src/jobpool/ai_titles.py`, tests `test_ai_titles.py`). Built in
+`market_look.bodies`, so only the weekly publication carries it; it reads the
+rows the Monday run already reads and adds no query.
+
+| Field | What it is |
+|---|---|
+| `jobs` | jobs whose title names AI |
+| `of` | every job counted that week, all families |
+| `early`, `internships` | of `jobs`: intern, entry or junior; intern alone |
+| `families` | `[family, AI titled, all jobs]`, largest first |
+| `kinds` | in a fixed order: `key`, `jobs`, `early`, `internships`, `titles` (up to 8 `[title, company, level]`, one per employer) |
+
+"Names AI": AI, GenAI, KI (German), LLM, agentic, machine learning, ML, prompt
+engineer, or an AI agent product area ("Agent Platform"). Bare "agent" doesn't
+count: in titles it is mostly call centre and travel work. Kinds, first match
+wins: research, customers (forward deployed, solutions, sales), bounds
+(governance, legal, security), teach (enablement, evaluation, QA), product
+(product and design), change (automation, consulting, operations), infra,
+build, and other. By title words only, so some jobs land in the wrong kind; a
+story says so. Lists, not objects, because `jsonb` doesn't keep key order.
+
 ### Counting rules
 
 The same as the stored snapshot (`market-snapshots.md`), by the same code:

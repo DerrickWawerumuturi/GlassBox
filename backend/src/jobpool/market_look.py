@@ -31,7 +31,7 @@ from psycopg import errors
 
 from src.database.repositories import profile_repository, publication_repository
 from src.database.session import connection, is_configured
-from src.jobpool import market_pages, snapshot
+from src.jobpool import ai_titles, market_pages, snapshot
 from src.matching.requirements import PROFILER_VERSION
 from src.matching.roles import TECH_FAMILIES
 from src.matching.skills import display
@@ -163,7 +163,7 @@ def bodies(rows: list[dict], as_of: datetime) -> dict:
     taken_at, and its `week`, the Monday of that week, which the pages date by.
     """
     week = week_of(as_of).isoformat()
-    return {"look": {**aggregate(rows, as_of), "week": week},
+    return {"look": {**aggregate(rows, as_of), "week": week, "ai_titles": ai_titles.count(rows)},
             "pages": {name: {**body, "week": week} for name, body in market_pages.build(rows, as_of).items()}}
 
 
