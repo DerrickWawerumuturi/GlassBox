@@ -1,3 +1,4 @@
+import {aiOnYourCvCover} from "@/components/stories/covers/ai-on-your-cv";
 import {contentsMayVaryCover} from "@/components/stories/covers/contents-may-vary";
 import {isEntryLevelDeadCover} from "@/components/stories/covers/is-entry-level-dead";
 import {peakPythonCover} from "@/components/stories/covers/peak-python";
@@ -11,6 +12,7 @@ export const STORY_COVERS: Record<StorySlug, () => string> = {
     "is-entry-level-dead": isEntryLevelDeadCover,
     "pick-a-side": pickASideCover,
     "the-lobby": theLobbyCover,
+    "ai-on-your-cv": aiOnYourCvCover,
     "contents-may-vary": contentsMayVaryCover,
     "peak-python": peakPythonCover,
     "within-eleven-jobs": withinElevenJobsCover,

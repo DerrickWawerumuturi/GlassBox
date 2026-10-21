@@ -427,7 +427,7 @@ in on it.
 Visual stories, at least one per market page, each telling one week's count with
 its own object and style (prototypes: `docs/local/editorial-sprint/stories/`):
 "Is entry level dead?" and "Pick a side" (entry level software), "The lobby is the biggest floor"
-(software engineering), "Contents may vary" (AI), "Peak Python" (machine
+(software engineering), "Do you need AI on your CV now?" and "Contents may vary" (AI), "Peak Python" (machine
 learning), "Within eleven jobs" (DevOps).
 
 - **Dated, like an article.** A story is fixed to one named week. Its numbers
@@ -494,6 +494,23 @@ learning), "Within eleven jobs" (DevOps).
   bodies (credited on the page and in `public/stories/is-entry-level-dead/heads/CREDITS.md`).
   It names no skills, so its CV button opens the sheet about the latest jobs, as
   the hub's CV card does, with the founder's own line before it.
+- **Do you need AI on your CV now? (21 Oct 2026).** The AI page's second story,
+  chapter two of the visual stories (it links chapter one, Is entry level dead?);
+  it leads the AI page's rail, Contents may vary follows. Week of 19 October
+  2026, publication id 4: each job family's readable jobs and those naming LLMs
+  (`look.families.<family>.readable` and `.skills.llm`), the AI jobs' languages
+  per job (`pages.ai.story.languages.per_job`: 379 none, 196 one, 134 two, 91
+  three or more) and entry level against senior
+  (`pages.entry-level-software.story.skills`, llm: 72 of 627, 485 of 2,796).
+  One real ad among 20 real door photos (Pexels, the opening only), a guess on a
+  building of 100 windows, then a drawn street, one building per family sorted
+  from the loudest ask for LLMs to the quietest (one drawn person per 5 jobs on
+  every screen), the AI door, a lamp post, two doors by level and the quiet
+  embedded door, with three real listings pinned where they stand. Its CV ask
+  counts six AI skills on a CV (llm, ai agents, rag, machine learning, ai
+  assistants, mlops), asked after the guess, at the street and at the end, each
+  its own `cta_clicked` place; an ask inside the story steps aside once the
+  reader has an answer, which stands once, at the end.
 
 ## Two misreads fixed (requirements-v6)
 

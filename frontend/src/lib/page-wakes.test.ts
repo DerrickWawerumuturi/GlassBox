@@ -100,6 +100,7 @@ describe("rendering a public page", {timeout: 30_000}, () => {
             ["entry-level-software", await import("@/app/market/[page]/pick-a-side/page")],
             ["software-engineering", await import("@/app/market/[page]/the-lobby/page")],
             ["ai", await import("@/app/market/[page]/contents-may-vary/page")],
+            ["ai", await import("@/app/market/[page]/ai-on-your-cv/page")],
             ["machine-learning", await import("@/app/market/[page]/peak-python/page")],
             ["devops", await import("@/app/market/[page]/within-eleven-jobs/page")],
         ] as const;
@@ -110,7 +111,7 @@ describe("rendering a public page", {timeout: 30_000}, () => {
         }
         expect(fetches).toEqual([]);
         expect(read.calls).toBe(0);
-        expect(routes.filter(([path]) => /^market\/\[page]\/(pick-a-side|the-lobby|contents-may-vary|peak-python|within-eleven-jobs)\//.test(path))
+        expect(routes.filter(([path]) => /^market\/\[page]\/(pick-a-side|the-lobby|contents-may-vary|ai-on-your-cv|peak-python|within-eleven-jobs)\//.test(path))
             .filter(([, text]) => text.includes("look-server") || text.includes("@/lib/published"))).toEqual([]);
     });
 });

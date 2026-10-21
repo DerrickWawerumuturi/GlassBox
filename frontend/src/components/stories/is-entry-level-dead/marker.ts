@@ -69,7 +69,9 @@ export const wquad = (pts: Pt[], r: Rnd, amp: number) => smooth(jitter(pts, r, a
 export const wpoly = (pts: Pt[], r: Rnd, amp: number) =>
     jitter(pts, r, amp).map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join("") + "Z";
 
-export type PersonOpts = {seed: number; shirt?: string | null; lime?: boolean; pack?: boolean; hand?: boolean};
+/** `laptops`: 0 to 3 held against the chest, one per programming language the ad names (Do you need AI on your CV now?). */
+export type PersonOpts = {seed: number; shirt?: string | null; lime?: boolean; pack?: boolean; hand?: boolean; laptops?: number};
+export const LAPTOP = "#4e5d6e";
 
 /** One tiny person, feet at (x, y), s wide; the seed picks skin, hair and shirt. */
 export function person(x: number, y: number, s: number, o: PersonOpts): Part[] {
@@ -79,6 +81,8 @@ export function person(x: number, y: number, s: number, o: PersonOpts): Part[] {
     parts.push({d: wquad([[x - sw, top], [x + sw, top], [x + sw * 1.05, bot], [x - sw * 1.05, bot]], r, amp), fill: shirt, lw: 1});
     parts.push({d: wline([[x - s * .17, bot], [x - s * .19, y]], r, amp) + wline([[x + s * .17, bot], [x + s * .19, y]], r, amp)
         + wline([[x - s * .32, y], [x - s * .1, y]], r, amp) + wline([[x + s * .08, y], [x + s * .32, y]], r, amp), lw: 1});
+    // A dark slate block per laptop, stacked: it reads even at 12 units.
+    for (let k = 0; k < (o.laptops ?? 0); k++) parts.push({d: wrect(x - s * .3, bot - s * .56 + k * s * .19, s * .6, s * .15, r, amp * .5), fill: LAPTOP, lw: .8, cls: "lap"});
     const armL = wline([[x - sw, top + s * .08], [x - sw - s * .12, bot - s * .1]], r, amp);
     const armR = o.hand ? wline([[x + sw, top + s * .08], [x + sw + s * .22, top - s * .55]], r, amp) : wline([[x + sw, top + s * .08], [x + sw + s * .12, bot - s * .1]], r, amp);
     parts.push({d: armL + armR, lw: .8});

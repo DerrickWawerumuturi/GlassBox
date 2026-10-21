@@ -17,11 +17,11 @@ const withYears: MarketBody = {...entry, week: "2026-10-12", experience: {
 }};
 
 describe("the hub's cards", () => {
-    it("are the six stories, the years page and how we count, in the prototype's order", () => {
+    it("are the seven stories, the years page and how we count, in the prototype's order", () => {
         const cards = hubCards({"entry-level-software": withYears});
         // The entry level page has two stories: the newest leads, the other follows the years page (19 Oct 2026).
         expect(cards.map((c) => c.href)).toEqual(["/market/entry-level-software/is-entry-level-dead", "/market/entry-level-software/years-of-experience",
-            "/market/entry-level-software/pick-a-side", "/market/software-engineering/the-lobby", "/market/ai/contents-may-vary",
+            "/market/entry-level-software/pick-a-side", "/market/software-engineering/the-lobby", "/market/ai/ai-on-your-cv", "/market/ai/contents-may-vary",
             "/market/machine-learning/peak-python", "/market/devops/within-eleven-jobs", "/method"]);
         // The CV card goes fifth, after the lobby.
         expect(cards[CV_AT - 1].href).toBe("/market/software-engineering/the-lobby");
@@ -31,7 +31,7 @@ describe("the hub's cards", () => {
         const cards = hubCards({"entry-level-software": withYears});
         const stories = cards.filter((c) => c.kind === "count");
         expect(stories.map((c) => c.live?.href)).toEqual(["/market/entry-level-software", "/market/entry-level-software", "/market/software-engineering",
-            "/market/ai", "/market/machine-learning", "/market/devops"]);
+            "/market/ai", "/market/ai", "/market/machine-learning", "/market/devops"]);
         // "Live" read as real time; the page shows the latest Monday (copy rewrite M5, 15 Oct 2026).
         expect(stories[0].live?.label).toBe("Latest count: entry level software jobs");
         expect(stories[2].live?.label).toBe("Latest count: software engineering jobs");
@@ -39,7 +39,7 @@ describe("the hub's cards", () => {
         for (const c of stories) expect(c.pill).toBe("Story");
         expect(hubFilters(cards).find(([k]) => k === "count")?.[1]).toBe("Stories");
         // Each story keeps its own week.
-        expect(stories.map((c) => c.when)).toEqual(["Week of 19 Oct", ...Array(5).fill("Week of 12 Oct")]);
+        expect(stories.map((c) => c.when)).toEqual(["Week of 19 Oct", "Week of 12 Oct", "Week of 12 Oct", "Week of 19 Oct", ...Array(3).fill("Week of 12 Oct")]);
     });
 
     it("write the years card from the live count, and leave it out when the count has no years", () => {

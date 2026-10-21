@@ -176,3 +176,7 @@ Is entry level dead? asks for the CV twice more besides its ending: after the gu
 (`cta_clicked` where `story_is_entry_level_dead_guess`) and at the internships turn
 (`story_is_entry_level_dead_turn`). Counted apart so the ending's own `story_is_entry_level_dead`
 stays comparable. Why: in its first day 7 of 22 readers reached the end and none clicked the ending's ask.
+Do you need AI on your CV now? (21 Oct) asks the same way from the start: after the guess
+(`story_ai_on_your_cv_guess`), at the street of doors (`story_ai_on_your_cv_street`) and at the end
+(`story_ai_on_your_cv`). Its guess reports `story_interacted` with the kinds `guess` and `show_count`, as chapter
+one's, under its own address.

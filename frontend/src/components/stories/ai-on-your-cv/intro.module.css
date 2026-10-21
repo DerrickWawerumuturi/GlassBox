@@ -1,0 +1,63 @@
+/*
+ * The opening (Intro.tsx; the prototype's intro.css): a row of real doors, the Holzland Becker listing taped beside the
+ * wooden one, a small drawn sign over each family's door. By default (a phone, reduced motion, before a wide screen's
+ * media query) it stacks: the wooden door and its listing, the words, then a row to swipe (phone) or a grid. On a
+ * wide screen with motion it is a sticky box the full width of the screen; CSS places the first frame from --zpx (px
+ * per door width) and the script then sets each door's place and size, --draw (the marker tracing the doors, 0 to 1)
+ * and --fade (the photos giving way to drawn doors, 0 to 1).
+ */
+.intro { position: relative; margin-top: 56px; --draw: 0; --fade: 0; }
+.iph { position: relative; aspect-ratio: 2 / 3; }
+.iph img { display: block; width: 100%; height: 100%; border-radius: 3px; box-shadow: 0 18px 30px -24px var(--shadow); opacity: calc(1 - var(--fade) * var(--ghost, .88)); }
+/* dark: the photos stay as dim walls behind the drawn doors, which are near black at night */
+:global(.dark) .intro { --ghost: .6; }
+.itrace { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.intro :global(.aic-iline) { fill: none; stroke: var(--marker); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: calc(1 - var(--draw)); }
+:global(.dark) .intro :global(.aic-iline) { stroke: var(--muted); }
+.intro :global(.aic-ifill) { fill: var(--door); stroke: none; opacity: var(--fade); }
+.intro :global(.aic-iknob) { fill: var(--marker); opacity: var(--fade); }
+.isign { position: absolute; transform: translateX(-50%); z-index: 1; padding: .22em .6em .28em; background: var(--sign); color: var(--ink); border: 1.5px solid var(--marker);
+  border-radius: 2px; font: 400 clamp(11px, calc(var(--zpx) * .072), 17px)/1.05 var(--neon); text-align: center; white-space: nowrap; box-shadow: 0 6px 10px -8px var(--shadow); }
+.intro .icap { margin: 0; font: 400 12px/1.4 var(--mono); color: var(--muted); text-align: center; }
+.swipe { display: none; }
+
+/* Stacked: nothing pinned, nothing moves */
+.ipin { display: flex; flex-direction: column; }
+.ivp { display: contents; }
+.itile { position: relative; margin: 0; }
+/* photo and card share one grid cell, so the block is as tall as whichever reaches lower */
+.wood { order: 0; width: 100%; max-width: 600px; margin: 0 auto; padding: 0 22px; display: grid; }
+.wood .iph { grid-area: 1 / 1; width: 56%; justify-self: end; }
+.wood .woodCard { grid-area: 1 / 1; z-index: 2; position: relative; align-self: start; width: min(300px, 58%); max-width: none; margin: 12% 0 0; --card-fs: 12px; --tilt: -2deg; }
+.itext { order: 1; width: 100%; max-width: 600px; margin: 40px auto 0; padding: 0 22px; }
+.ibeat { margin-bottom: 1.1em; }
+.ibeat p:last-child { margin-bottom: 0; }
+.irow { --zpx: 165px; order: 2; display: grid; grid-template-columns: repeat(10, 1fr); gap: 30px 14px; width: 100%; max-width: 1200px; margin: 18px auto 0; padding: 18px 22px 0; }
+.intro .icap { order: 3; margin-top: 14px; padding: 0 22px; }
+
+/* Wide, with motion: the sticky row */
+@media (min-width: 761px) and (prefers-reduced-motion: no-preference) {
+  .ipin { position: sticky; top: 0; height: 100vh; overflow: hidden; display: block; --zpx: clamp(220px, (100vh - 300px) / 1.5, (100vw - 64px) / 2.2); }
+  .ivp { position: absolute; inset: 0; display: block; }
+  .irow { display: contents; }
+  .itile { position: absolute; left: 0; top: 0; container-type: inline-size; width: var(--zpx); transform: translate(calc(32px + (.64 + var(--i) * 1.1) * var(--zpx)), 40px); }
+  .wood { display: block; max-width: none; padding: 0; margin: 0; }
+  .wood .iph { width: auto; }
+  .wood .woodCard { position: absolute; left: -60%; top: 13%; width: 86%; margin: 0; --card-fs: 3.4cqw; }
+  .itext { position: absolute; left: 0; right: 0; top: calc(70px + 1.5 * var(--zpx)); z-index: 2; display: grid; max-width: 640px; margin: 0 auto; }
+  .ibeat { grid-area: 1 / 1; margin: 0; opacity: 0; transition: opacity .35s; }
+  .ibeat.on { opacity: 1; }
+  .intro .icap { position: absolute; left: 0; right: 0; bottom: 10px; margin: 0; padding: 0; }
+}
+
+@media (max-width: 760px) {
+  .intro { margin-top: 44px; }
+  .wood { padding: 0 16px; }
+  .wood .iph { width: 58%; }
+  .wood .woodCard { width: 66%; margin-top: 14%; --card-fs: 10.5px; }
+  .itext { padding: 0 16px; margin-top: 36px; }
+  .irow { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 22px 16px 6px; margin-top: 4px; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .irow .itile { flex: 0 0 40%; scroll-snap-align: start; scroll-margin-left: 16px; }
+  .intro .icap { text-align: left; padding: 0 16px; }
+  .swipe { display: inline; }
+}

@@ -1,0 +1,33 @@
+/*
+ * A job listing card (the prototype's listing.css), taped up with two strips across its top corners. Sizes are in em,
+ * so a card scales with its own font size: the text column sets it in px, the frame in cqw (--card-fs), and a parent
+ * may tilt it (--tilt). The lime marker keeps dark ink on lime in both themes.
+ */
+.lcard { position: relative; font-size: var(--card-fs, 13px); margin: 1.6em 0 0; max-width: 340px; transform: rotate(var(--tilt, 0deg)); transform-origin: 50% 0; }
+.listing { position: relative; background: var(--card); color: var(--ink); border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent); border-radius: .45em;
+  padding: 1.15em 1.2em 1.1em; box-shadow: 0 1.4em 2.2em -1.7em var(--shadow), 0 1px 0 var(--shadow); font-family: var(--essay); line-height: 1.35; text-align: left; }
+.listing p { margin: 0; }
+.listing .posted { font: 500 .78em/1.2 var(--mono); color: var(--muted); letter-spacing: .02em; margin-bottom: .55em; }
+.listing .title { font-weight: 700; font-size: 1.32em; line-height: 1.15; letter-spacing: -.012em; }
+.listing .co { font-weight: 600; font-size: 1em; margin-top: .3em; }
+.listing .loc { font-size: .92em; color: var(--muted); }
+.listing .facts { display: flex; flex-wrap: wrap; gap: .35em; margin: .7em 0 .2em; }
+.facts span { font-size: .82em; padding: .15em .65em; border-radius: 999px; background: color-mix(in oklab, var(--ink) 7%, transparent); color: var(--ink); white-space: nowrap; }
+.listing .h { font-weight: 700; font-size: .86em; text-transform: uppercase; letter-spacing: .06em; margin-top: .95em; padding-top: .7em; border-top: 1px solid var(--rule);
+  display: flex; justify-content: space-between; gap: 1em; }
+.h span { font: 500 .95em var(--mono); text-transform: none; letter-spacing: 0; color: var(--muted); }
+.list { margin: .35em 0 0; padding: 0 0 0 1.15em; font-size: .95em; list-style: disc; }
+.list li { margin: .12em 0; }
+.list li.lime { background: linear-gradient(transparent 12%, var(--lime) 12%, var(--lime) 88%, transparent 88%); color: #21201c; width: fit-content; padding: 0 .35em;
+  margin-left: -.35em; border-radius: .2em; }
+.list.cols { columns: 2; column-gap: 1.4em; }
+.list.cols li { break-inside: avoid; }
+.listing .none { font-size: .92em; color: var(--muted); font-style: italic; margin-top: .35em; }
+.apply { display: inline-flex; align-items: center; margin-top: 1em; padding: .45em 1.3em; border-radius: .5em; background: color-mix(in oklab, var(--ink) 9%, transparent);
+  color: color-mix(in oklab, var(--ink) 38%, transparent); font-weight: 600; font-size: .92em; cursor: default; user-select: none; }
+.lcard .note { font: italic 400 .88em/1.35 var(--essay); color: var(--muted); margin: .55em 0 0 .2em; }
+.listing::before, .listing::after { content: ""; position: absolute; top: -.7em; width: 4.6em; height: 1.5em; background: color-mix(in oklab, #efe6c8 78%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.listing::before { left: .4em; transform: rotate(-8deg); }
+.listing::after { right: .4em; transform: rotate(7deg); }
+:global(.dark) .listing::before, :global(.dark) .listing::after { background: color-mix(in oklab, #cfc4a2 45%, transparent); }

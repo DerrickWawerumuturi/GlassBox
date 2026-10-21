@@ -1,0 +1,148 @@
+/*
+ * Do you need AI on your CV now? One world: a street of drawn buildings, one per job family, every window a drawn
+ * person, lime where the job names LLMs (ported from docs/local/editorial-sprint/stories/ai-on-your-cv/story.css).
+ * Hanken Grotesk for what we write, Caveat for the pen notes, Tilt Neon (--neon) for the title, the signs and the big
+ * reveal number, JetBrains Mono for the counts on the signs. Orange only acts (links, the CV button), rings the
+ * reader's picks and writes the notes; lime is the one highlight; warm light is scenery (the lamp, an open door).
+ * Light is the street at dusk on paper; dark is the street at night on the warm charcoal, no paper shapes behind
+ * anyone, the window panes left clear, the marker ink a touch lighter so outlines still read. The opening:
+ * intro.module.css. The listings: listing.module.css.
+ */
+.root {
+  --neon: var(--font-tilt-neon), var(--font-space-grotesk), system-ui, sans-serif;
+  --page: var(--paper); --card: #fffdf9; --rule: #dcd5cc; --pen: #e0471f; --lit: #d7ee4c; --marker: #1a1a1a; --sign: #fffdf9; --pane: #fbf8f3;
+  --door: #6b5345; --warm: #ffd98a; --pave: #8d857a; --shadow: rgba(60, 45, 20, .28);
+  --f0: #e9c3b4; --f1: #c6d8bd; --f2: #b9cde6; --f3: #ead9a4; --f4: #d2c4ea; --f5: #e2b89c;
+  position: relative; isolation: isolate; overflow-x: clip;
+  background: var(--page); color: var(--ink); font: 400 20px/1.6 var(--essay); -webkit-font-smoothing: antialiased;
+}
+:global(.dark) .root {
+  --page: var(--charcoal); --ink: var(--charcoal-ink); --muted: var(--charcoal-muted); --card: #312e29; --rule: #4a463f; --pen: #ff7a4d;
+  --marker: #574f44; --sign: #3a362f; --pane: none; --door: #1c1a17; --warm: #ffcf7a; --pave: #7a7368; --shadow: rgba(0, 0, 0, .6);
+  --f0: #7a5a52; --f1: #4f6a4c; --f2: #45607e; --f3: #7a6a3c; --f4: #5d5080; --f5: #7c5844;
+}
+.crumbs { color: var(--muted); }
+.root p { margin: 0 0 1.1em; }
+.root a { color: var(--orange); text-underline-offset: 3px; }
+.col { max-width: 600px; margin-left: auto; margin-right: auto; padding: 0 22px; }
+.root h1 { font: 400 clamp(40px, 6.2vw, 68px)/1.04 var(--neon); letter-spacing: -.01em; margin: 0 0 22px; }
+.root h2 { font: 400 clamp(28px, 3.6vw, 40px)/1.15 var(--neon); margin: 0 0 18px; }
+.root p.dek { font-size: clamp(20px, 2.1vw, 23px); line-height: 1.5; color: var(--muted); max-width: 24em; margin-left: auto; margin-right: auto; }
+.root p.by { font-size: 15px; color: var(--muted); margin-top: 24px; }
+.root p.live { font-size: 15px; color: var(--muted); }
+.root p.lead { font-size: clamp(21px, 2.3vw, 24px); line-height: 1.5; }
+.note { font: 500 24px/1.1 var(--hand); color: var(--pen); margin: 0; }
+.root .cap { font: italic 400 15px/1.55 var(--essay); color: var(--muted); margin: 16px 0 0; max-width: 46em; }
+.root .src { font: 400 12.5px/1.5 var(--mono); color: var(--muted); margin: 6px 0 0; }
+.root .src a { color: inherit; }
+.root p.hint { font-size: 16.5px; color: var(--muted); }
+.hero { margin-top: 56px; text-align: center; }
+
+/* 1. Guess first: a façade of 100 windows under one slider, a dimmer beside it as a readout */
+.guess { margin-top: 140px; }
+.guessfig { margin: 36px auto 0; max-width: 980px; padding: 0 22px; }
+.gwrap { width: min(100%, 500px); margin: 0 auto; }
+.root p.glab { font: 600 15px var(--essay); color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; gap: 10px; }
+.glab b { color: var(--ink); font-weight: 700; }
+.grow { display: flex; gap: 14px; align-items: flex-end; margin-top: 70px; }
+/* a drag up the building sets the guess, so the grid keeps the gesture */
+.grid { position: relative; flex: 1 1 auto; aspect-ratio: 1; touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.grid svg, .dimmer svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.grid[aria-disabled="true"] { cursor: default; }
+.dimmer { flex: 0 0 15%; aspect-ratio: 70 / 400; }
+.root p.cue { margin: 14px 0 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 44px; }
+.ghost { appearance: none; font: 600 15px var(--essay); background: transparent; color: var(--ink); border: 1.5px solid var(--ink); border-radius: 12px; padding: 0 18px; min-height: 44px; cursor: pointer; }
+.ghost:hover { background: color-mix(in oklab, var(--ink) 7%, transparent); }
+.yousaid { margin-left: auto; transform: rotate(-2deg); }
+.root p.reveal { margin: 18px 0 0; min-height: 1.4em; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; outline: none; }
+.root p.reveal[hidden] { display: none; }
+.reveal .big { font: 400 clamp(56px, 8vw, 88px)/.9 var(--neon); }
+.reveal span:not(.big) { font-size: 19px; max-width: 30em; line-height: 1.45; }
+.shown :global(.aic-lime) { animation: pop .45s cubic-bezier(.2, .9, .3, 1.3) backwards; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* The drawings: marker ink and flat fills, the same in both themes */
+.root :global(.aic-line) { stroke: var(--marker); stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; fill: none; }
+.root :global(.aic-line.aic-thin) { stroke-width: 1.1; }
+.root :global(.aic-feat .aic-line) { stroke-width: 1.8; }
+.root :global(.aic-feat .aic-line.aic-thin) { stroke-width: 1.5; }
+.root :global(.aic-tiny .aic-line) { stroke-width: 1; }
+.root :global(.aic-tiny .aic-line.aic-thin) { stroke-width: .8; }
+.root :global(.aic-ring) { fill: none; stroke: var(--pen); stroke-width: 2.2; stroke-linecap: round; }
+.root :global(.aic-facade) { fill: var(--f2); stroke-width: 1.6; }
+.root :global(.aic-sign) { fill: var(--sign); }
+.root :global(.aic-win) { fill: var(--pane); stroke-width: .9; }
+.root :global(.aic-win.aic-lime) { fill: var(--lit); }
+.root :global(text.aic-signname) { font-family: var(--neon); fill: var(--ink); }
+.root :global(text.aic-signcount) { font-family: var(--mono); font-weight: 500; fill: var(--muted); }
+.root :global(.aic-track) { fill: none; stroke: var(--marker); stroke-width: 2; stroke-linecap: round; }
+.root :global(.aic-knob) { fill: var(--sign); stroke-width: 1.4; }
+.root :global(text.aic-tick) { font: 400 11px var(--mono); fill: var(--muted); }
+/* A head bobs 2.5 degrees about its chin, the group's own origin; reduced motion stills it (story.module.css). */
+.root :global(.aic-bob) { transform-origin: 0 0; animation: bob 3.6s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+
+/* 2 to 7. The street: steps on the left, one sticky frame on the right */
+.scrolly { margin: 150px auto 0; max-width: 1200px; padding: 0 22px; display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 720px); gap: 48px; justify-content: center; align-items: start; }
+.steps { padding-bottom: 20vh; }
+.step { min-height: 82vh; display: flex; flex-direction: column; justify-content: center; padding: 10px 0; font-size: 19.5px; opacity: .38; transition: opacity .4s; }
+.step.on { opacity: 1; }
+.step p { max-width: 24em; }
+.stage { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+.frame { position: relative; container-type: inline-size; width: min(100%, calc((100vh - 72px) * 720 / 600)); aspect-ratio: 720 / 600; margin: 0 auto; }
+.frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pframe, .psrc, .pcard { display: none; }
+.stageSrc { text-align: center; max-width: 60em; margin: 0 auto; }
+.ov { position: absolute; opacity: 0; visibility: hidden; transition: opacity .5s, visibility 0s .5s; }
+.ov.show { opacity: 1; visibility: visible; transition: opacity .5s .4s, visibility 0s; }
+.chars { inset: 0; pointer-events: none; }
+.chars svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* a listing pinned where its step stands, sized by the frame's width */
+.cardAt > div { margin: 0; max-width: none; }
+.pcard > div { --card-fs: 13px; --tilt: -1deg; margin: 1.4em 0 .4em; }
+
+/* The asks inside the story: smaller than the ending's, no rules above and below. */
+.midAsk { margin: 22px 0 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.root .midAsk p { margin: 0; font-size: 16px; font-weight: 500; color: var(--muted); max-width: 22em; flex: 1 1 14em; line-height: 1.4; }
+
+/* 8. Ending: the CV ask, what we can't see, how we counted, chapter one, the credits */
+.end { margin-top: 120px; }
+.cta { margin: 44px 0 24px; padding: 26px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.ask { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.root .ask p { margin: 0; font-weight: 500; max-width: 20em; flex: 1 1 14em; }
+.fold { margin: 48px 0 0; padding: 22px 24px 8px; background: var(--card); border: 1px solid var(--rule); border-radius: 4px; transform: rotate(.4deg); box-shadow: 0 18px 30px -26px var(--shadow); }
+.root .fold h3 { font: 700 18px var(--essay); margin: 0 0 12px; }
+.fold ul { margin: 0; padding: 0 0 0 20px; list-style: disc; font-size: 16px; line-height: 1.55; color: var(--muted); }
+.fold li { margin: 0 0 10px; }
+.method { margin: 40px 0 0; border-top: 1px solid var(--rule); padding-top: 14px; font-size: 16px; line-height: 1.6; color: var(--muted); }
+.method summary { cursor: pointer; font: 700 18px var(--essay); color: var(--ink); }
+.method[open] summary { margin-bottom: 12px; }
+.next { margin: 40px 0 0; padding: 18px 22px 16px; border: 1.5px solid var(--ink); border-radius: 14px; }
+.root .next p { margin: 0; }
+.root p.lcKick { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.root p.lcTitle { font: 400 26px/1.1 var(--neon); margin: 6px 0 4px; }
+.lcTitle a { text-decoration-thickness: 2px; }
+.root p.lcSub { font-size: 15.5px; line-height: 1.4; color: var(--muted); }
+.root p.credit { font-size: 13px; color: var(--muted); margin: 40px 0 120px; }
+.root .credit a { color: inherit; }
+
+/* Phone: the steps stack, one still frame under each step's words, its listing between the two, no sticky stepper. */
+@media (max-width: 760px) {
+  .root { font-size: 18px; }
+  .hero { margin-top: 36px; }
+  .guess { margin-top: 100px; }
+  .grow { margin-top: 60px; }
+  .reveal .big { font-size: 56px; }
+  .scrolly { margin-top: 110px; display: block; padding: 0 16px; }
+  .steps { padding-bottom: 0; }
+  .step { min-height: 0; opacity: 1; display: block; padding: 0; margin-top: 64px; font-size: 18px; }
+  .step:first-child { margin-top: 0; }
+  .step p { max-width: none; }
+  .stage { display: none; }
+  .pcard, .psrc { display: block; }
+  .pframe { display: block; width: 100%; margin: 20px 0 0; }
+  .psrc .src { margin-top: 8px; }
+  .end { margin-top: 90px; }
+  .root .ask p { flex-basis: 100%; }
+  .fold { padding: 18px 16px 6px; }
+}

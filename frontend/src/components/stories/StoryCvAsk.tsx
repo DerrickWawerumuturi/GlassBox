@@ -21,8 +21,9 @@ import {CV_QUESTION, StoryInfo, storyAsk, storyPlace} from "@/lib/stories/story"
  * card does, and the results open on /analysis.
  */
 
-function Ending({className, question}: {className?: string; question: string}) {
-    if (useHave() !== null) return <MarketCvAsk note={null} />;
+function Ending({className, question, mid}: {className?: string; question: string; mid: boolean}) {
+    // After a scan the answer stands once, at the end: an ask inside the story steps aside.
+    if (useHave() !== null) return mid ? null : <MarketCvAsk note={null} />;
     return (
         <div className={className}>
             <p>{question}</p>
@@ -43,12 +44,15 @@ function Open({story, className, question, place}: {story: StoryInfo; className?
     );
 }
 
-/** `place` names a second ask inside a story (Is entry level dead? asks after the guess and at the turn); only a story that names no skills has one. */
+/**
+ * `place` names an ask inside a story, counted apart from the ending's (Is entry level dead? asks after the guess and
+ * at the turn; Do you need AI on your CV now? after the guess and at the street).
+ */
 export default function StoryCvAsk({story, className, question = CV_QUESTION, place}: {story: StoryInfo; className?: string; question?: string; place?: CtaPlace}) {
     if (!story.ask.length) return <Open story={story} className={className} question={question} place={place} />;
     return (
-        <MarketAskProvider ask={storyAsk(story)} page={story.page} where={storyPlace(story.slug)}>
-            <Ending className={className} question={question} />
+        <MarketAskProvider ask={storyAsk(story)} page={story.page} where={place ?? storyPlace(story.slug)}>
+            <Ending className={className} question={question} mid={place !== undefined} />
         </MarketAskProvider>
     );
 }

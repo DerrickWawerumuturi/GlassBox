@@ -45,7 +45,7 @@ describe("sitemap", () => {
             `${SITE_URL}/market`, `${SITE_URL}/market/entry-level-software`, `${SITE_URL}/market/entry-level-software/years-of-experience`,
             `${SITE_URL}/market/entry-level-software/is-entry-level-dead`, `${SITE_URL}/market/entry-level-software/pick-a-side`,
             `${SITE_URL}/market/software-engineering`, `${SITE_URL}/market/software-engineering/the-lobby`,
-            `${SITE_URL}/market/ai`, `${SITE_URL}/market/ai/contents-may-vary`,
+            `${SITE_URL}/market/ai`, `${SITE_URL}/market/ai/ai-on-your-cv`, `${SITE_URL}/market/ai/contents-may-vary`,
             `${SITE_URL}/market/machine-learning`, `${SITE_URL}/market/machine-learning/peak-python`,
             `${SITE_URL}/market/devops`, `${SITE_URL}/market/devops/within-eleven-jobs`, `${SITE_URL}/method`]);
         for (const entry of sitemapEntries()) expect(Object.keys(entry)).toEqual(["url"]);

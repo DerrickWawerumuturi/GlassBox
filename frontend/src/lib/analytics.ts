@@ -20,16 +20,18 @@ export type MarketPage = MarketName;
 // phone menu. "years": the years of experience page. "market": the /market grid's CV card. "product", "about":
 // the closing CV card of /product, /about. A market page's button says the page's name; a story's says "story_" and
 // its address ("story_pick_a_side"). Is entry level dead? also asks mid story: after the guess ("_guess") and at the
-// internships turn ("_turn"), counted apart so the ending's own clicks stay comparable.
+// internships turn ("_turn"), counted apart so the ending's own clicks stay comparable. Do you need AI on your CV now?
+// asks after the guess ("_guess") and at the street of doors ("_street") the same way.
 const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years", "market", "about", ...STORY_SLUGS.map(storyPlace),
-    "story_is_entry_level_dead_guess", "story_is_entry_level_dead_turn"] as const;
+    "story_is_entry_level_dead_guess", "story_is_entry_level_dead_turn", "story_ai_on_your_cv_guess", "story_ai_on_your_cv_street"] as const;
 /** Where a "Compare your CV" or "Try it out" click, or a phone's cv_handoff (lib/cv-handoff.ts), came from. */
 export type CtaPlace = (typeof CTA_PLACES)[number] | MarketPage;
 /**
  * A story's interactions, by a short name: the first one a reader uses in a page view is story_interacted
  * (docs/decisions/analytics.md). Pick a side: pick_side, scratch, reveal_all. The lobby: lift, all_floors.
  * Contents may vary: open_box, ingredient, show_none. Peak Python: arm, peak_list. Within eleven jobs: crane, fly_over.
- * Is entry level dead?: guess (setting a guess), show_count (asking for our count; not the reveal on scrolling past).
+ * Is entry level dead? and Do you need AI on your CV now?: guess (setting a guess), show_count (asking for our count; not
+ * the reveal on scrolling past).
  */
 export const STORY_KINDS = ["pick_side", "scratch", "reveal_all", "lift", "all_floors", "open_box", "ingredient", "show_none",
     "arm", "peak_list", "crane", "fly_over", "guess", "show_count"] as const;

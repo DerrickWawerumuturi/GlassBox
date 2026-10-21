@@ -5,6 +5,7 @@ import {allertaStencil} from "@/app/fonts/allerta-stencil";
 import {bebasNeue} from "@/app/fonts/bebas-neue";
 import {hankenGrotesk} from "@/app/fonts/hanken-grotesk";
 import {limelight} from "@/app/fonts/limelight";
+import {tiltNeon} from "@/app/fonts/tilt-neon";
 import {methodCover, yearsCover} from "@/components/market-hub/covers";
 import s from "@/components/market-hub/hub.module.css";
 import HubCv from "@/components/market-hub/HubCv";
@@ -41,7 +42,7 @@ export const metadata = publicPage("/market", {
 });
 
 // The faces the covers set their numbers in (Contents may vary's cover draws in Hanken Grotesk).
-const FONTS = [hankenGrotesk, bebasNeue, limelight, allertaStencil].map((f) => f.variable).join(" ");
+const FONTS = [hankenGrotesk, bebasNeue, limelight, allertaStencil, tiltNeon].map((f) => f.variable).join(" ");
 
 const cover = (c: HubCard) => c.cover === "years" ? yearsCover(c.years!.unstated, c.years!.total)
     : c.cover === "method" ? methodCover() : STORY_COVERS[c.cover as StorySlug]();

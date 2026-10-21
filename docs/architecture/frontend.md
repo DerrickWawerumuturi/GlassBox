@@ -31,7 +31,7 @@ src/
     market/[page]/years-of-experience  how many years entry level software jobs ask for, from the entry level page's
                                  `experience` counts (lib/years-answer.ts); any other page name is a 404
     market/[page]/<story>        one or more stories per market page (is-entry-level-dead, pick-a-side, the-lobby,
-                                 contents-may-vary, peak-python, within-eleven-jobs): one week's count, static, its own
+                                 ai-on-your-cv, contents-may-vary, peak-python, within-eleven-jobs): one week's count, static, its own
                                  share image and faces
                                  (components/stories, lib/stories, decisions/market-pages.md "Stories")
     market/page.tsx              /market, the grid of stories: covers, a plain link to each live page, the years card from the
@@ -93,7 +93,10 @@ src/
                                  story for the hub), and a folder per story (its CSS module, server parts, small client parts);
                                  Pick a side's deck art is CC0, in public/stories/pick-a-side with its LICENSES.md;
                                  Is entry level dead?'s canvas crowd (marker.ts, sprites.ts, layouts.ts, stage.ts),
-                                 SVG people (people.ts) and Pexels heads in public/stories/is-entry-level-dead/heads
+                                 SVG people (people.ts) and Pexels heads in public/stories/is-entry-level-dead/heads;
+                                 Do you need AI on your CV now? reuses its marker and sprites (laptops as a kind) for a
+                                 drawn street (buildings.ts, states.ts, stage.ts), with the opening's Pexels doors
+                                 (Intro.tsx, doors.ts) and heads in public/stories/ai-on-your-cv, and Tilt Neon (app/fonts)
     people/                      the hand drawn cast (Open Peeps, Open Doodles, CC0: LICENSES.md): art/ one module per
                                  drawing, draw.ts personSvg (and the dark theme's line art filter), Person.tsx (floated
                                  into the text beside a paragraph; Chapter takes one as `person`)

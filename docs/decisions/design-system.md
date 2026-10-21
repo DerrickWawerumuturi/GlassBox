@@ -429,3 +429,22 @@ Pudding's NBA piece) and Pexels heads; no paper shapes behind anyone in dark mod
   flat wood; the weekly points are a quiet blue, with no shaded range (we have none).
 - **Dark.** The warm charcoal ground; people keep their fills and stand straight on it,
   no backing shapes; only the marker ink goes from `#1a1a1a` to `#4a443b`.
+
+
+## Stories open on paper (2026-10-21)
+
+The visual stories (`/market/<page>/<story>`) open in the light theme whatever the reader's system setting
+(founder, 21 Oct 2026). On a story, the theme menu's System means light; an explicit Dark choice still turns it
+dark. Everywhere else System still follows the OS. `lib/theme.ts` (`isStoryPath`, `themeScript`, `applyChoice`)
+and `ThemeWatcher`, which repaints on a link into or out of a story. Cost: none.
+
+
+## Do you need AI on your CV now? (2026-10-21)
+
+Chapter two of the stories keeps the series signature (naive marker people, Pexels photo heads credited by
+photographer) in a new world: a street of drawn buildings, one per job family, each window a drawn person for 5
+jobs, lime where the ad names LLMs. Real door photographs (Pexels, 20, credited) appear in the opening only, then
+hand over to the drawn doors (founder: "only at the intro"). Job ads appear as realistic listing cards (title,
+employer, location, posted date, requirements, a greyed Apply), never a job board's own design or a logo.
+Percentages lead, the count beside them; groups under about 30 jobs show counts only. Display face: Tilt Neon
+(OFL, self hosted, Latin subset). Opens light like every story.

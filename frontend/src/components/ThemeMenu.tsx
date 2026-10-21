@@ -2,6 +2,7 @@
 
 import React, {useEffect, useId, useState} from "react";
 import {MonitorIcon, MoonIcon, SunIcon} from "lucide-react";
+import {usePathname} from "next/navigation";
 
 import {DropdownMenuRadioGroup, DropdownMenuRadioItem} from "@/components/ui/dropdown-menu";
 import {applyChoice, readChoice, saveChoice, ThemeChoice} from "@/lib/theme";
@@ -43,11 +44,14 @@ export function ThemeMenu() {
 
 /** On System, follow the OS when it switches between light and dark. Renders nothing. */
 export function ThemeWatcher() {
+    const path = usePathname();
     useEffect(() => {
         const media = matchMedia("(prefers-color-scheme: dark)");
         const onChange = () => { if (readChoice() === "system") applyChoice("system"); };
         media.addEventListener("change", onChange);
         return () => media.removeEventListener("change", onChange);
     }, []);
+    // A link into or out of a story keeps the page: System means light on a story and the OS elsewhere.
+    useEffect(() => { if (readChoice() === "system") applyChoice("system", path); }, [path]);
     return null;
 }
