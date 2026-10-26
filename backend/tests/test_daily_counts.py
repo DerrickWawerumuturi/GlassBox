@@ -4,6 +4,8 @@ that an upload scan's two requests count once, and that counting never costs
 a request. The writer's SQL is replaced here; the real upsert runs at the end,
 against a LOCAL database only.
 """
+import asyncio
+import logging
 import os
 import threading
 import time
@@ -123,16 +125,99 @@ def test_an_account_is_counted_once_and_only_when_its_request_worked(client, cou
     assert counted() == [("accounts_created",)]
 
 
-def test_a_count_that_fails_to_write_is_logged_and_the_scan_still_answers(client, monkeypatch, capsys):
+def test_a_count_that_fails_to_write_is_logged_without_error_details_and_scan_answers(client, monkeypatch, caplog):
     monkeypatch.setattr(daily_counts, "is_configured", lambda: True)
 
     def down():
-        raise RuntimeError("database unreachable")
+        raise RuntimeError("DATABASE_URL=do-not-log cv text must not appear")
     monkeypatch.setattr(daily_counts, "connection", down)
-    response = _upload(client, "/analyze")
-    daily_counts.settle()
+    with caplog.at_level(logging.ERROR, logger=daily_counts.__name__):
+        response = _upload(client, "/analyze")
+        daily_counts.settle()
     assert response.status_code == 200 and response.json() == {"jobs": []}
-    assert "daily count not kept (scans_started): database unreachable" in capsys.readouterr().out
+    assert "daily counter write failed" in caplog.text
+    assert "counters=scans_started" in caplog.text
+    assert "error_type=RuntimeError" in caplog.text
+    assert "do-not-log" not in caplog.text
+    assert "DATABASE_URL" not in caplog.text and "CV text" not in caplog.text
+
+
+def test_lifespan_drains_pending_counter_writes(monkeypatch):
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
+    monkeypatch.setattr(daily_counts, "is_configured", lambda: True)
+    monkeypatch.setattr(daily_counts, "connection", lambda: nullcontext(None))
+
+    def slow_increment(conn, events):
+        started.set()
+        assert release.wait(2)
+        finished.set()
+
+    monkeypatch.setattr(daily_count_repository, "increment", slow_increment)
+
+    async def exercise_lifespan():
+        lifespan = main.lifespan(main.app)
+        await lifespan.__aenter__()
+        try:
+            daily_counts.count("scans_started")
+            assert await asyncio.to_thread(started.wait, 1)
+            stopping = asyncio.create_task(lifespan.__aexit__(None, None, None))
+            await asyncio.sleep(0.05)
+            assert not stopping.done()
+            release.set()
+            await stopping
+        finally:
+            release.set()
+
+    asyncio.run(exercise_lifespan())
+    assert finished.is_set()
+
+
+def test_lifespan_cancellation_while_joining_tasks_attempts_counter_drain(monkeypatch):
+    joining = asyncio.Event()
+    drain_attempted = threading.Event()
+    real_gather = asyncio.gather
+
+    async def blocked_gather(*tasks, return_exceptions=False):
+        joining.set()
+        await real_gather(*tasks, return_exceptions=return_exceptions)
+
+    monkeypatch.setattr(main.asyncio, "gather", blocked_gather)
+    monkeypatch.setattr(daily_counts, "settle", lambda timeout=None: drain_attempted.set())
+
+    async def exercise_lifespan():
+        lifespan = main.lifespan(main.app)
+        await lifespan.__aenter__()
+        stopping = asyncio.create_task(lifespan.__aexit__(None, None, None))
+        await joining.wait()
+        stopping.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await stopping
+
+    asyncio.run(exercise_lifespan())
+    assert drain_attempted.is_set()
+
+
+def test_settle_timeout_is_logged_and_pending_write_can_finish(monkeypatch, caplog):
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
+    monkeypatch.setattr(daily_counts, "is_configured", lambda: True)
+    monkeypatch.setattr(daily_counts, "connection", lambda: nullcontext(None))
+
+    def slow_increment(conn, events):
+        started.set()
+        assert release.wait(2)
+        finished.set()
+
+    monkeypatch.setattr(daily_count_repository, "increment", slow_increment)
+    daily_counts.count("scans_started")
+    assert started.wait(1)
+    try:
+        with caplog.at_level(logging.WARNING, logger=daily_counts.__name__):
+            assert daily_counts.settle(timeout=0.01) is False
+        assert "daily counter drain timed out" in caplog.text
+    finally:
+        release.set()
+    assert daily_counts.settle(timeout=1) is True
+    assert finished.is_set()
 
 
 def test_a_slow_count_never_holds_the_request(client, counted, monkeypatch):

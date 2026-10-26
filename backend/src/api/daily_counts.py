@@ -12,13 +12,17 @@ is two requests at once, /cv/parse and /analyze, and /analyze alone decides
 whether it worked (frontend lib/cv-ask.ts), so /cv/parse is not counted.
 
 Counting never costs a request: the write runs on its own thread after the
-route has moved on, and a write that fails is logged and dropped.
+route has moved on. Failures log counter names and exception type, not error
+text, then drop the count. Shutdown waits briefly for queued writes. Writes are
+not retried because a lost commit acknowledgement can make an increment unsafe
+to repeat.
 """
 import functools
+import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
 from fastapi import Request
-from concurrent.futures import ThreadPoolExecutor
 
 from src.database.repositories import daily_count_repository
 from src.database.session import connection, is_configured
@@ -26,6 +30,14 @@ from src.database.session import connection, is_configured
 # One worker: counts land in the order they happened, and counting holds at
 # most one of the pool's connections however busy the API gets.
 _writer = ThreadPoolExecutor(max_workers=1, thread_name_prefix="daily-counts")
+_log = logging.getLogger(__name__)
+
+
+def _log_failure(operation: str, events: tuple[str, ...], err: Exception) -> None:
+    """Log enough to find a lost count without exposing driver error details."""
+    counters = ",".join(events) or "none"
+    _log.error("daily counter %s failed (counters=%s, error_type=%s)",
+               operation, counters, type(err).__name__)
 
 
 def _write(events: tuple[str, ...]) -> None:
@@ -35,7 +47,7 @@ def _write(events: tuple[str, ...]) -> None:
         with connection() as conn:
             daily_count_repository.increment(conn, events)
     except Exception as err:
-        print(f"daily count not kept ({', '.join(events)}): {err}")
+        _log_failure("write", events, err)
 
 
 def count(*events: str) -> None:
@@ -43,12 +55,21 @@ def count(*events: str) -> None:
     try:
         _writer.submit(_write, events)
     except Exception as err:  # the writer is shut down: the process is stopping
-        print(f"daily count not kept ({', '.join(events)}): {err}")
+        _log_failure("enqueue", events, err)
 
 
-def settle() -> None:
-    """Waits for every count asked for so far. For tests: a request never waits."""
-    _writer.submit(lambda: None).result()
+def settle(timeout: float | None = None) -> bool:
+    """Wait for queued counts; return false if the writer cannot drain in time."""
+    try:
+        # FIFO on the single worker: the barrier completes after earlier writes.
+        _writer.submit(lambda: None).result(timeout=timeout)
+        return True
+    except FutureTimeoutError:
+        _log.warning("daily counter drain timed out; queued writes may remain")
+        return False
+    except Exception as err:
+        _log_failure("drain", (), err)
+        return False
 
 
 def scan(*also: str):

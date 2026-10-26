@@ -95,6 +95,18 @@ async def lifespan(_app):
     yield
     for task in tasks:
         task.cancel()
+    try:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    finally:
+        # Requests are drained before ASGI lifespan shutdown. Attempt the FIFO
+        # counter drain even if shutdown is cancelled while joining other tasks.
+        drain = asyncio.create_task(asyncio.to_thread(daily_counts.settle, timeout=10))
+        try:
+            # Shield lets the bounded settle wait finish without consuming the
+            # lifespan's cancellation. A second cancellation still propagates.
+            await asyncio.shield(drain)
+        except asyncio.CancelledError:
+            raise
 
 
 app = FastAPI(lifespan=lifespan)

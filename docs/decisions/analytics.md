@@ -113,10 +113,10 @@ sign up.
 
 ## Server side counts (2026-10-08)
 
-PostHog misses whoever blocks it: an ad blocker, Do Not Track. The API counts
-the few things that matter itself, as daily totals in `daily_counts`
-(migration 020): one row per UTC day, five counters, nothing else. No user id,
-no address, no file name, no CV content, no row per person.
+PostHog misses events blocked by an ad blocker or Do Not Track. The API also
+counts a few events as daily totals in `daily_counts` (migrations 020 and 021):
+one row per UTC day, nine counters, nothing else. No user id, address, file
+name, CV content or row per person.
 
 | Counter | Adds one when |
 |---|---|
@@ -134,14 +134,20 @@ A body that says it is over 10 MB is refused by a middleware before any route
 and is not counted; a file that reaches `/analyze` and isn't a PDF is started
 and failed. `scans_started - scans_finished - scans_failed` is scans cut off
 by a restart. These match PostHog's `scan_started`, `scan_finished`,
-`scan_failed`, `cv_reused` and `signed_up`, so the gap between them is what
-PostHog misses.
+`scan_failed`, `cv_reused` and `signed_up`, but they are not guaranteed to
+match. PostHog events are emitted by the browser; server counters count requests
+that reach the wrapped API route. Client telemetry may be blocked or lost, and
+some API rejections happen before a route counter starts.
 
 **Never at the request's cost.** `daily_counts.count()` hands the write to one
 background thread and returns; the request never waits on the database. A
-write that fails is printed (`daily count not kept (...)`) and dropped. One
-thread keeps the counts in order and holds at most one pooled connection.
-Without `DATABASE_URL` nothing is counted. The write is one
+failed write logs its counter names and exception type, but not the database
+error text, then is dropped. It is not retried: a connection can fail after
+Postgres committed, and retrying an atomic increment could count it twice. One
+thread keeps the counts in order and holds at most one pooled connection. On
+normal application shutdown, a FIFO barrier waits up to 10 seconds for queued
+writes to finish and logs if the drain times out. A forced process kill can
+still lose work in the queue. Without `DATABASE_URL` nothing is counted. The write is one
 `insert ... on conflict (day) do update set x = x + 1`, so two requests
 counting at once both land, even the first two of a day.
 
