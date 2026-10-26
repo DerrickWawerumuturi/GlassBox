@@ -16,6 +16,8 @@ route has moved on, and a write that fails is logged and dropped.
 """
 import functools
 import sys
+
+from fastapi import Request
 from concurrent.futures import ThreadPoolExecutor
 
 from src.database.repositories import daily_count_repository
@@ -54,13 +56,16 @@ def scan(*also: str):
     def wrap(route):
         @functools.wraps(route)  # FastAPI reads the route's parameters through __wrapped__
         async def counted(*args, **kwargs):
-            count("scans_started", *also)
+            request = kwargs.get("request")
+            internal = bool(request and getattr(request.state, "internal_test", False))
+            prefix = "test_" if internal else ""
+            count(prefix + "scans_started", *(prefix + event for event in also))
             try:
                 result = await route(*args, **kwargs)
             except Exception:
-                count("scans_failed")
+                count(prefix + "scans_failed")
                 raise
-            count("scans_finished")
+            count(prefix + "scans_finished")
             return result
         return counted
     return wrap
@@ -69,7 +74,8 @@ def scan(*also: str):
 # ---------------------------------------------------------------- the read command
 
 HEADINGS = {"scans_started": "started", "scans_finished": "finished", "scans_failed": "failed",
-            "cv_reused": "reused", "accounts_created": "accounts"}
+            "cv_reused": "reused", "accounts_created": "accounts", "test_scans_started": "test-started",
+            "test_scans_finished": "test-finished", "test_scans_failed": "test-failed", "test_cv_reused": "test-reused"}
 WEEK = 7
 
 
