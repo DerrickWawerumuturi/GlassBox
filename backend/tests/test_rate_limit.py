@@ -72,3 +72,18 @@ def test_the_route_answers_429_with_the_friendly_line(monkeypatch):
     assert r.json()["detail"] == "That's a lot of ads for one hour. Try again soon."
     assert int(r.headers["Retry-After"]) > 0
     rate_limit.ads.reset()
+
+
+def test_scan_routes_are_limited_before_expensive_work(monkeypatch):
+    monkeypatch.setattr(rate_limit.scans, "limit", 2)
+    rate_limit.scans.reset()
+    client = TestClient(main.app)
+    # Invalid requests still consume attempts: malformed requests must not be
+    # a way to probe/queue the expensive scan endpoint without a limit.
+    first = client.post("/analyze")
+    second = client.post("/analyze")
+    third = client.post("/analyze")
+    assert first.status_code == 422 and second.status_code == 422
+    assert third.status_code == 429
+    assert int(third.headers["Retry-After"]) > 0
+    rate_limit.scans.reset()
