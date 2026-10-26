@@ -45,6 +45,17 @@ const SAVE_TIMEOUT_MS = 60_000;
 
 let apiToken : {token: string, expiresAt: number} | null = null;
 
+/** Optional local-only credential. Never configure as NEXT_PUBLIC_*.
+ * To test, set sessionStorage.glassbox_test_key in DevTools for this tab.
+ */
+function internalTestHeaders(): Record<string, string> {
+    if (typeof window === "undefined") return {};
+    try {
+        const key = window.sessionStorage.getItem("glassbox_test_key");
+        return key ? {"X-Glassbox-Test-Key": key} : {};
+    } catch { return {}; }
+}
+
 export async function getApiToken(): Promise<string> {
     if (apiToken && Date.now() < apiToken.expiresAt) return apiToken.token;
 
@@ -114,8 +125,8 @@ function postFile<T>(path: string, file: File, timeoutMs: number, label: string,
 }
 
 /** A signed-in call. Every route but /health, /analyze and /cv/parse needs the token. */
-async function authed<T>(method: string, path: string, label: string, body?: unknown, timeoutMs = SAVE_TIMEOUT_MS): Promise<T> {
-    const headers: Record<string, string> = {Authorization: `Bearer ${await getApiToken()}`};
+async function authed<T>(method: string, path: string, label: string, body?: unknown, timeoutMs = SAVE_TIMEOUT_MS, extraHeaders: Record<string, string> = {}): Promise<T> {
+    const headers: Record<string, string> = {Authorization: `Bearer ${await getApiToken()}`, ...extraHeaders};
     if (body !== undefined) headers["Content-Type"] = "application/json";
     const init: RequestInit = {method, headers, body: body === undefined ? undefined : JSON.stringify(body)};
     return request<T>(path, init, timeoutMs, label);
@@ -139,7 +150,7 @@ export function ProcessCv(file: File): Promise<CvBreakdown> {
 export default async function Analyze(file: File): Promise<JobRadarAnalysis> {
     const token = await getApiToken().catch(() => null);
     const headers = token ? {Authorization: `Bearer ${token}`} : undefined;
-    return postFile<JobRadarAnalysis>("/analyze", file, ANALYZE_TIMEOUT_MS, "Analysis", headers);
+    return postFile<JobRadarAnalysis>("/analyze", file, ANALYZE_TIMEOUT_MS, "Analysis", {...headers, ...internalTestHeaders()});
 }
 
 export function StoreCV(cv: CvBreakdown): Promise<CvBreakdown> {
@@ -303,5 +314,5 @@ export function DeleteLatestCV(): Promise<{ deleted: boolean }> {
 
 /** A rescan from the kept CV skills, no upload. 404 nothing kept, 409 kept by an older parser. */
 export function AnalyzeReuse(): Promise<JobRadarAnalysis> {
-    return authed<JobRadarAnalysis>("POST", "/analyze/reuse", "Analysis", undefined, ANALYZE_TIMEOUT_MS);
+    return authed<JobRadarAnalysis>("POST", "/analyze/reuse", "Analysis", undefined, ANALYZE_TIMEOUT_MS, internalTestHeaders());
 }
