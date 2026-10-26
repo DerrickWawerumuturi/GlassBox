@@ -137,7 +137,7 @@ async def scan_guard(request, call_next):
         )
     expected = os.getenv("GLASSBOX_TEST_KEY", "")
     supplied = request.headers.get("x-glassbox-test-key", "")
-    request.state.internal_test = bool(expected and supplied and hmac.compare_digest(expected, supplied))
+    request.state.internal_test = bool(expected and supplied and hmac.compare_digest(expected.encode("utf-8"), supplied.encode("utf-8")))
     return await call_next(request)
 
 
