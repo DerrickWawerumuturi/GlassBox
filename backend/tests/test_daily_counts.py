@@ -236,3 +236,19 @@ def test_a_quiet_day_reads_as_zeros():
         rows = daily_count_repository.recent(conn, 14)
     assert len(rows) == 14 and len({r["day"] for r in rows}) == 14
     assert all(isinstance(r["accounts_created"], int) for r in rows)
+
+
+def test_credentialed_internal_scan_uses_separate_counters(client, counted, monkeypatch):
+    monkeypatch.setenv("GLASSBOX_TEST_KEY", "test-secret-for-unit-test")
+    response = client.post("/analyze", files={"file": ("cv.pdf", PDF, "application/pdf")},
+                           headers={"X-Glassbox-Test-Key": "test-secret-for-unit-test"})
+    assert response.status_code == 200
+    assert counted() == [("test_scans_started",), ("test_scans_finished",)]
+
+
+def test_wrong_internal_test_key_remains_production_traffic(client, counted, monkeypatch):
+    monkeypatch.setenv("GLASSBOX_TEST_KEY", "real-secret")
+    response = client.post("/analyze", files={"file": ("cv.pdf", PDF, "application/pdf")},
+                           headers={"X-Glassbox-Test-Key": "wrong-secret"})
+    assert response.status_code == 200
+    assert counted() == [("scans_started",), ("scans_finished",)]
