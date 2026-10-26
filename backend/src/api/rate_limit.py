@@ -83,3 +83,6 @@ class RateLimit:
 
 
 ads = RateLimit(limit=20, window=3600)
+
+# Analysis is CPU/LLM intensive; internal tests are subject to this same cap.
+scans = RateLimit(limit=10, window=3600)
