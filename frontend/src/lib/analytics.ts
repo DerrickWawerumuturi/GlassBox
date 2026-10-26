@@ -43,11 +43,11 @@ export const FAIL_REASONS = ["timeout", "too_big", "not_pdf", "server", "network
 export type FailReason = (typeof FAIL_REASONS)[number];
 
 type Events = {
-    scan_started: {from?: MarketPage};
-    cv_uploaded: Record<string, never>;
-    cv_reused: Record<string, never>;
-    scan_finished: {duration_s: number; jobs: number; from?: MarketPage};
-    scan_failed: {stage: "upload" | "reuse"; reason?: FailReason};
+    scan_started: {from?: MarketPage; internal_test?: boolean};
+    cv_uploaded: {internal_test?: boolean};
+    cv_reused: {internal_test?: boolean};
+    scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean};
+    scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean};
     file_refused: {reason: (typeof REFUSALS)[number]};
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
@@ -59,9 +59,9 @@ type Events = {
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
-    scan_started: ["from"], cv_uploaded: [], cv_reused: [],
-    scan_finished: ["duration_s", "jobs", "from"],
-    scan_failed: ["stage", "reason"],
+    scan_started: ["from", "internal_test"], cv_uploaded: ["internal_test"], cv_reused: ["internal_test"],
+    scan_finished: ["duration_s", "jobs", "from", "internal_test"],
+    scan_failed: ["stage", "reason", "internal_test"],
     file_refused: ["reason"],
     view_opened: ["page", "view"],
     signed_up: [],
@@ -200,7 +200,13 @@ export function initAnalytics(key = process.env.NEXT_PUBLIC_POSTHOG_KEY): boolea
 // Pages can fire before the provider's effect has run, so every call starts PostHog first (once).
 export function track<E extends keyof Events>(event: E, ...props: Events[E] extends Record<string, never> ? [] : [Events[E]]) {
     if (!initAnalytics()) return;
-    posthog.capture(event, allowedProps(event, props[0] as Record<string, unknown> | undefined));
+    const safe = allowedProps(event, props[0] as Record<string, unknown> | undefined);
+    if (["scan_started", "scan_finished", "scan_failed", "cv_uploaded", "cv_reused"].includes(event)) {
+        try {
+            if (typeof window !== "undefined" && window.sessionStorage.getItem("glassbox_test_key")) safe.internal_test = true;
+        } catch { /* sessionStorage may be unavailable */ }
+    }
+    posthog.capture(event, safe);
 }
 
 let lastPath: string | null = null;
@@ -257,7 +263,7 @@ export function forgetUser() {
 export function scanEvents(kind: "upload" | "reuse", from?: MarketPage) {
     const start = Date.now();
     track("scan_started", {from});
-    if (kind === "upload") track("cv_uploaded"); else track("cv_reused");
+    if (kind === "upload") track("cv_uploaded", {}); else track("cv_reused", {});
     return {
         finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from}),
         failed: (reason?: FailReason) => track("scan_failed", {stage: kind, reason}),

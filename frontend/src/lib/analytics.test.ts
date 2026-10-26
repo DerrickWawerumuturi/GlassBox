@@ -219,6 +219,16 @@ describe("a story's interaction", () => {
         expect(sent()).toEqual([{kind: "scratch"}, {story: "the-lobby"}]);
     });
 
+    it("marks scan events as internal only when a session test key is present", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        vi.stubGlobal("window", {sessionStorage: {getItem: vi.fn(() => "test-secret")}});
+        a.scanEvents("upload").failed("server");
+        expect(posthog.capture).toHaveBeenCalledWith("scan_started", {internal_test: true});
+        expect(posthog.capture).toHaveBeenCalledWith("cv_uploaded", {internal_test: true});
+        expect(posthog.capture).toHaveBeenCalledWith("scan_failed", {stage: "upload", reason: "server", internal_test: true});
+    });
+
     it("sends nothing without a key", async () => {
         const a = await load();
         a.storyInteracted("the-lobby", "lift");

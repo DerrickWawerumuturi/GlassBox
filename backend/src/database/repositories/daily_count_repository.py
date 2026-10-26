@@ -1,6 +1,7 @@
 """daily_counts: one row per UTC day of server side totals (decisions/analytics.md)."""
 
-COLUMNS = ("scans_started", "scans_finished", "scans_failed", "cv_reused", "accounts_created")
+COLUMNS = ("scans_started", "scans_finished", "scans_failed", "cv_reused", "accounts_created",
+           "test_scans_started", "test_scans_finished", "test_scans_failed", "test_cv_reused")
 
 # One statement, so two requests counting at once both land: the conflict
 # branch adds to whatever the row holds when it runs.

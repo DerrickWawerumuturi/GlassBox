@@ -329,3 +329,8 @@ to secrets; every other key merely disables its provider.
    incremental: about a second when nothing is stale, 1–2 minutes for the whole
    pool (~11k jobs). While it runs, the old revision's list thins out as its
    profiles are replaced.
+
+
+## Scan protection and internal test credential
+
+Set a high-entropy `GLASSBOX_TEST_KEY` secret on the Azure Container App only if internal test traffic needs separate counters. Set the same value manually in the browser tab's `sessionStorage.glassbox_test_key` to classify browser test scans. Never use `NEXT_PUBLIC_*` for this credential. If `GLASSBOX_TEST_KEY` is unset, all scans count as production traffic. Scan routes are limited to 10 attempts per IP in a sliding hour, including internal tests. The limiter is in-memory per replica; if the app is scaled to multiple replicas, use a shared limiter before relying on it as a strict global abuse boundary.

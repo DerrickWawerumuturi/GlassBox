@@ -9,7 +9,11 @@ create table if not exists daily_counts (
     scans_finished   int not null default 0,
     scans_failed     int not null default 0,
     cv_reused        int not null default 0,
-    accounts_created int not null default 0
+    accounts_created int not null default 0,
+    test_scans_started int not null default 0,
+    test_scans_finished int not null default 0,
+    test_scans_failed int not null default 0,
+    test_cv_reused int not null default 0
 );
 
 comment on column daily_counts.day is

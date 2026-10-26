@@ -16,7 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import main
-from src.api import daily_counts
+from src.api import daily_counts, rate_limit
 from src.database.repositories import daily_count_repository, user_repository
 from src.database.services import users
 from src.database.services.users import NoLatestCV
@@ -51,6 +51,7 @@ def counted(monkeypatch):
 
 @pytest.fixture
 def client(monkeypatch):
+    rate_limit.scans.reset()
     monkeypatch.setattr(main, "_pdf_text", lambda data: _text())
     monkeypatch.setattr(main, "_agent", lambda: Agent())
     monkeypatch.setattr(main, "_cv_parser", lambda: Agent())
@@ -171,12 +172,14 @@ def test_only_known_counters_reach_the_sql():
 def test_the_table_shows_each_day_and_a_seven_day_total():
     today = date(2026, 10, 8)
     rows = [{"day": today - timedelta(days=13 - i), "scans_started": i, "scans_finished": i, "scans_failed": 0,
-             "cv_reused": 0, "accounts_created": 1} for i in range(14)]
+             "cv_reused": 0, "accounts_created": 1, "test_scans_started": i, "test_scans_finished": i,
+             "test_scans_failed": 0, "test_cv_reused": 0} for i in range(14)]
     lines = daily_counts.table(rows, 3).splitlines()
-    assert lines[0].split() == ["day", "(UTC)", "started", "finished", "failed", "reused", "accounts"]
+    assert lines[0].split() == ["day", "(UTC)", "started", "finished", "failed", "reused", "accounts",
+                                "test-started", "test-finished", "test-failed", "test-reused"]
     assert [line.split()[0] for line in lines[1:4]] == ["2026-10-06", "2026-10-07", "2026-10-08"]
-    # The last 7 days: 7 + 8 + ... + 13 = 70 scans, 7 accounts.
-    assert lines[4].split() == ["last", "7", "days", "70", "70", "0", "0", "7"]
+    # The last 7 days: 7 + 8 + ... + 13 = 70 production and test scans, 7 accounts.
+    assert lines[4].split() == ["last", "7", "days", "70", "70", "0", "0", "7", "70", "70", "0", "0"]
 
 
 # ------------------------------------------------- the real SQL, local database only
@@ -236,3 +239,19 @@ def test_a_quiet_day_reads_as_zeros():
         rows = daily_count_repository.recent(conn, 14)
     assert len(rows) == 14 and len({r["day"] for r in rows}) == 14
     assert all(isinstance(r["accounts_created"], int) for r in rows)
+
+
+def test_credentialed_internal_scan_uses_separate_counters(client, counted, monkeypatch):
+    monkeypatch.setenv("GLASSBOX_TEST_KEY", "test-secret-for-unit-test")
+    response = client.post("/analyze", files={"file": ("cv.pdf", PDF, "application/pdf")},
+                           headers={"X-Glassbox-Test-Key": "test-secret-for-unit-test"})
+    assert response.status_code == 200
+    assert counted() == [("test_scans_started",), ("test_scans_finished",)]
+
+
+def test_wrong_internal_test_key_remains_production_traffic(client, counted, monkeypatch):
+    monkeypatch.setenv("GLASSBOX_TEST_KEY", "real-secret")
+    response = client.post("/analyze", files={"file": ("cv.pdf", PDF, "application/pdf")},
+                           headers={"X-Glassbox-Test-Key": "wrong-secret"})
+    assert response.status_code == 200
+    assert counted() == [("scans_started",), ("scans_finished",)]
