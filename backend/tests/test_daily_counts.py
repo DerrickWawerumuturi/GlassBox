@@ -16,7 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import main
-from src.api import daily_counts
+from src.api import daily_counts, rate_limit
 from src.database.repositories import daily_count_repository, user_repository
 from src.database.services import users
 from src.database.services.users import NoLatestCV
@@ -51,6 +51,7 @@ def counted(monkeypatch):
 
 @pytest.fixture
 def client(monkeypatch):
+    rate_limit.scans.reset()
     monkeypatch.setattr(main, "_pdf_text", lambda data: _text())
     monkeypatch.setattr(main, "_agent", lambda: Agent())
     monkeypatch.setattr(main, "_cv_parser", lambda: Agent())
