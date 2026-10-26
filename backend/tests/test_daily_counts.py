@@ -172,12 +172,14 @@ def test_only_known_counters_reach_the_sql():
 def test_the_table_shows_each_day_and_a_seven_day_total():
     today = date(2026, 10, 8)
     rows = [{"day": today - timedelta(days=13 - i), "scans_started": i, "scans_finished": i, "scans_failed": 0,
-             "cv_reused": 0, "accounts_created": 1} for i in range(14)]
+             "cv_reused": 0, "accounts_created": 1, "test_scans_started": i, "test_scans_finished": i,
+             "test_scans_failed": 0, "test_cv_reused": 0} for i in range(14)]
     lines = daily_counts.table(rows, 3).splitlines()
-    assert lines[0].split() == ["day", "(UTC)", "started", "finished", "failed", "reused", "accounts"]
+    assert lines[0].split() == ["day", "(UTC)", "started", "finished", "failed", "reused", "accounts",
+                                "test-started", "test-finished", "test-failed", "test-reused"]
     assert [line.split()[0] for line in lines[1:4]] == ["2026-10-06", "2026-10-07", "2026-10-08"]
-    # The last 7 days: 7 + 8 + ... + 13 = 70 scans, 7 accounts.
-    assert lines[4].split() == ["last", "7", "days", "70", "70", "0", "0", "7"]
+    # The last 7 days: 7 + 8 + ... + 13 = 70 production and test scans, 7 accounts.
+    assert lines[4].split() == ["last", "7", "days", "70", "70", "0", "0", "7", "70", "70", "0", "0"]
 
 
 # ------------------------------------------------- the real SQL, local database only
