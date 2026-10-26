@@ -180,3 +180,10 @@ Do you need AI on your CV now? (21 Oct) asks the same way from the start: after 
 (`story_ai_on_your_cv_guess`), at the street of doors (`story_ai_on_your_cv_street`) and at the end
 (`story_ai_on_your_cv`). Its guess reports `story_interacted` with the kinds `guess` and `show_count`, as chapter
 one's, under its own address.
+
+
+## Internal scan tests and reporting
+
+The backend accepts internal-test classification only when `X-Glassbox-Test-Key` matches the server-only `GLASSBOX_TEST_KEY` setting. The frontend can send that key from the current tab's `sessionStorage.glassbox_test_key` value; never put it in a `NEXT_PUBLIC_*` environment variable or commit it. The key is not stored. Credentialed internal scans increment the `test_scans_*` and `test_cv_reused` daily counters instead of production scan counters. PostHog scan events can be filtered by `internal_test=true` when the same tab key is present. Do not use country exclusions to remove internal tests.
+
+PostHog's `internal_test` property is a reporting convenience, not the security boundary: the backend-validated key controls server-side counter classification. A tab with a wrong/stale key may be marked in PostHog but will remain production traffic in backend totals. The backend daily counters remain the source of truth for counted server scans.
