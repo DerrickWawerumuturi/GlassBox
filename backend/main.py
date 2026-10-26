@@ -13,6 +13,7 @@ authentication, request models and status codes live here; the work does not.
     a scan, a new account       counted as daily totals (src/api/daily_counts.py)
 """
 import asyncio
+import hmac
 import json
 import os
 import tempfile
@@ -21,7 +22,7 @@ from contextlib import asynccontextmanager
 from functools import cache
 from typing import Literal
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -29,7 +30,7 @@ from fastapi.responses import JSONResponse
 from pdf_inspector import pdf_inspector
 
 from src.Agent.utils.location import LocationPreferences
-from src.api import daily_counts, market
+from src.api import daily_counts, market, rate_limit
 from src.Agent.utils.types import (
     AnalysisPayload, AppliedDateRequest, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
     LocationPreferencesRequest, ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
@@ -118,6 +119,26 @@ async def unexpected_errors(request, call_next):
     except Exception:
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
+
+
+@app.middleware("http")
+async def scan_guard(request, call_next):
+    """Limit expensive scans and classify credentialed internal test traffic."""
+    if request.url.path not in {"/analyze", "/analyze/reuse"} or request.method != "POST":
+        return await call_next(request)
+    peer = request.client.host if request.client else None
+    key = rate_limit.client_key(peer, request.headers.get("x-forwarded-for"))
+    wait = rate_limit.scans.allow(key)
+    if wait:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "You've reached the scan limit for this hour. Try again later."},
+            headers={"Retry-After": str(max(1, int(wait) + 1))},
+        )
+    expected = os.getenv("GLASSBOX_TEST_KEY", "")
+    supplied = request.headers.get("x-glassbox-test-key", "")
+    request.state.internal_test = bool(expected and supplied and hmac.compare_digest(expected, supplied))
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -248,7 +269,7 @@ async def _parsed_cv(cv_text: str, file_name, user):
 
 @app.post("/analyze")
 @daily_counts.scan()
-async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
+async def analyze(request: Request, file: UploadFile = File(...), user=Depends(optional_user)):
     data = await upload.pdf_bytes(file)  # too big or not a PDF fails here, before the queue
     preferences = await _location_preferences(user)
     # Both steps are synchronous and slow. Running them directly in this async
@@ -267,7 +288,7 @@ async def analyze(file: UploadFile = File(...), user=Depends(optional_user)):
 
 @app.post("/analyze/reuse")
 @daily_counts.scan("cv_reused")
-async def analyze_again(user=Depends(current_user)):
+async def analyze_again(request: Request, user=Depends(current_user)):
     """A rescan from the kept profile of the latest CV: no upload, no LLM call. Same shape as /analyze."""
     query = await run_in_threadpool(user_service.latest_profile, user)
     preferences = await _location_preferences(user)
