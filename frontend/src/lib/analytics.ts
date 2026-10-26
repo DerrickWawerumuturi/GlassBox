@@ -44,8 +44,8 @@ export type FailReason = (typeof FAIL_REASONS)[number];
 
 type Events = {
     scan_started: {from?: MarketPage; internal_test?: boolean};
-    cv_uploaded: Record<string, never>;
-    cv_reused: Record<string, never>;
+    cv_uploaded: {internal_test?: boolean};
+    cv_reused: {internal_test?: boolean};
     scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean};
     scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean};
     file_refused: {reason: (typeof REFUSALS)[number]};
@@ -263,7 +263,7 @@ export function forgetUser() {
 export function scanEvents(kind: "upload" | "reuse", from?: MarketPage) {
     const start = Date.now();
     track("scan_started", {from});
-    if (kind === "upload") track("cv_uploaded"); else track("cv_reused");
+    if (kind === "upload") track("cv_uploaded", {}); else track("cv_reused", {});
     return {
         finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from}),
         failed: (reason?: FailReason) => track("scan_failed", {stage: kind, reason}),
