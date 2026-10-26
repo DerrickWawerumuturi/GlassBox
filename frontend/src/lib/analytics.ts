@@ -44,8 +44,8 @@ export type FailReason = (typeof FAIL_REASONS)[number];
 
 type Events = {
     scan_started: {from?: MarketPage; internal_test?: boolean};
-    cv_uploaded: {internal_test?: boolean};
-    cv_reused: {internal_test?: boolean};
+    cv_uploaded: Record<string, never>;
+    cv_reused: Record<string, never>;
     scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean};
     scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean};
     file_refused: {reason: (typeof REFUSALS)[number]};
