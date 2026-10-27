@@ -285,3 +285,11 @@ ORDER BY 1;
 - Rest of World, The hidden Kenyan workers training China's AI models: https://restofworld.org/2025/kenya-china-ai-workers/
 
 These links identify concrete source artifacts for verification and design study. Recheck availability and page contents at publication time.
+
+
+### Lead examples to verify at publication time
+- Quora, Full Stack Software Engineer, New Grad: https://jobs.ashbyhq.com/quora/5494e6a1-a973-46af-b9f3-57208eb91b52 . The official listing says Remote - Multiple Locations, Canada and United States, and its minimum requirements distinguish graduation/fundamentals from preferred prior software and AI-project experience.
+- Coinbase, Software Engineer - Crypto Data Foundations: https://www.coinbase.com/careers/positions/8304038?gh_jid=8304038 . Glassbox stores this as Remote - USA; the live careers index currently lists the role as Remote - USA. The direct job page did not render in the browser check, so re-open the role before publication.
+- HP IQ, Product Design Engineer: https://job-boards.greenhouse.io/hpiq/jobs/6144518004 . The official description specifies mechanical parts, 3D CAD, prototyping, design validation and manufacturing.
+- Astranis, Software Defined Radio Hardware Intern: https://job-boards.greenhouse.io/astranis/jobs/4716088006 . The official description identifies hardware design and electrical-engineering requirements; the word "software" in "software-defined radio" does not make this a software-engineering vacancy.
+- Astera Labs, System Validation Engineer Intern: https://job-boards.greenhouse.io/asteraearlycareer2027/jobs/4724488005 . The official description spans hardware, firmware and applications, with test automation and scripts. This supports retaining it as ambiguous rather than treating it as an obvious false positive.
