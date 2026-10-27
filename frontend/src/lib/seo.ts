@@ -20,7 +20,7 @@ const stories = (page: MarketName) => STORIES.filter((s) => s.page === page).map
 
 /** The pages search should list, in sitemap order. Each /market page goes here too, its stories after it. */
 export const PUBLIC_PATHS: ReadonlyArray<`/${string}`> = ["/", "/product", "/about", "/privacy", "/your-cv", "/market",
-    "/market/entry-level-software", YEARS_PATH, ...stories("entry-level-software"),
+    "/market/entry-level-software", YEARS_PATH, ...stories("entry-level-software"), "/market/entry-level-software/when-the-job-description-says-ai",
     "/market/software-engineering", ...stories("software-engineering"), "/market/ai", ...stories("ai"),
     "/market/machine-learning", ...stories("machine-learning"), "/market/devops", ...stories("devops"), "/method"];
 

@@ -1,0 +1,40 @@
+.root {
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 19px/1.68 var(--essay);
+  -webkit-font-smoothing: antialiased;
+}
+.root p { margin: 0 0 1.12em; color: color-mix(in oklab, var(--ink) 90%, var(--paper)); }
+.root a { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
+.col { max-width: 760px; margin-inline: auto; padding-inline: 22px; }
+.hero { padding-top: clamp(46px, 7vw, 76px); padding-bottom: 26px; }
+.root h1 { margin: 0; font: 700 clamp(42px, 6.1vw, 68px)/1.04 var(--essay); letter-spacing: -.035em; }
+.root p.lead { margin-bottom: 1.1em; color: var(--ink); font-size: clamp(22px, 2.45vw, 28px); line-height: 1.42; }
+.root h2 { margin: 1.75em 0 .58em; font: 700 clamp(30px, 4vw, 40px)/1.12 var(--essay); letter-spacing: -.025em; }
+.root h3 { margin: 0 0 .45em; font: 700 23px/1.25 var(--essay); letter-spacing: -.02em; }
+.figure { width: min(1100px, calc(100% - 44px)); margin: 42px auto 50px; }
+.figure img { display: block; width: 100%; height: auto; }
+.figure figcaption { margin-top: 10px; color: var(--muted); font: 500 12px/1.5 var(--mono); }
+.openingFigure { margin-top: 30px; }
+.comparisonFigure { margin-top: 34px; margin-bottom: 42px; }
+.root ul, .root ol { margin: -.25em 0 1.18em; padding-left: 1.45em; }
+.root li { margin: .22em 0; padding-left: .15em; }
+.meanings { counter-reset: meaning; list-style: none; padding: 0 !important; }
+.meanings li { counter-increment: meaning; position: relative; padding-left: 42px; margin: 1.35em 0; }
+.meanings li::before { content: counter(meaning) "."; position: absolute; left: 0; top: 0; color: var(--orange); font: 600 16px/1.6 var(--mono); }
+.meanings li p { margin-bottom: .72em; }
+.explore { margin-top: 1.6em !important; }
+
+@media (max-width: 700px) {
+  .root { font-size: 18px; line-height: 1.63; }
+  .hero { padding-top: 42px; padding-bottom: 22px; }
+  .root h1 { font-size: clamp(39px, 10vw, 52px); line-height: 1.06; }
+  .root p.lead { font-size: 22px; }
+  .root h2 { margin-top: 1.55em; font-size: clamp(29px, 8vw, 34px); }
+  .root h3 { font-size: 21px; }
+  .figure { width: calc(100% - 32px); margin-block: 30px 36px; }
+  .figure figcaption { font-size: 11px; }
+  .comparisonFigure { margin-block: 28px 36px; }
+}

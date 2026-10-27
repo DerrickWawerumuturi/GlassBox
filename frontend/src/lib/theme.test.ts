@@ -28,7 +28,7 @@ describe("theme choice", () => {
     });
 
     it("knows a story's address, and nothing else", () => {
-        for (const path of ["/market/entry-level-software/is-entry-level-dead", "/market/ai/contents-may-vary", "/market/devops/within-eleven-jobs/"]) expect([path, isStoryPath(path)]).toEqual([path, true]);
+        for (const path of ["/market/entry-level-software/is-entry-level-dead", "/market/ai/contents-may-vary", "/market/devops/within-eleven-jobs/", "/market/entry-level-software/when-the-job-description-says-ai"]) expect([path, isStoryPath(path)]).toEqual([path, true]);
         for (const path of ["/market", "/market/ai", "/market/entry-level-software/years-of-experience", "/", "/analysis"]) expect([path, isStoryPath(path)]).toEqual([path, false]);
         expect(isDark("system", true, true)).toBe(false);
         expect(isDark("dark", false, true)).toBe(true);
