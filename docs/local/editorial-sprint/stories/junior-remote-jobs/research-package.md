@@ -265,3 +265,23 @@ ORDER BY 1;
 3. Add parser regression tests for the three real heading/years mismatches. Do not modify production code or reprofile in this research sprint.
 4. Recompute source sensitivity and the same-employer/family check on the frozen scope.
 5. Only then finalise article copy and export the six visual frames. No distribution planning until the article package is approved.
+
+
+## Verified source links for the article package
+
+### Employer artifacts
+- Quora, Full Stack Software Engineer, New Grad (official Ashby listing): https://jobs.ashbyhq.com/quora/5494e6a1-a973-46af-b9f3-57208eb91b52
+- Coinbase, Software Engineer - Crypto Data Foundations (official careers listing): https://www.coinbase.com/careers/positions/8304038
+- HP IQ, Product Design Engineer (official Greenhouse listing): https://job-boards.greenhouse.io/hpiq/jobs/6144518004
+- HP IQ, Product Design Engineering Intern (official Greenhouse listing): https://job-boards.greenhouse.io/hpiq/jobs/6141235004
+- Skydio, Product Design Engineer (Early Career) (official Ashby listing): https://jobs.ashbyhq.com/skydio/ba62805c-ebe7-4b99-85af-f58c807b4dd1
+- Astranis, Software Defined Radio Hardware Intern (official Greenhouse listing): https://job-boards.greenhouse.io/astranis/jobs/4716088006
+- Astera Labs, System Validation Engineer Intern (official Greenhouse listing): https://job-boards.greenhouse.io/asteraearlycareer2027/jobs/4724488005
+
+### Visual journalism
+- Bloomberg Graphics, Gasoline Prices Around the World: https://www.bloomberg.com/graphics/gas-prices/
+- ProPublica, Busted: https://www.propublica.org/series/busted
+- The Markup, How We Assessed the Accuracy of Predictive Policing Software: https://themarkup.org/show-your-work/2023/10/02/how-we-assessed-the-accuracy-of-predictive-policing-software
+- Rest of World, The hidden Kenyan workers training China's AI models: https://restofworld.org/2025/kenya-china-ai-workers/
+
+These links identify concrete source artifacts for verification and design study. Recheck availability and page contents at publication time.
