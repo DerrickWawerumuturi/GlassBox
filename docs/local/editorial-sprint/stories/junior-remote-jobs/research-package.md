@@ -273,7 +273,7 @@ ORDER BY 1;
 - Quora, Full Stack Software Engineer, New Grad (official Ashby listing): https://jobs.ashbyhq.com/quora/5494e6a1-a973-46af-b9f3-57208eb91b52
 - Coinbase, Software Engineer - Crypto Data Foundations (official careers listing): https://www.coinbase.com/careers/positions/8304038
 - HP IQ, Product Design Engineer (official Greenhouse listing): https://job-boards.greenhouse.io/hpiq/jobs/6144518004
-- HP IQ, Product Design Engineering Intern (official Greenhouse listing): https://job-boards.greenhouse.io/hpiq/jobs/6141235004
+- HP IQ, Product Design Engineering Intern (URL recorded in Glassbox; direct page did not render in this pass): https://job-boards.greenhouse.io/hpiq/jobs/6141235004
 - Skydio, Product Design Engineer (Early Career) (official Ashby listing): https://jobs.ashbyhq.com/skydio/ba62805c-ebe7-4b99-85af-f58c807b4dd1
 - Astranis, Software Defined Radio Hardware Intern (official Greenhouse listing): https://job-boards.greenhouse.io/astranis/jobs/4716088006
 - Astera Labs, System Validation Engineer Intern (official Greenhouse listing): https://job-boards.greenhouse.io/asteraearlycareer2027/jobs/4724488005
