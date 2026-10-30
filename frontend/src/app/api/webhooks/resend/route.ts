@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Webhook } from "svix";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import postgres from "postgres";
 
 export const runtime = "nodejs";
@@ -37,7 +37,23 @@ export async function POST(request: Request) {
   };
 
   try {
-    event = new Webhook(secret).verify(payload, headers) as ResendEvent;
+    const timestamp = Number(headers["svix-timestamp"]);
+    const messageId = headers["svix-id"];
+    const signatureHeader = headers["svix-signature"];
+    if (!messageId || !Number.isFinite(timestamp) || !signatureHeader) throw new Error("Missing Svix headers");
+    if (Math.abs(Date.now() / 1000 - timestamp) > 300) throw new Error("Stale webhook timestamp");
+
+    const secretBytes = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
+    const signedContent = `${messageId}.${headers["svix-timestamp"]}.${payload}`;
+    const expected = createHmac("sha256", secretBytes).update(signedContent).digest();
+    const valid = signatureHeader.split(" ").some((part) => {
+      const [version, encoded] = part.split(",", 2);
+      if (version !== "v1" || !encoded) return false;
+      const supplied = Buffer.from(encoded, "base64");
+      return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+    });
+    if (!valid) throw new Error("Signature mismatch");
+    event = JSON.parse(payload) as ResendEvent;
   } catch {
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
   }
