@@ -38,8 +38,6 @@ export async function POST(
   let draft: OutreachDraft | undefined;
   try {
     draft = await sql.begin(async (transaction) => {
-      // postgres.js exposes transaction parameters as never in this inferred
-      // context. Use its parameterized unsafe() API with positional bindings.
       const tx = transaction as unknown as TransactionQuery;
       const rows = await tx.unsafe(
         `SELECT d.*, p.organisation, p.contact_email AS current_contact_email,
@@ -83,7 +81,9 @@ export async function POST(
          RETURNING *`,
         [id],
       );
-      return claimedRows[0] as OutreachDraft;
+      // UPDATE ... RETURNING * contains only draft columns. Preserve the joined
+      // prospect campaign and UTM fields selected above for the post-send write.
+      return { ...row, ...claimedRows[0] } as OutreachDraft;
     });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
@@ -152,8 +152,8 @@ export async function POST(
           draft!.recipient_email,
           draft!.sender_email,
           draft!.subject,
-          draft!.prospect_campaign,
-          draft!.utm_url,
+          draft!.prospect_campaign ?? null,
+          draft!.utm_url ?? null,
         ],
       );
       await tx.unsafe(
