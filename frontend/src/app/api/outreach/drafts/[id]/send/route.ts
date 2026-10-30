@@ -134,17 +134,17 @@ export async function POST(
         WHERE m.resend_email_id = ${result.id}
       `;
       await tx`
+        UPDATE public.outreach_prospects
+        SET status = 'contacted', last_contacted_at = now(), updated_at = now()
+        WHERE id = ${draft!.prospect_id}
+      `;
+      await tx`
         UPDATE public.outreach_prospects p
         SET opted_out_at = COALESCE(p.opted_out_at, now()), status = 'opted_out', updated_at = now()
         WHERE EXISTS (
           SELECT 1 FROM public.resend_webhook_events e
           WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.complained'
         ) AND p.id = ${draft!.prospect_id}
-      `;
-      await tx`
-        UPDATE public.outreach_prospects
-        SET status = 'contacted', last_contacted_at = now(), updated_at = now()
-        WHERE id = ${draft!.prospect_id}
       `;
     });
 
