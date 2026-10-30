@@ -29,7 +29,7 @@ export async function POST(
   if ("response" in access) return access.response;
 
   const { id } = await context.params;
-  if (!/^\\d+$/.test(id)) return NextResponse.json({ error: "Invalid draft id" }, { status: 400 });
+  if (!/^\d+$/.test(id)) return NextResponse.json({ error: "Invalid draft id" }, { status: 400 });
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "RESEND_API_KEY is not configured" }, { status: 503 });
