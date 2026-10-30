@@ -29,7 +29,10 @@ Do not grant this role access to CVs, users, jobs, or other Glassbox product dat
 ## API flow
 
 1. `GET /api/outreach/drafts` — list prospects and drafts (admin allowlist only).
-2. `POST /api/outreach/drafts` — create a pending-approval draft. The recipient is read from the prospect record, never accepted from the request body.
+2. `POST /api/outreach/drafts` — create a pending-approval draft. The recipient is read from the prospect record, never accepted from the request body. Every request must include `purpose: "initial"` or `purpose: "follow_up"`.
+   - Prospects with verified prior contact history must use `purpose: "follow_up"`; an initial-introduction draft is rejected.
+   - Prospects marked `previously_contacted_unverified` are blocked until their history and recipient are verified.
+   - A follow-up is rejected unless a prior contact timestamp or recognised contacted status exists.
 3. `POST /api/outreach/drafts/:id/approve` — explicitly approve one draft.
 4. `POST /api/outreach/drafts/:id/send` — send only an approved draft through Resend.
 
