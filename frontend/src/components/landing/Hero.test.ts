@@ -53,10 +53,11 @@ describe("the hero", () => {
         expect(h).toContain(`<p class="m-0 font-mono text-[12px] text-muted-foreground" role="status">${ASK.reading}</p>`);
     });
 
-    it("without this week's count has nothing to compare with, so shows only the words", () => {
+    it("keeps the CV scan available when this week's count has not loaded", () => {
         const h = hero(null);
         expect(h).toContain(COPY.hero.title);
-        expect(buttons(h)).toEqual([]);
+        expect(buttons(h)).toEqual(["Compare your CV"]);
+        expect(nothingUnder(h)).toBe(true);
     });
 });
 
