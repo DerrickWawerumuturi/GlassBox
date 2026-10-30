@@ -124,7 +124,7 @@ export async function POST(
            ${draft!.prospect_campaign ?? null}, ${draft!.utm_url ?? null}, 'sent', now())
         ON CONFLICT (resend_email_id) DO NOTHING
       `;
-      await tx`
+      await txSql`
         UPDATE public.outreach_messages m
         SET status = CASE
               WHEN EXISTS (SELECT 1 FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.complained') THEN 'complained'
@@ -137,12 +137,12 @@ export async function POST(
             complained_at = (SELECT min(e.received_at) FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.complained')
         WHERE m.resend_email_id = ${result.id}
       `;
-      await tx`
+      await txSql`
         UPDATE public.outreach_prospects
         SET status = 'contacted', last_contacted_at = now(), updated_at = now()
         WHERE id = ${draft!.prospect_id}
       `;
-      await tx`
+      await txSql`
         UPDATE public.outreach_prospects p
         SET opted_out_at = COALESCE(p.opted_out_at, now()), status = 'opted_out', updated_at = now()
         WHERE EXISTS (
