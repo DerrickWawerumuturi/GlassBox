@@ -52,7 +52,12 @@ export async function POST(request: Request) {
   const access = await requireOutreachAdmin();
   if ("response" in access) return access.response;
 
-  let body: { prospectId?: unknown; subject?: unknown; textBody?: unknown };
+  let body: {
+    prospectId?: unknown;
+    purpose?: unknown;
+    subject?: unknown;
+    textBody?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -60,11 +65,16 @@ export async function POST(request: Request) {
   }
 
   const prospectId = Number(body.prospectId);
+  const purpose = body.purpose === "initial" || body.purpose === "follow_up"
+    ? body.purpose
+    : null;
   const subject = typeof body.subject === "string" ? body.subject.trim() : "";
   const textBody = typeof body.textBody === "string" ? body.textBody.trim() : "";
-  if (!Number.isSafeInteger(prospectId) || prospectId < 1 ||
+  if (!Number.isSafeInteger(prospectId) || prospectId < 1 || !purpose ||
       !subject || subject.length > 180 || !textBody || textBody.length > 20000) {
-    return NextResponse.json({ error: "A valid prospectId, subject and textBody are required" }, { status: 400 });
+    return NextResponse.json({
+      error: "A valid prospectId, purpose (initial or follow_up), subject and textBody are required",
+    }, { status: 400 });
   }
 
   const senderEmail = process.env.OUTREACH_FROM_EMAIL?.trim();
@@ -75,12 +85,33 @@ export async function POST(request: Request) {
   const sql = outreachDatabase();
   try {
     const [prospect] = await sql`
-      SELECT id, organisation, contact_email, status, opted_out_at
+      SELECT id, organisation, contact_email, status, last_contacted_at, opted_out_at
       FROM public.outreach_prospects
       WHERE id = ${prospectId}
       LIMIT 1
     `;
     if (!prospect) return NextResponse.json({ error: "Prospect not found" }, { status: 404 });
+
+    if (prospect.status === "previously_contacted_unverified") {
+      return NextResponse.json({
+        error: "This prospect's previous contact is unverified. Confirm the contact history and recipient before creating a draft.",
+      }, { status: 409 });
+    }
+
+    const hasContactHistory = Boolean(prospect.last_contacted_at) ||
+      ["previously_contacted", "contacted", "follow_up_due"].includes(String(prospect.status));
+
+    if (hasContactHistory && purpose !== "follow_up") {
+      return NextResponse.json({
+        error: "This prospect has already been contacted. Create a follow-up draft, not a new introduction.",
+      }, { status: 409 });
+    }
+    if (!hasContactHistory && purpose === "follow_up") {
+      return NextResponse.json({
+        error: "A follow-up requires a verified prior contact record.",
+      }, { status: 409 });
+    }
+
     const recipient = String(prospect.contact_email ?? "").trim().toLowerCase();
     if (!EMAIL_PATTERN.test(recipient)) {
       return NextResponse.json({ error: "Prospect has no valid, verified contact email" }, { status: 422 });
