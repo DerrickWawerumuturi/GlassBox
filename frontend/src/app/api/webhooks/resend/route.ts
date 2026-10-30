@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       INSERT INTO public.resend_webhook_events
         (svix_id, event_type, resend_email_id, recipient_email, event_created_at, payload)
       VALUES
-        (${svixId}, ${event.type}, ${emailId ?? null}, ${recipient}, ${event.created_at ? new Date(event.created_at) : null}, ${sql.json(event)})
+        (${svixId}, ${event.type}, ${emailId ?? null}, ${recipient}, ${event.created_at ? new Date(event.created_at) : null}, ${sql.json(JSON.parse(payload))})
       ON CONFLICT (svix_id) DO NOTHING
       RETURNING id
     `;
