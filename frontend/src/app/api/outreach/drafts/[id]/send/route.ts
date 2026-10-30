@@ -34,6 +34,11 @@ export async function POST(
       `;
       if (!row) throw new Error("DRAFT_NOT_FOUND");
       if (row.status === "sent") throw new Error("ALREADY_SENT");
+      if (row.sending_started_at &&
+          Date.now() - new Date(String(row.sending_started_at)).getTime() > 23 * 60 * 60 * 1000 &&
+          row.status !== "sent") {
+        throw new Error("RECONCILIATION_REQUIRED");
+      }
       if (row.status !== "approved" &&
           !(row.status === "sending" && row.sending_started_at &&
             Date.now() - new Date(String(row.sending_started_at)).getTime() > 5 * 60 * 1000)) {
@@ -60,6 +65,7 @@ export async function POST(
       DRAFT_NOT_FOUND: "Draft not found",
       ALREADY_SENT: "This draft has already been sent",
       NOT_APPROVED_OR_ALREADY_SENDING: "Draft must be approved and not currently sending",
+      RECONCILIATION_REQUIRED: "This send attempt is older than Resend's 24-hour idempotency window. Reconcile the delivery status before retrying.",
       RECIPIENT_CHANGED: "The prospect email changed after this draft was created. Create and approve a fresh draft.",
       PROSPECT_OPTED_OUT: "This prospect has opted out and cannot be contacted",
     };
@@ -113,6 +119,27 @@ export async function POST(
            ${draft!.sender_email}, ${draft!.subject},
            ${draft!.prospect_campaign ?? null}, ${draft!.utm_url ?? null}, 'sent', now())
         ON CONFLICT (resend_email_id) DO NOTHING
+      `;
+      await tx`
+        UPDATE public.outreach_messages m
+        SET status = CASE
+              WHEN EXISTS (SELECT 1 FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.complained') THEN 'complained'
+              WHEN EXISTS (SELECT 1 FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type IN ('email.bounced', 'email.failed', 'email.suppressed')) THEN 'bounced'
+              WHEN EXISTS (SELECT 1 FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.delivered') THEN 'delivered'
+              ELSE 'sent'
+            END,
+            delivered_at = (SELECT min(e.received_at) FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.delivered'),
+            bounced_at = (SELECT min(e.received_at) FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type IN ('email.bounced', 'email.failed', 'email.suppressed')),
+            complained_at = (SELECT min(e.received_at) FROM public.resend_webhook_events e WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.complained')
+        WHERE m.resend_email_id = ${result.id}
+      `;
+      await tx`
+        UPDATE public.outreach_prospects p
+        SET opted_out_at = COALESCE(p.opted_out_at, now()), status = 'opted_out', updated_at = now()
+        WHERE EXISTS (
+          SELECT 1 FROM public.resend_webhook_events e
+          WHERE e.resend_email_id = ${result.id} AND e.event_type = 'email.complained'
+        ) AND p.id = ${draft!.prospect_id}
       `;
       await tx`
         UPDATE public.outreach_prospects
