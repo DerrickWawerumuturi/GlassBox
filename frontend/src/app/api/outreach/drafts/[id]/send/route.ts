@@ -23,7 +23,10 @@ export async function POST(
   let draft: Record<string, unknown> | undefined;
   try {
     draft = await sql.begin(async (tx) => {
-      const [row] = await tx`
+      // postgres.js types the transaction tag with `never` parameters here;
+      // reuse the already-inferred client tag type for parameterized queries.
+      const txSql = tx as unknown as typeof sql;
+      const [row] = await txSql`
         SELECT d.*, p.organisation, p.contact_email AS current_contact_email,
                p.opted_out_at, p.status AS prospect_status, p.campaign AS prospect_campaign,
                p.utm_url
@@ -50,7 +53,7 @@ export async function POST(
       if (recipient !== currentRecipient) throw new Error("RECIPIENT_CHANGED");
       if (row.opted_out_at || row.prospect_status === "opted_out") throw new Error("PROSPECT_OPTED_OUT");
 
-      const [claimed] = await tx`
+      const [claimed] = await txSql`
         UPDATE public.outreach_email_drafts
         SET status = 'sending', sending_started_at = now(), updated_at = now(), last_error = NULL
         WHERE id = ${id}
@@ -104,13 +107,14 @@ export async function POST(
     }
 
     await sql.begin(async (tx) => {
-      await tx`
+      const txSql = tx as unknown as typeof sql;
+      await txSql`
         UPDATE public.outreach_email_drafts
         SET status = 'sent', resend_email_id = ${result.id}, sent_at = now(),
             updated_at = now(), last_error = NULL
         WHERE id = ${id}
       `;
-      await tx`
+      await txSql`
         INSERT INTO public.outreach_messages
           (prospect_id, resend_email_id, recipient_email, sender_email, subject,
            campaign, utm_url, status, sent_at)
