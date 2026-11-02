@@ -174,6 +174,7 @@ describe("the sheet's words", () => {
         expect(ASK.sheet.line(ask())).toBe(`We read the skills on your CV and compare them with the 15 that ${entry.readable} entry level software jobs mention most.`);
         expect(ASK.sheet.title(ask())).toBe("How many of these 15 are on your CV?");
         expect(ASK.sheet.resultLine(ask())).toBe("of the 15 skills entry level software jobs mention most are already on your CV.");
+        expect(ASK.sheet.seeThem).toBe("See full scan");
         // A story picks its skills, so its sheet never says they are the ones mentioned most.
         const story: Ask = {...ask(ask().skills.slice(0, 11)), what: STORY_WHAT};
         expect(ASK.sheet.line(story)).toBe(`We read the skills on your CV and compare them with the 11 this story counts in ${entry.readable} entry level software jobs.`);
