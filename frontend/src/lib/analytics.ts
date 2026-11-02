@@ -42,6 +42,9 @@ export const REFUSALS = ["not_pdf", "too_big"] as const;
 export const FAIL_REASONS = ["timeout", "too_big", "not_pdf", "server", "network", "not_kept", "other"] as const;
 export type FailReason = (typeof FAIL_REASONS)[number];
 
+const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
+type VisitSource = {ref_domain?: string} & Partial<Record<(typeof UTM)[number], string>>;
+
 type Events = {
     scan_started: {from?: MarketPage; internal_test?: boolean} & VisitSource;
     cv_uploaded: {internal_test?: boolean};
@@ -101,8 +104,6 @@ export function pagePath(url: string): string {
     }
 }
 
-const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
-type VisitSource = {ref_domain?: string} & Partial<Record<(typeof UTM)[number], string>>;
 // The only properties PostHog's own events may carry besides its "$" context.
 const PAGE_ALLOWED: Record<string, readonly string[]> = {$pageview: ["ref_domain", ...UTM], $pageleave: [], $identify: []};
 
