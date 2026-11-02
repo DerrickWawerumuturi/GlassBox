@@ -99,6 +99,7 @@ def test_only_headings_open_sections():
     ("Requirements: two (2) years of experience with React.", {"years": 2, "kind": "required"}),
     ("We have 10+ years in business. You need 2+ years of experience.", {"years": 2, "kind": "required"}),
     ("Requirements: 0-2 years of professional experience.", {"years": 0, "kind": "required"}),
+
     # Real phrasings, 2026-10-07. A range after "experience" read its upper end.
     ("- Experience: 5-7+ years in data center commissioning, construction, or critical infrastructure delivery",
      {"years": 5, "kind": "required"}),
@@ -113,6 +114,19 @@ def test_only_headings_open_sections():
 ])
 def test_extract_experience(description, expected):
     assert extract_experience("Engineer", description) == expected
+
+
+def test_live_pool_experience_headings_reopen_requirements():
+    # These headings must reopen requirements after earlier "About Us"/benefits sections.
+    assert extract_experience("Software Engineer Internship (UNPAID)",
+        "What You'll Have\\n2+ years of experience working with the MERN stack.") == {
+            "years": 2, "kind": "required"}
+    assert extract_experience("Engineering Manager",
+        "What You'll Bring:\\n7+ years of professional experience as a mobile engineer and at least 2+ years of experience in leadership roles") == {
+            "years": 7, "kind": "required"}
+    assert extract_experience("Software Engineer III, Trading - FBG",
+        "Experience and Skills\\nAt least 3-5 years of real-world demonstrable experience building applications.\\n2+ years of experience with C# and cloud platforms.") == {
+            "years": 3, "kind": "required"}
 
 
 def test_required_and_preferred_skills_are_separated_per_clause():
