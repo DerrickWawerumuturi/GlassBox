@@ -147,7 +147,7 @@ describe("analytics with a key", () => {
         expect(posthog.capture).toHaveBeenCalledWith("scan_started", {});
     });
 
-    it("sends pages as a path, without the query string", async () => {
+    it("carries the original visit source through to a completed scan", async () => {\n        vi.stubGlobal("document", {referrer: "https://news.ycombinator.com/item?id=1"});\n        vi.stubGlobal("location", {search: "?utm_source=hn&utm_medium=community&utm_campaign=launch", hostname: "seeglassbox.com"});\n        const a = await load();\n        a.initAnalytics("phc_test");\n        a.trackPageview("/");\n        const scan = a.scanEvents("upload");\n        scan.finished(12);\n        expect(posthog.capture).toHaveBeenCalledWith("scan_started", {ref_domain: "news.ycombinator.com", utm_source: "hn", utm_medium: "community", utm_campaign: "launch"});\n        expect(posthog.capture).toHaveBeenCalledWith("scan_finished", expect.objectContaining({jobs: 12, ref_domain: "news.ycombinator.com", utm_source: "hn", utm_medium: "community", utm_campaign: "launch"}));\n    });\n\n    it("sends pages as a path, without the query string", async () => {
         const a = await load();
         a.initAnalytics("phc_test");
         a.trackPageview("/dashboard/market?view=gaps&file_name=cv.pdf");
