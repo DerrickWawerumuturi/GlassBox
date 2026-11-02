@@ -118,6 +118,10 @@ class SearchQuery:
     country_code: str | None = None
     city: str | None = None
     remote: bool | None = None
+    experience: list[dict] = field(default_factory=list)
+    education: str | None = None
+    languages: list[str] = field(default_factory=list)
+    derived: dict | None = None
 
     def __post_init__(self):
         if self.primary_role is not None and not isinstance(self.primary_role, str):
@@ -139,6 +143,10 @@ class SearchQuery:
             country_code=parsed.country_code,
             city=parsed.city,
             remote=parsed.remote,
+            experience=[p.model_dump() if hasattr(p, 'model_dump') else dict(p) for p in parsed.experience],
+            education=parsed.education,
+            languages=list(parsed.languages),
+            derived=parsed.derived,
         )
 
 @dataclass
