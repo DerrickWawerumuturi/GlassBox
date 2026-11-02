@@ -272,14 +272,9 @@ class JoobleProvider(JobProvider):
 
 
 class PoolProvider(JobProvider):
+    """The shared, profiled live pool, matched to the parsed CV profile."""
+
     scopes = ("remote",)
-
-    """
-    The daily job pool (src/jobpool), matched to this search by title.
-
-    Postings come back under their original provider and id, so one also found
-    live dedupes against it, and re-storing it only refreshes its own row.
-    """
 
     name = "pool"
     LIMIT = 5000
