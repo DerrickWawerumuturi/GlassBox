@@ -116,7 +116,7 @@ def run(now: datetime | None = None, force: bool = False, accept: date | None = 
         row_id = publication_repository.insert(conn, week, cand["as_of"], status, PROFILER_VERSION, cand["jobs"],
                                                checks, cand["look"] if kept else None, cand["pages"] if kept else None)
     if kept:
-        refresh_site.refresh()      # the site shows it now, not on its next visit (refresh_site.py)
+        refresh_site.refresh(expected_week=week, expected_pages=cand['pages'])  # verify actual rendered HTML
     return {"id": row_id, "status": status, "week": week, "jobs": cand["jobs"], "gates": checks}
 
 
