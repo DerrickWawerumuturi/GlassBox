@@ -16,7 +16,10 @@ from src.matching.requirements import profile_job
 
 
 def persist_search_jobs(ingestion, search_id, jobs):
-    """Persist only fresh provider results; pool rows already have durable database IDs."""
+    """Persist only fresh provider results; pool rows already have durable database IDs.
+
+    Existing pool rows are still analyzed in full; this only avoids redundant writes.
+    """
     job_ids = {
         resolve_identity(job)[0]: job.db_id
         for job in jobs if job.db_id is not None
