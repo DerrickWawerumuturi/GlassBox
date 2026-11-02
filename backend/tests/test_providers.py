@@ -5,9 +5,11 @@ No network: requests is faked.
 """
 import pytest
 import requests
+from contextlib import nullcontext
+from types import SimpleNamespace
 
 import src.Agent.Framework.providers as providers_module
-from src.Agent.Framework.providers import JoobleProvider, JSearchProvider, MuseProvider
+from src.Agent.Framework.providers import JoobleProvider, JSearchProvider, MuseProvider, PoolProvider
 from src.Agent.utils.types import ParsedQuery, SearchQuery, SearchScope
 
 QUERY = SearchQuery.from_parsed(ParsedQuery(
@@ -156,3 +158,25 @@ def test_engine_dedupes_by_storage_identity_and_filters_by_tier(monkeypatch):
     kept, ineligible = SearchEngine._filter_eligible(unique, resolved)
     assert [j.external_id for j in kept] == ["1", "4"] and ineligible == 2
     assert SearchEngine._filter_eligible(unique, loc.ResolvedLocation()) == (unique, 0)
+
+
+
+def test_pool_provider_uses_broader_remote_market_pool(monkeypatch):
+    jobs = [SimpleNamespace(title=f"Data Engineer {i}") for i in range(650)]
+    seen = {}
+    monkeypatch.setattr(providers_module, "connection", lambda: nullcontext(object()))
+    monkeypatch.setattr(
+        providers_module.job_repository,
+        "search_pool",
+        lambda conn, params: seen.update(params=params) or jobs,
+    )
+    monkeypatch.setattr(providers_module.loc, "LocationPreferences", lambda **kwargs: object())
+    monkeypatch.setattr(providers_module.loc, "location_tier", lambda job, prefs: "worldwide")
+    monkeypatch.setattr(providers_module.loc, "location_fit", lambda tier, prefs: 1)
+
+    outcome = {}
+    selected = PoolProvider().fetch(QUERY, REMOTE, outcome)
+
+    assert len(selected) == 500
+    assert seen["params"]["limit"] == 2_000
+    assert outcome["request_params"]["limit"] == 2_000
