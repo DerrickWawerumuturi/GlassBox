@@ -21,7 +21,11 @@ from pydantic import ValidationError
 
 from src.Agent.utils import location as loc
 from src.Agent.utils.types import Job, SearchQuery, SearchScope
-from src.database.repositories import job_repository
+from src.database.repositories import job_repository, profile_repository
+from src.matching.candidate import Candidate
+from src.matching.matcher import related
+from src.matching.requirements import PROFILER_VERSION
+from src.matching.roles import RANK, TECH_FAMILIES
 from src.database.session import connection, is_configured
 from src.jobpool.sources import FULL_BOARDS, POOL_WINDOWS
 
@@ -276,39 +280,51 @@ class PoolProvider(JobProvider):
     """
 
     name = "pool"
-    LIMIT = 60
-    # Remote candidates fetched before tier ranking trims them to LIMIT, so a
-    # role open to the user's country is not lost behind newer ones that are not.
-    REMOTE_CANDIDATES = 400
+    LIMIT = 5000
+    TOO_SENIOR = 3
 
     def available(self) -> bool:
         return is_configured()
 
     def fetch(self, query, scope, outcome):
-        # Every word of a title must match, so the primary role alone misses
-        # the secondary roles the CV also qualifies for.
-        roles = list(dict.fromkeys(r.strip() for r in [query.primary_role, *query.secondary_roles] if r and r.strip()))[:4]
-        places = [p for p in (scope.city, scope.country_name) if p]
-        params = {
-            "roles": roles,
-            # What counts as live is the pool's rule (sources.POOL_WINDOWS): not
-            # closed by its board (jobs.closed_at), and within the age limits.
-            # JSearch rows and pasted links get the plain age limit, since a
-            # missed sighting of a searched posting says nothing.
-            **POOL_WINDOWS,
-            "refreshed": list(FULL_BOARDS),
-            "remote": True if scope.kind == "remote" else None,
-            "place": "|".join(re.escape(p) for p in places) if scope.kind != "remote" and places else None,
-            "limit": self.REMOTE_CANDIDATES if scope.kind == "remote" else self.LIMIT,
-        }
-        outcome["request_params"] = {k: v for k, v in params.items() if v is not None}
-        if not roles or (scope.kind != "remote" and not places):
-            outcome["status"] = "skipped"
+        # Match the same profiled, role-family-aware live pool as Opportunities.
+        roles = [r.strip() for r in [query.primary_role, *query.secondary_roles] if r and r.strip()]
+        if not roles:
+            outcome['status'] = 'skipped'
             return []
-
+        prefs = loc.LocationPreferences(country_code=scope.country_code, city=scope.city)
+        candidate = Candidate.from_cv({
+            'title': query.primary_role, 'primary_role': query.primary_role,
+            'secondary_roles': query.secondary_roles, 'skills': query.skills,
+            'experience': query.experience, 'experience_level': query.experience_level,
+            'education': query.education, 'languages': query.languages, 'derived': query.derived,
+        }, prefs)
+        if candidate.families:
+            families = {family for family in TECH_FAMILIES | {'ai_data'}
+                        if max(strength * related(source, family)
+                               for source, strength in candidate.families.items()) >= 0.4}
+            families.add('other')
+        else:
+            families = set(TECH_FAMILIES) | {'other'}
+        top = max(RANK[candidate.level(track)] for track in ('software', 'ml', 'any'))
+        too_senior = [level for level, rank in RANK.items() if rank >= top + self.TOO_SENIOR]
+        params = {**POOL_WINDOWS, 'version': PROFILER_VERSION, 'families': sorted(families),
+                  'too_senior': too_senior, 'refreshed': list(FULL_BOARDS), 'limit': self.LIMIT}
+        outcome['request_params'] = {'families': params['families'], 'too_senior': too_senior,
+                                     'window_days': POOL_WINDOWS['age'], 'limit': self.LIMIT,
+                                     'location_scope': scope.label}
         with connection() as conn:
-            jobs = job_repository.search_pool(conn, params)
-        if scope.kind == "remote" and scope.country_code:
-            prefs = loc.LocationPreferences(country_code=scope.country_code, city=scope.city)
-            jobs.sort(key=lambda job: -loc.location_fit(loc.location_tier(job, prefs), prefs))
-        return jobs[:self.LIMIT]
+            rows = profile_repository.pool(conn, params)
+        jobs = [Job(
+            id=str(row['id']), db_id=row['id'], provider=row['provider'],
+            external_id=str(row['external_id']), title=row['title'], company=row['company'],
+            description=row['description'], location=row['location'], remote=row['remote'],
+            remote_eligibility=row['remote_eligibility'], employment_type=row['employment_type'],
+            experience_level=row['experience_level'], url=row['url'], posted_at=row['posted_at_raw'],
+            posted_at_utc=row['posted_at'].isoformat() if row['posted_at'] else None, raw=row['raw_payload'],
+        ) for row in rows]
+        if scope.country_code:
+            jobs = [job for job in jobs if loc.location_tier(job, prefs) != 'ineligible']
+        outcome['request_params']['candidate_pool_rows'] = len(rows)
+        outcome['request_params']['eligible_rows'] = len(jobs)
+        return jobs
