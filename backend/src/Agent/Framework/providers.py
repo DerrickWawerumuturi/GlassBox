@@ -318,7 +318,7 @@ class PoolProvider(JobProvider):
             description=row['description'], location=row['location'], remote=row['remote'],
             remote_eligibility=row['remote_eligibility'], employment_type=row['employment_type'],
             experience_level=row['experience_level'], url=row['url'], posted_at=row['posted_at_raw'],
-            posted_at_utc=row['posted_at'].isoformat() if row['posted_at'] else None, raw=row['raw_payload'],
+            posted_at_utc=row['posted_at'].isoformat() if row['posted_at'] else None,
         ) for row in rows]
         if scope.country_code:
             jobs = [job for job in jobs if loc.location_tier(job, prefs) != 'ineligible']

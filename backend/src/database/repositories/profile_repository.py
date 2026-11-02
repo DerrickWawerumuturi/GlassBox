@@ -52,8 +52,7 @@ limit %(limit)s
 POOL = """
 select j.id, j.provider, j.external_id, j.title, j.company, j.description, j.location, j.remote, j.remote_eligibility,
        j.employment_type, j.experience_level, j.url, j.posted_at, j.posted_at_raw,
-       j.first_seen_at, j.last_seen_at, j.raw_payload, j.raw_payload ->> 'workplaceType' as workplace_type,
-       p.profile""" + _LIVE
+       j.first_seen_at, j.last_seen_at""" + _LIVE
 
 # The same pool, with only what the market counts read (snapshot.py, market_look.py).
 # Reading raw_payload and the whole profile for ~13k rows moved ~8 MB and took
