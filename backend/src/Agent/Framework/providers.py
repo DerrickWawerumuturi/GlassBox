@@ -272,6 +272,8 @@ class JoobleProvider(JobProvider):
 
 
 class PoolProvider(JobProvider):
+    scopes = ("remote",)
+
     """
     The daily job pool (src/jobpool), matched to this search by title.
 
