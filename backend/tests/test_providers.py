@@ -178,7 +178,7 @@ def test_pool_provider_uses_profiled_shared_pool_and_candidate_fields(monkeypatc
         "location": "Remote", "remote": True, "remote_eligibility": "Worldwide",
         "employment_type": "Full-time", "experience_level": "Entry Level",
         "url": "https://example.com/jobs/101", "posted_at": None,
-        "posted_at_raw": "2 days ago", "raw_payload": {},
+        "posted_at_raw": "2 days ago",
     }]
     captured = {}
     monkeypatch.setattr(providers_module, "connection", lambda: nullcontext(object()))
