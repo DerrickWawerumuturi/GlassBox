@@ -33,7 +33,9 @@ from src.matching.skills import find_skills, scan, tokens
 # v6: "Member of Technical Staff" is not a level, an intern or new grad title is
 # never senior, "in the last 10 years" is not a requirement, and an early career
 # title can't require more than 3 years (2026-10-07, decisions/market-pages.md).
-PROFILER_VERSION = "requirements-v6"
+# v7: recognize common experience-section headings so years inside them are not
+# discarded as part of an earlier "About Us"/benefits stop section (2026-11-02).
+PROFILER_VERSION = "requirements-v7"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
@@ -43,7 +45,8 @@ THIN_BELOW = 800
 _REQUIRED_MARKERS = (
     "requirements", "required qualifications", "minimum qualifications",
     "basic qualifications", "what you'll need", "what you will need",
-    "what we're looking for", "what we are looking for", "must have",
+    "what we're looking for", "what we are looking for", "what you'll bring", "what you will bring", "what you'll have", "what you will have",
+    "experience and skills", "must have",
     "must-have", "you have", "you will have", "essential", "qualifications",
     "who you are", "required skills", "required experience", "about you",
     "your profile", "dein profil", "ihr profil", "anforderungen",
