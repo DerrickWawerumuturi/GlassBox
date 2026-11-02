@@ -83,3 +83,34 @@ def test_a_stored_profile_is_scored_and_only_unstored_jobs_are_read(monkeypatch)
     by_title = {r["job"].job.title: r["match"] for r in ranked}
     assert any("Principal" in b for b in by_title["Backend Engineer"]["blockers"])
     assert by_title["Junior Backend Engineer"]["tier"] != "unlikely"
+
+
+def test_scan_persists_only_jobs_not_already_in_the_shared_pool():
+    from src.Agent.Framework.JobRadarAgent import persist_search_jobs
+    from src.Agent.utils.types import Job
+    from src.database.fingerprint import resolve_identity
+
+    pooled = Job(
+        title="Backend Engineer", company="Acme", description="Python",
+        provider="greenhouse", external_id="123", db_id=41,
+    )
+    fresh = Job(
+        title="ML Engineer", company="Beta", description="PyTorch",
+        provider="jsearch", external_id="456",
+    )
+
+    class Ingestion:
+        def __init__(self):
+            self.calls = []
+
+        def persist_jobs(self, search_id, jobs):
+            self.calls.append((search_id, jobs))
+            return {resolve_identity(job)[0]: 99 for job in jobs}
+
+    ingestion = Ingestion()
+    ids = persist_search_jobs(ingestion, 7, [pooled, fresh])
+
+    assert ids[resolve_identity(pooled)[0]] == 41
+    assert ids[resolve_identity(fresh)[0]] == 99
+    assert len(ingestion.calls) == 1
+    assert ingestion.calls[0] == (7, [fresh])
