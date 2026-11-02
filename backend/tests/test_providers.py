@@ -3,10 +3,11 @@ What each search provider sends and what it parses, pinned before the provider
 refactor so the refactor is checked against behaviour, not just imports.
 No network: requests is faked.
 """
-import pytest
-import requests
 from contextlib import nullcontext
 from types import SimpleNamespace
+
+import pytest
+import requests
 
 import src.Agent.Framework.providers as providers_module
 from src.Agent.Framework.providers import JoobleProvider, JSearchProvider, MuseProvider, PoolProvider
