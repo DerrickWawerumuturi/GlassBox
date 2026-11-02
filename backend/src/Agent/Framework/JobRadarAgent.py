@@ -15,6 +15,17 @@ from src.matching.matcher import TIER_ORDER, match
 from src.matching.requirements import profile_job
 
 
+def persist_search_jobs(ingestion, search_id, jobs):
+    """Persist only fresh provider results; pool rows already have durable database IDs."""
+    job_ids = {
+        resolve_identity(job)[0]: job.db_id
+        for job in jobs if job.db_id is not None
+    }
+    new_jobs = [job for job in jobs if job.db_id is None]
+    job_ids.update(ingestion.persist_jobs(search_id, new_jobs))
+    return job_ids
+
+
 class JobRadarAgent:
     def __init__(self):
         self.query_interpreter = GroqModel("user")
@@ -22,7 +33,6 @@ class JobRadarAgent:
         self.sentence_embedder = SentenceEmbedder()
         self.market_analyzer = MarketAnalyzer()
         self.ingestion = JobIngestionService()
-
 
     def run(self, user_input, location_preferences: dict | None = None):
         return self.match(self.parse(user_input), location_preferences)
@@ -50,12 +60,13 @@ class JobRadarAgent:
         outcome = self.search_engine.get_jobs(search_query, run_log=run_log)
         raw_jobs = outcome.jobs
 
-        # Raw postings are stored before parsing, so the ones parsing discards
-        # (no description) still enter the dataset and stay reprocessable.
+        # The profiled shared pool rows already exist in jobs/job_profiles. Re-upserting
+        # thousands of unchanged rows on every CV scan adds write load and repeats
+        # payload hashing without creating new market observations.
         search_id = self.ingestion.record_search(
             query, run_log, len(raw_jobs), started_at, outcome.coverage
         )
-        job_ids = self.ingestion.persist_jobs(search_id, raw_jobs)
+        job_ids = persist_search_jobs(self.ingestion, search_id, raw_jobs)
 
         # The provider payload has been persisted and nothing downstream reads
         # it. Dropping it here keeps it out of the response serialiser.
@@ -101,7 +112,6 @@ class JobRadarAgent:
             "ranked_jobs": ranked_jobs,
             "search": outcome.coverage,
         }
-
 
     @staticmethod
     def score_jobs(query, processed_jobs, location_prefs, profiles=None):
