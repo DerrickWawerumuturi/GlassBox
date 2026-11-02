@@ -102,7 +102,7 @@ export function pagePath(url: string): string {
 }
 
 const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
-type VisitSource = {ref_domain?: string} & Partial<Record<(typeof UTM)[number], string>;
+type VisitSource = {ref_domain?: string} & Partial<Record<(typeof UTM)[number], string>>;
 // The only properties PostHog's own events may carry besides its "$" context.
 const PAGE_ALLOWED: Record<string, readonly string[]> = {$pageview: ["ref_domain", ...UTM], $pageleave: [], $identify: []};
 
