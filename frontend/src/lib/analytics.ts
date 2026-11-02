@@ -59,9 +59,9 @@ type Events = {
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
-    scan_started: ["from", "internal_test"], cv_uploaded: ["internal_test"], cv_reused: ["internal_test"],
-    scan_finished: ["duration_s", "jobs", "from", "internal_test"],
-    scan_failed: ["stage", "reason", "internal_test"],
+    scan_started: ["from", "internal_test", "ref_domain", ...UTM], cv_uploaded: ["internal_test"], cv_reused: ["internal_test"],
+    scan_finished: ["duration_s", "jobs", "from", "internal_test", "ref_domain", ...UTM],
+    scan_failed: ["stage", "reason", "internal_test", "ref_domain", ...UTM],
     file_refused: ["reason"],
     view_opened: ["page", "view"],
     signed_up: [],
@@ -262,10 +262,10 @@ export function forgetUser() {
  */
 export function scanEvents(kind: "upload" | "reuse", from?: MarketPage) {
     const start = Date.now();
-    track("scan_started", {from});
+    track("scan_started", {from, ...activeVisitSource});
     if (kind === "upload") track("cv_uploaded", {}); else track("cv_reused", {});
     return {
-        finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from}),
-        failed: (reason?: FailReason) => track("scan_failed", {stage: kind, reason}),
+        finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from, ...activeVisitSource}),
+        failed: (reason?: FailReason) => track("scan_failed", {stage: kind, reason, ...activeVisitSource}),
     };
 }
