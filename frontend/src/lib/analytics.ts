@@ -211,6 +211,8 @@ export function track<E extends keyof Events>(event: E, ...props: Events[E] exte
 }
 
 let lastPath: string | null = null;
+// Kept for this page load so scan outcomes retain the original acquisition source.
+let activeVisitSource: VisitSource = {};
 // Page views sent so far in this page load, and the one a story interaction was last counted in.
 let views = 0, interactedIn = -1;
 
@@ -224,6 +226,7 @@ export function trackPageview(path: string) {
     if (clean === lastPath) return;
     const source = lastPath === null && typeof document !== "undefined"
         ? visitSource(document.referrer, location.search, location.hostname) : {};
+    if (lastPath === null) activeVisitSource = source;
     lastPath = clean;
     views++;
     posthog.capture("$pageview", {$current_url: clean, ...source});
