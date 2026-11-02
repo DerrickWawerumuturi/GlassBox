@@ -276,10 +276,14 @@ class PoolProvider(JobProvider):
     """
 
     name = "pool"
-    LIMIT = 60
-    # Remote candidates fetched before tier ranking trims them to LIMIT, so a
-    # role open to the user's country is not lost behind newer ones that are not.
-    REMOTE_CANDIDATES = 400
+    # A scan's skill frequencies need a useful denominator, not the first 60
+    # titles. The live pool already limits postings by age and last sighting;
+    # keep a representative slice from each scope without reading the whole pool.
+    LIMIT = 500
+    # Remote candidates fetched before tier ranking trims them to LIMIT. A larger
+    # window lets location fit choose eligible postings instead of only the newest
+    # 400, while the final per-scope cap keeps scan work bounded.
+    REMOTE_CANDIDATES = 2_000
 
     def available(self) -> bool:
         return is_configured()
