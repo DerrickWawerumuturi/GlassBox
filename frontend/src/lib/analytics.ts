@@ -43,11 +43,11 @@ export const FAIL_REASONS = ["timeout", "too_big", "not_pdf", "server", "network
 export type FailReason = (typeof FAIL_REASONS)[number];
 
 type Events = {
-    scan_started: {from?: MarketPage; internal_test?: boolean};
+    scan_started: {from?: MarketPage; internal_test?: boolean} & VisitSource;
     cv_uploaded: {internal_test?: boolean};
     cv_reused: {internal_test?: boolean};
-    scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean};
-    scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean};
+    scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean} & VisitSource;
+    scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean} & VisitSource;
     file_refused: {reason: (typeof REFUSALS)[number]};
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
@@ -101,7 +101,7 @@ export function pagePath(url: string): string {
     }
 }
 
-const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
+const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;\ntype VisitSource = {ref_domain?: string} & Partial<Record<(typeof UTM)[number], string>;
 // The only properties PostHog's own events may carry besides its "$" context.
 const PAGE_ALLOWED: Record<string, readonly string[]> = {$pageview: ["ref_domain", ...UTM], $pageleave: [], $identify: []};
 
@@ -164,7 +164,7 @@ export function scrub(result: CaptureResult | null): CaptureResult | null {
     for (const key of DROP_PROPS) delete props[key];
     const keep = page ?? Object.keys(allowedProps(result.event as keyof Events, props));
     for (const key of Object.keys(props)) if (!key.startsWith("$") && !keep.includes(key) && !REQUIRED.includes(key)) delete props[key];
-    if (result.event === "$pageview") cleanSource(props);
+    if (result.event === "$pageview" || result.event === "scan_started" || result.event === "scan_finished" || result.event === "scan_failed") cleanSource(props);
     return {...result, properties: props, $set: undefined, $set_once: undefined};
 }
 
