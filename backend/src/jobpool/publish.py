@@ -120,6 +120,19 @@ def run(now: datetime | None = None, force: bool = False, accept: date | None = 
     return {"id": row_id, "status": status, "week": week, "jobs": cand["jobs"], "gates": checks}
 
 
+def refresh_latest_site() -> bool:
+    """Verify the latest already-published week on the public site without collecting or inserting a snapshot."""
+    if not is_configured():
+        print("no DATABASE_URL; cannot verify the published site")
+        return False
+    with connection() as conn:
+        latest = publication_repository.latest(conn)
+    if not latest:
+        print("no published market exists yet")
+        return False
+    return refresh_site.refresh(expected_week=latest["week"], expected_pages=latest["pages"] or {})
+
+
 def held_back(result: dict) -> str:
     """The failed checks of a rejected candidate, one line."""
     return "; ".join(f"{g['gate']}: {g['detail']}" for g in result["gates"] if not g["ok"])
@@ -155,6 +168,8 @@ def main(argv: list[str]) -> int:
     if "--status" in argv:
         status()
         return 0
+    if "--refresh-site" in argv:
+        return 0 if refresh_latest_site() else 1
     accept = parse_week(argv[argv.index("--accept") + 1]) if "--accept" in argv else None
     result = run(force="--now" in argv, accept=accept)
     _print(result)

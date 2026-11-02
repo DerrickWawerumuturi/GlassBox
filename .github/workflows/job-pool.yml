@@ -8,6 +8,12 @@ on:
     # first run after Monday 00:00 UTC, whenever it starts.
     - cron: "17 */6 * * *"
   workflow_dispatch:
+    inputs:
+      verify_latest_site:
+        description: "Only verify the latest published market pages; skip collection"
+        required: false
+        type: boolean
+        default: false
 
 # One at a time, and never beside a deploy: a deploy re-reads the pool under
 # its new PROFILER_VERSION, and a run on the old image must not undo that.
@@ -37,6 +43,15 @@ jobs:
           az acr login --name jobradarregistry
           docker pull jobradarregistry.azurecr.io/jobradar:live
 
+      - name: Verify latest published market pages
+        if: inputs.verify_latest_site == true
+        env:
+          DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          SITE_URL: https://seeglassbox.com
+        run: docker run --rm -e DATABASE_URL -e REVALIDATE_SECRET -e SITE_URL \
+          jobradarregistry.azurecr.io/jobradar:live python -m src.jobpool.publish --refresh-site
+
       # The only step that sees the database. GitHub masks the secret as a whole
       # string; its parts are masked too, because a driver error can quote the
       # host or user on their own. `-e DATABASE_URL` passes it by name: its value
@@ -45,6 +60,7 @@ jobs:
       # holds for /api/revalidate. Unset, the refresh is skipped with a line in the log.
       # The step's output `published` is the week this run published, if it published one.
       - name: Collect, count and publish
+        if: inputs.verify_latest_site != true
         id: collect
         env:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
@@ -74,7 +90,7 @@ jobs:
       # Unset: one line in the log and nothing else. --all rewrites every published
       # week, so a week published by hand (publish --now) is added with the next one.
       - name: Add the week to the open dataset
-        if: steps.collect.outputs.published != ''
+        if: inputs.verify_latest_site != true && steps.collect.outputs.published != ''
         env:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
           OPEN_DATA_TOKEN: ${{ secrets.OPEN_DATA_TOKEN }}

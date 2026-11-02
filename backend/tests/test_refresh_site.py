@@ -164,3 +164,19 @@ def test_publication_refresh_rejects_stale_html_even_when_status_is_200(capsys):
     assert refresh_site.refresh(ENV, http, expected_week=week, expected_pages={"ai": {"jobs": 400}}) is False
     out = capsys.readouterr().out
     assert "expected week" in out and "HTTP 200" not in out
+
+
+
+def test_refresh_latest_site_reads_the_latest_publication_without_creating_one(monkeypatch):
+    from contextlib import nullcontext
+    from datetime import date
+
+    row = {"week": date(2026, 11, 2), "pages": {"ai": {"jobs": 123}}}
+    monkeypatch.setattr(publish, "is_configured", lambda: True)
+    monkeypatch.setattr(publish, "connection", lambda: nullcontext("read-only-test-connection"))
+    monkeypatch.setattr(publish.publication_repository, "latest", lambda conn: row)
+    calls = []
+    monkeypatch.setattr(refresh_site, "refresh", lambda **kwargs: calls.append(kwargs) or True)
+
+    assert publish.refresh_latest_site() is True
+    assert calls == [{"expected_week": date(2026, 11, 2), "expected_pages": {"ai": {"jobs": 123}}}]
