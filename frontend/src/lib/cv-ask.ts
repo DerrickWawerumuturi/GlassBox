@@ -87,7 +87,7 @@ export const ASK = {
         waitLong: "Still reading. This one is taking more than a minute.",
         result: (k: number, n: number) => `${k} of ${n}`,
         resultLine: (ask: Ask) => `of the ${ask.skills.length} ${ask.what} are already on your CV.`,
-        seeThem: "See them",
+        seeThem: "See full scan",
         keep: "Keep them",
         keepLine: " with a free account, to compare again later.",
     },

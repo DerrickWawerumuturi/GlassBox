@@ -1,6 +1,7 @@
 'use client'
 
 import React, {useCallback, useReducer, useState} from "react";
+import {useRouter} from "next/navigation";
 
 import CvSheet from "@/components/cv-ask/CvSheet";
 import Analyze, {AnalyzeReuse, ProcessCv, wakeApi} from "@/lib/api";
@@ -18,6 +19,7 @@ import {reuseError, useLatestCV} from "@/lib/latest-cv";
  * visitor to their results. `from` names the market page, for its analytics.
  */
 export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPage} = {}) {
+    const router = useRouter();
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
     const [open, setOpen] = useState(false);
@@ -73,7 +75,7 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPag
 
     const sheet = (
         <CvSheet open={open} onOpenChange={setOpen} ask={ask} state={state} latest={latest} signedIn={signedIn}
-                 onFile={upload} onReuse={() => void reuse()} onSee={() => setOpen(false)} />
+                 onFile={upload} onReuse={() => void reuse()} onSee={() => { setOpen(false); if (ask) router.push("/analysis"); }} />
     );
     return {open: show, isOpen: open, scanning: status === "analyzing", sheet};
 }
