@@ -126,7 +126,7 @@ def test_live_pool_experience_headings_reopen_requirements():
             "years": 7, "kind": "required"}
     assert extract_experience("Software Engineer III, Trading - FBG",
         "Experience and Skills\\nAt least 3-5 years of real-world demonstrable experience building applications.\\n2+ years of experience with C# and cloud platforms.") == {
-            "years": 5, "kind": "required"}
+            "years": 3, "kind": "required"}
 
 
 def test_required_and_preferred_skills_are_separated_per_clause():
