@@ -100,19 +100,19 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(publish.publication_repository, "insert", lambda *a: 42)
     monkeypatch.setattr(publish, "candidate", lambda conn, now: {"as_of": NOW, "jobs": 17_000, "look": {}, "pages": {}})
     calls = []
-    monkeypatch.setattr(refresh_site, "refresh", lambda: calls.append("refresh") or True)
+    monkeypatch.setattr(refresh_site, "refresh", lambda **kwargs: calls.append(kwargs) or True)
     return calls
 
 
 def test_a_publication_refreshes_the_site(fake_db, monkeypatch):
     monkeypatch.setattr(publish, "gates", lambda *a, **k: [{"gate": "jobs", "ok": True, "detail": ""}])
     assert publish.run(now=NOW)["status"] == "published"
-    assert fake_db == ["refresh"]
+    assert fake_db == [{"expected_week": NOW.date(), "expected_pages": {}}]
 
 
 def test_a_failed_refresh_leaves_the_publication_as_it_is(fake_db, monkeypatch):
     monkeypatch.setattr(publish, "gates", lambda *a, **k: [{"gate": "jobs", "ok": True, "detail": ""}])
-    monkeypatch.setattr(refresh_site, "refresh", lambda: refresh(FakeHttp({"https://site.test/api/revalidate": 500})))
+    monkeypatch.setattr(refresh_site, "refresh", lambda **kwargs: refresh(FakeHttp({"https://site.test/api/revalidate": 500})))
     assert publish.run(now=NOW) == {"id": 42, "status": "published", "week": NOW.date(), "jobs": 17_000,
                                     "gates": [{"gate": "jobs", "ok": True, "detail": ""}]}
 
@@ -121,3 +121,46 @@ def test_a_held_back_week_leaves_the_site_alone(fake_db, monkeypatch):
     monkeypatch.setattr(publish, "gates", lambda *a, **k: [{"gate": "jobs", "ok": False, "detail": "few"}])
     assert publish.run(now=NOW)["status"] == "rejected"
     assert fake_db == []
+
+
+
+def test_publication_refresh_checks_week_and_page_count_in_html(capsys):
+    from datetime import date
+
+    week = date(2026, 10, 12)
+    html = "Week of 12 October 2026 · 400 software jobs"
+    http = FakeHttp({url: 200 for url in []})
+    original = http._answer
+
+    def answer(method, url, headers=None):
+        response = original(method, url, headers)
+        if method == "GET" and url.endswith("/market/ai"):
+            return httpx.Response(200, text=html)
+        if method == "GET" and url.endswith("/market"):
+            return httpx.Response(200, text="Counted in the week of 12 October 2026")
+        if method == "GET" and url.startswith("https://site.test/market/"):
+            return httpx.Response(200, text=html)
+        return httpx.Response(200, text="")
+
+    http._answer = answer
+    assert refresh_site.refresh(ENV, http, expected_week=week, expected_pages={"ai": {"jobs": 400}})
+    assert "verified" in capsys.readouterr().out
+
+
+def test_publication_refresh_rejects_stale_html_even_when_status_is_200(capsys):
+    from datetime import date
+
+    week = date(2026, 11, 2)
+    http = FakeHttp()
+    original = http._answer
+
+    def answer(method, url, headers=None):
+        response = original(method, url, headers)
+        if method == "GET" and url.startswith("https://site.test/market"):
+            return httpx.Response(200, text="Week of 26 October 2026 · 390 jobs")
+        return httpx.Response(200, text="")
+
+    http._answer = answer
+    assert refresh_site.refresh(ENV, http, expected_week=week, expected_pages={"ai": {"jobs": 400}}) is False
+    out = capsys.readouterr().out
+    assert "expected week" in out and "HTTP 200" not in out
