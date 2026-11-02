@@ -42,12 +42,15 @@ export const REFUSALS = ["not_pdf", "too_big"] as const;
 export const FAIL_REASONS = ["timeout", "too_big", "not_pdf", "server", "network", "not_kept", "other"] as const;
 export type FailReason = (typeof FAIL_REASONS)[number];
 
+const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
+type VisitSource = {ref_domain?: string} & Partial<Record<(typeof UTM)[number], string>>;
+
 type Events = {
-    scan_started: {from?: MarketPage; internal_test?: boolean};
+    scan_started: {from?: MarketPage; internal_test?: boolean} & VisitSource;
     cv_uploaded: {internal_test?: boolean};
     cv_reused: {internal_test?: boolean};
-    scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean};
-    scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean};
+    scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean} & VisitSource;
+    scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean} & VisitSource;
     file_refused: {reason: (typeof REFUSALS)[number]};
     view_opened: {page: Page; view?: string};
     signed_up: Record<string, never>;
@@ -59,9 +62,9 @@ type Events = {
 };
 
 const ALLOWED: {[E in keyof Events]: ReadonlyArray<keyof Events[E]>} = {
-    scan_started: ["from", "internal_test"], cv_uploaded: ["internal_test"], cv_reused: ["internal_test"],
-    scan_finished: ["duration_s", "jobs", "from", "internal_test"],
-    scan_failed: ["stage", "reason", "internal_test"],
+    scan_started: ["from", "internal_test", "ref_domain", ...UTM], cv_uploaded: ["internal_test"], cv_reused: ["internal_test"],
+    scan_finished: ["duration_s", "jobs", "from", "internal_test", "ref_domain", ...UTM],
+    scan_failed: ["stage", "reason", "internal_test", "ref_domain", ...UTM],
     file_refused: ["reason"],
     view_opened: ["page", "view"],
     signed_up: [],
@@ -101,7 +104,6 @@ export function pagePath(url: string): string {
     }
 }
 
-const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
 // The only properties PostHog's own events may carry besides its "$" context.
 const PAGE_ALLOWED: Record<string, readonly string[]> = {$pageview: ["ref_domain", ...UTM], $pageleave: [], $identify: []};
 
@@ -164,7 +166,7 @@ export function scrub(result: CaptureResult | null): CaptureResult | null {
     for (const key of DROP_PROPS) delete props[key];
     const keep = page ?? Object.keys(allowedProps(result.event as keyof Events, props));
     for (const key of Object.keys(props)) if (!key.startsWith("$") && !keep.includes(key) && !REQUIRED.includes(key)) delete props[key];
-    if (result.event === "$pageview") cleanSource(props);
+    if (result.event === "$pageview" || result.event === "scan_started" || result.event === "scan_finished" || result.event === "scan_failed") cleanSource(props);
     return {...result, properties: props, $set: undefined, $set_once: undefined};
 }
 
@@ -210,6 +212,8 @@ export function track<E extends keyof Events>(event: E, ...props: Events[E] exte
 }
 
 let lastPath: string | null = null;
+// Kept for this page load so scan outcomes retain the original acquisition source.
+let activeVisitSource: VisitSource = {};
 // Page views sent so far in this page load, and the one a story interaction was last counted in.
 let views = 0, interactedIn = -1;
 
@@ -223,6 +227,7 @@ export function trackPageview(path: string) {
     if (clean === lastPath) return;
     const source = lastPath === null && typeof document !== "undefined"
         ? visitSource(document.referrer, location.search, location.hostname) : {};
+    if (lastPath === null) activeVisitSource = source;
     lastPath = clean;
     views++;
     posthog.capture("$pageview", {$current_url: clean, ...source});
@@ -262,10 +267,10 @@ export function forgetUser() {
  */
 export function scanEvents(kind: "upload" | "reuse", from?: MarketPage) {
     const start = Date.now();
-    track("scan_started", {from});
+    track("scan_started", {from, ...activeVisitSource});
     if (kind === "upload") track("cv_uploaded", {}); else track("cv_reused", {});
     return {
-        finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from}),
-        failed: (reason?: FailReason) => track("scan_failed", {stage: kind, reason}),
+        finished: (jobs: number) => track("scan_finished", {duration_s: Math.round((Date.now() - start) / 1000), jobs, from, ...activeVisitSource}),
+        failed: (reason?: FailReason) => track("scan_failed", {stage: kind, reason, ...activeVisitSource}),
     };
 }

@@ -242,6 +242,21 @@ describe("where a visit came from", () => {
         vi.stubGlobal("location", {search, hostname: host});
     };
 
+    it("carries the first pageview's source through to scan start and completion", async () => {
+        visit("https://news.ycombinator.com/item?id=1", "?utm_source=hn&utm_medium=community&utm_campaign=launch");
+        const a = await load();
+        a.initAnalytics("phc_test");
+        a.trackPageview("/");
+        const scan = a.scanEvents("upload");
+        scan.finished(12);
+        expect(posthog.capture).toHaveBeenCalledWith("scan_started", {
+            ref_domain: "news.ycombinator.com", utm_source: "hn", utm_medium: "community", utm_campaign: "launch",
+        });
+        expect(posthog.capture).toHaveBeenCalledWith("scan_finished", expect.objectContaining({
+            jobs: 12, ref_domain: "news.ycombinator.com", utm_source: "hn", utm_medium: "community", utm_campaign: "launch",
+        }));
+    });
+
     it("the first pageview carries the referring site's name and the utm tags, nothing more", async () => {
         visit("https://www.reddit.com/r/cscareerquestions/comments/abc?share=1", "?utm_source=reddit&utm_campaign=launch&ref=x&email=a@b.c");
         const a = await load();
