@@ -56,7 +56,7 @@ def aggregate(rows: list[dict], as_of: date | None = None, months: int = MAX_MON
         groups[key][taken_on] = row
 
     series = []
-    months_by_version: dict[str, set[str]] = defaultdict(set)
+    months_by_series: dict[tuple[str, str], set[str]] = defaultdict(set)
     for (month, version, family), daily_by_date in sorted(groups.items()):
         daily = [daily_by_date[d] for d in sorted(daily_by_date)]
         taken_dates = sorted(daily_by_date)
@@ -84,7 +84,7 @@ def aggregate(rows: list[dict], as_of: date | None = None, months: int = MAX_MON
         ))
         coverage_days = calendar.monthrange(int(month[:4]), int(month[5:7]))[1]
         snapshot_days = len(taken_dates)
-        months_by_version[version].add(month)
+        months_by_series[(version, family)].add(month)
         series.append({
             "month": month,
             "profiler_version": version,
@@ -100,7 +100,7 @@ def aggregate(rows: list[dict], as_of: date | None = None, months: int = MAX_MON
             "skills": skills,
         })
 
-    six_month_available = any(len(observed_months) >= 6 for observed_months in months_by_version.values())
+    six_month_available = any(len(observed_months) >= 6 for observed_months in months_by_series.values())
     return {
         "range_start": range_start.isoformat(),
         "range_end": range_end.isoformat(),
