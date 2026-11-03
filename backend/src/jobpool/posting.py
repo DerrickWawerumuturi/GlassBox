@@ -177,7 +177,7 @@ def workplace(job) -> str | None:
     stated_raw = next((raw.get(key) for key in (
         "workplaceType", "workplace_type", "workplace_type_label", "workplace"
     ) if raw.get(key) not in (None, "")), "")
-    stated = re.sub(r"[\\s_-]+", "", str(stated_raw).strip().lower())
+    stated = re.sub(r"[\s_-]+", "", str(stated_raw).strip().lower())
     if stated in ("remote", "hybrid", "onsite"):
         return stated
     head = f"{job.title or ''} {job.location or ''}".lower()
