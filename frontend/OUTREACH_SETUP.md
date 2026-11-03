@@ -18,6 +18,21 @@ Never put the Resend API key in a `NEXT_PUBLIC_*` variable or commit it to the r
 
 Apply `backend/src/database/migrations/022_outreach_email_drafts.sql` to the production Neon branch before deploying the new API routes.
 
+
+Use two separate login roles, both with `NOINHERIT NOCREATEDB NOCREATEROLE` and **no membership in `neon_superuser`**:
+
+- `glassbox_outreach_app_limited` for `OUTREACH_APP_DATABASE_URL`.
+  - SELECT, INSERT and UPDATE on `outreach_prospects`, `outreach_messages`, and `outreach_email_drafts`.
+  - SELECT on `resend_webhook_events`.
+  - USAGE and SELECT on `outreach_email_drafts_id_seq` and `outreach_messages_id_seq`.
+- `glassbox_outreach_webhook_limited` for `OUTREACH_DATABASE_URL`.
+  - SELECT and INSERT on `resend_webhook_events`.
+  - SELECT and UPDATE on `outreach_messages` and `outreach_prospects`.
+  - USAGE and SELECT on `resend_webhook_events_id_seq`.
+
+Both roles already exist on the production Neon branch with these grants. Set a password for each role in Neon Console, then update the two Vercel connection-string variables to use the matching role. Do not share passwords in chat. Before rollout, verify both roles have no `neon_superuser` membership, `CREATEDB` or `CREATEROLE`, and have no SELECT access to `users`, `jobs`, or `cvs`.
+
+The older `glassbox_outreach_app` and `glassbox_outreach_webhook` roles are over-privileged and must not remain in either Vercel connection string. Retire their elevated memberships after the new connection strings are deployed and verified.
 Create a dedicated login role for `OUTREACH_APP_DATABASE_URL`. Grant it:
 - SELECT on `outreach_prospects`, `outreach_messages`, and `resend_webhook_events`.
 - INSERT and UPDATE on `outreach_prospects`, `outreach_messages`, and `outreach_email_drafts`.
@@ -25,6 +40,7 @@ Create a dedicated login role for `OUTREACH_APP_DATABASE_URL`. Grant it:
 - USAGE and SELECT on the sequence backing `outreach_email_drafts.id`.
 
 Do not grant this role access to CVs, users, jobs, or other Glassbox product data.
+
 
 ## API flow
 
