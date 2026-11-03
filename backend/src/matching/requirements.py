@@ -35,7 +35,9 @@ from src.matching.skills import find_skills, scan, tokens
 # title can't require more than 3 years (2026-10-07, decisions/market-pages.md).
 # v7: recognize common experience-section headings so years inside them are not
 # discarded as part of an earlier "About Us"/benefits stop section (2026-11-02).
-PROFILER_VERSION = "requirements-v7"
+# v8: recognize "How to be successful in this role" and "What you bring to the
+# team" as requirements headings; both occur in live technical postings (2026-11-03).
+PROFILER_VERSION = "requirements-v8"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
@@ -46,7 +48,8 @@ _REQUIRED_MARKERS = (
     "requirements", "required qualifications", "minimum qualifications",
     "basic qualifications", "what you'll need", "what you will need",
     "what we're looking for", "what we are looking for", "what you'll bring", "what you will bring", "what you'll have", "what you will have",
-    "experience and skills", "must have",
+    "experience and skills", "how to be successful in this role", "what you bring to the team",
+    "what success looks like", "must have",
     "must-have", "you have", "you will have", "essential", "qualifications",
     "who you are", "required skills", "required experience", "about you",
     "your profile", "dein profil", "ihr profil", "anforderungen",
