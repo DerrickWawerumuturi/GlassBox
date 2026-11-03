@@ -503,3 +503,43 @@ def test_digital_design_engineer_with_product_designer_description_is_design():
         "Digital Design Engineer",
         "Product Designer responsible for user experience and Figma prototypes."
     ) == "design"
+
+
+# Expanded v9 physical-family audit: semiconductor, aerospace and industrial roles.
+@pytest.mark.parametrize("title, family", [
+    ("ATE Engineer Intern", "embedded"),
+    ("Advanced DV Engineer Intern", "embedded"),
+    ("DFT Engineering Intern", "embedded"),
+    ("Design Architecture Engineer Intern", "embedded"),
+    ("Emulation Engineering Intern", "embedded"),
+    ("Packaging Engineering Intern", "embedded"),
+    ("System Validation Engineer Intern", "qa"),
+    ("Field Applications Engineer Intern", "solutions"),
+    ("Product Applications Engineer Intern", "solutions"),
+    ("Lab Strategy Engineer Intern", "non_tech"),
+    ("CAD Engineer Intern", "non_tech"),
+    ("Radiation Effects Engineer Intern", "non_tech"),
+    ("Additive Engineer New Grad", "non_tech"),
+    ("Materials Engineer New Grad", "non_tech"),
+    ("Architectural Engineering Internship", "non_tech"),
+    ("Airworthiness Engineering Intern", "non_tech"),
+    ("Loads and Dynamics Engineering Intern", "non_tech"),
+    ("Structures Engineering Intern", "non_tech"),
+    ("Vehicle Performance Engineer", "non_tech"),
+    ("Aerodynamics and Analysis Engineering Internship", "non_tech"),
+    ("Propulsion Engineer", "non_tech"),
+    ("HITL Engineering Intern", "non_tech"),
+    ("R&D Engineering Intern", "non_tech"),
+    ("Electrical Engineering Internship", "non_tech"),
+    ("Satellite Engineer", "non_tech"),
+    ("Mechanisms Engineer", "non_tech"),
+    ("Optics Engineer", "non_tech"),
+    ("Patent Engineer - Life Sciences", "non_tech"),
+    ("Quality Inspector II - NDT", "qa"),
+    ("Aerospace Algorithms Engineer Co-op", "software_engineering"),
+    ("New Graduate Engineer, GNC and Modeling and Simulation", "software_engineering"),
+    ("Platform Applications Engineer Intern - Tools and Validation Infrastructure", "software_engineering"),
+    ("Platform Software Diagnostics Intern", "software_engineering"),
+])
+def test_expanded_physical_family_audit_v9(title, family):
+    assert classify_family(title) == family
