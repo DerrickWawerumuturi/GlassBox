@@ -407,10 +407,11 @@ def test_experience_is_read_under_common_requirements_headings(heading):
 
 
 @pytest.mark.parametrize("title, family", [
-    ("Product Design Engineer", "non_tech"),
+    ("Product Design Engineer", "design"),
+    ("Product Design Engineering Intern", "design"),
     ("Quality Engineering Intern - Summer 2027", "qa"),
     ("Software Defined Radio Hardware Associate", "embedded"),
-    ("Electromechanical Design Engineering Intern", "non_tech"),
+    ("Electromechanical Design Engineering Intern", "embedded"),
     ("Semiconductor Product Engineer", "embedded"),
     ("Senior Thermomechanical Analysis Engineer", "non_tech"),
     ("Hardware Entwickler*in", "embedded"),
