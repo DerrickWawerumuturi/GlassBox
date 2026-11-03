@@ -163,13 +163,16 @@ _SOFTWARE_QA = re.compile(r"\b(?:software|sdet|automation|automated|api|web|mobi
 _SOFTWARE_WORD = re.compile(r"\b(?:software|developer|programmer|coder|swe|sde|technical staff|entwickler\w*|"
                             r"softwareentwickl\w*|informati(?:k|ker|cs)\w*)\b")
 _HARDWARE_DESIGN = re.compile(r"\b(?:hardware|asic|rtl|silicon|semiconductor|electromechanical|physical design|(?:design|digital) verification|"
-                              r"signal integrity|power integrity|pcb\w*|power electronics|electronics|rf|radio frequency|"
-                              r"emc|wireless|analog|ee|component)\b")
+                              r"signal integrity|power integrity|pcb\w*|power electronics|power engineer|electronics|rf|radio frequency|"
+                              r"emc|wireless|analog|ee|component|avionics|harness|digital design|digital ic|integrated circuit|"
+                              r"photonic|photonics|mmic|chiplet|quantum design)\b")
 _PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mechanical|thermomechanical|hvac|plumbing|construction|"
                             r"commissioning|power (?:generation|systems?|plant)|transmission|battery|thermal|actuators?|"
                             r"structural|civil|electrical|cabling|fiber|osp|rack|data ?cent(?:er|re)s?|datacenter|controls|"
                             r"instrumentation|scada|propulsion|metrology|manufacturing|npi|quality control|qc|accident|"
-                            r"helicopter|estimator|welder|physical)\b")
+                            r"helicopter|estimator|welder|physical|turbomachinery|tooling|piping|aerospace|air vehicle|"
+                            r"composite|industrial engineering|functional safety|process safety|systems safety|system safety|"
+                            r"environmental health|ehs|fuel cell|equipment|overhead line|power line|munition|nuclear|pvd)\b")
 # A job function named before the technical word makes that word its subject,
 # not its job: "Legal Engineer", "Recruiter, Field Engineering", "Executive
 # Assistant to Head of Engineering". And the role part of a title (before the
