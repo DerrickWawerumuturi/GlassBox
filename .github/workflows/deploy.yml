@@ -91,7 +91,7 @@ jobs:
           SECRET_REF="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .secretRef // empty' | head -n1)"
           if [ -z "$SECRET_REF" ]; then
             SECRET_NAMES="$(az containerapp secret list -n jobradar-backend -g jobradar-rg --query '[].name' -o tsv)"
-            SECRET_REF="$(printf '%s\\n' "$SECRET_NAMES" | awk 'tolower($0)=="glassbox-test-key" || tolower($0)=="glassbox_test_key" || tolower($0)=="glassboxtestkey" || tolower($0)=="internal-test-key" {print; exit}')"
+            SECRET_REF="$(printf '%s\n' "$SECRET_NAMES" | awk 'tolower($0)=="glassbox-test-key" || tolower($0)=="glassbox_test_key" || tolower($0)=="glassboxtestkey" || tolower($0)=="internal-test-key" {print; exit}')"
             if [ -z "$SECRET_REF" ]; then
               DIRECT_VALUE="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .value // empty' | head -n1)"
               if [ -n "$DIRECT_VALUE" ]; then
@@ -102,7 +102,7 @@ jobs:
             fi
             if [ -z "$SECRET_REF" ]; then
               ENV_NAMES="$(printf '%s' "$ENV_JSON" | jq -r '.[].name' | paste -sd, -)"
-              SECRET_NAMES_CSV="$(printf '%s\\n' "$SECRET_NAMES" | paste -sd, -)"
+              SECRET_NAMES_CSV="$(printf '%s\n' "$SECRET_NAMES" | paste -sd, -)"
               echo "No GLASSBOX_TEST_KEY mapping or recognized secret found. Container env names: $ENV_NAMES. Secret names: $SECRET_NAMES_CSV."
               exit 1
             fi
