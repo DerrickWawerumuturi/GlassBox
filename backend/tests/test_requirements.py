@@ -387,3 +387,34 @@ def test_an_early_career_title_cannot_require_many_years():
     assert extract_experience("Software Engineer", text) == {"years": 8, "kind": "required"}
     assert extract_experience("Software Engineering Intern", "Requirements:\n- 1+ years of coding.")["years"] == 1
     assert posting("Member of Technical Staff, Intern (Spring 2027)", text * 40).seniority == "intern"
+
+
+# Production QA follow-up, 2026-11-03: these headings appear in current job
+# descriptions after an "About Us" stop section. They introduce actual
+# qualifications, not generic prose.
+@pytest.mark.parametrize("heading", [
+    "HOW TO BE SUCCESSFUL IN THIS ROLE",
+    "WHAT YOU BRING TO THE TEAM",
+])
+def test_experience_is_read_under_common_requirements_headings(heading):
+    text = (
+        "ABOUT US\nWe build products for developers.\n\n"
+        f"{heading}\n\n"
+        "- 2+ years of experience in software engineering.\n"
+        "- Experience with Python and distributed systems."
+    )
+    assert extract_experience("FullStack Engineer", text) == {"years": 2, "kind": "required"}
+
+
+@pytest.mark.parametrize("title, family", [
+    ("Product Design Engineer", "design"),
+    ("Product Design Engineering Intern", "design"),
+    ("Quality Engineering Intern - Summer 2027", "qa"),
+    ("Software Defined Radio Hardware Associate", "embedded"),
+    ("Electromechanical Design Engineering Intern", "embedded"),
+    ("Semiconductor Product Engineer", "embedded"),
+    ("Senior Thermomechanical Analysis Engineer", "non_tech"),
+    ("Hardware Entwickler*in", "embedded"),
+])
+def test_physical_engineering_titles_do_not_leak_into_software_family(title, family):
+    assert classify_family(title) == family
