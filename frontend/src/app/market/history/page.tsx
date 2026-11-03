@@ -87,7 +87,9 @@ function Skills({skills}: {skills: SkillDemand[]}) {
             {skills.slice(0, 4).map((skill) => (
                 <li key={skill.key} className="rounded-full border border-stone-300 px-2.5 py-1 text-xs">
                     <span className="font-semibold">{skill.key}</span>
-                    <span className="ml-1.5 text-stone-500">req {percent(skill.required_share)}</span>
+                    <span className="mt-1 block text-stone-500">
+                        R {percent(skill.required_share)} · P {percent(skill.preferred_share)} · M {percent(skill.mentioned_share)}
+                    </span>
                 </li>
             ))}
         </ul>
