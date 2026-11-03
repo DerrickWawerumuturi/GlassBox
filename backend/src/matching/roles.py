@@ -90,7 +90,7 @@ _FAMILIES = [
                  r"detection|threat|red team|cryptography|identity|iam|grc|sirt)(?: \w+){0,3}? "
                  r"(?:engineer\w*|analyst|architect|specialist|tester)\b|\bpentester\b|"
                  r"\bcyber ?security\b|\binformation security\b|\bproduct security\b|\b(?:dev)?secops\b"),
-    ("qa", r"\b(?:qa|quality assurance|test|testing|sdet|software tester|tester|quality engineer)\b"),
+    ("qa", r"\b(?:qa|quality assurance|test|testing|sdet|software tester|tester|quality engineer|quality engineering)\b"),
     ("devops", r"\b(?:devops|dev ops|site reliability|sre|platform|infrastructure|cloud|systems?|release|build|"
                r"kubernetes|linux)(?: operations| reliability)? (?:engineer\w*|architect|developer|specialist)\b|"
                r"\bdevops\b|\bsre\b"),
