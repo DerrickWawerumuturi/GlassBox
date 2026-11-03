@@ -35,7 +35,7 @@ describe("the hero", () => {
         expect(h).toContain(COPY.hero.lede);
         expect(buttons(h)).toEqual(["Compare your CV"]);
         expect(nothingUnder(h)).toBe(true);
-        expect(raw(createElement(Hero, {total: "9,722", ask, scanning: false, onFind: () => {}}))).not.toContain(`class="cv-handoff"`);
+        expect(raw(createElement(Hero, {total: "9,722", ask, scanning: false, onFind: () => {}}))).toContain(`class="cv-handoff`);
         expect(peeks(h)).toBe(true);
         expect(h).not.toContain("Free. No account needed.");
         expect(h).not.toMatch(/\?\s*of\b/);
@@ -66,6 +66,7 @@ describe("a market page before a scan", () => {
         const h = html(createElement(MarketAskProvider, {ask, page: "entry-level-software", children: createElement(MarketCvAsk)}));
         expect(buttons(h)).toEqual([ASK.compare]);
         expect(nothingUnder(h)).toBe(true);
+        expect(raw(createElement(Hero, {total: "—", ask: null, scanning: false, onFind: () => {}}))).not.toContain(`class="cv-handoff`);
         expect(peeks(h)).toBe(true);
         expect(h).not.toMatch(/\?\s*of\b/);
         expect(h).not.toContain("How many of these are on your CV?");
