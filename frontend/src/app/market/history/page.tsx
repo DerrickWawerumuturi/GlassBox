@@ -11,7 +11,7 @@ import t from "@/components/stories/story.module.css";
 export const dynamic = "force-dynamic";
 export const metadata = publicPage("/market/history", {
     title: "Monthly market history | Glassbox",
-    description: "Monthly averages of active tech job postings, with snapshot coverage and profiler versions shown.",
+    description: "Monthly averages of active tech jobs, with snapshot coverage and profiler versions shown.",
     share: {title: "Monthly market history", description: "A dated view of what active tech jobs ask for."},
 });
 
@@ -182,7 +182,7 @@ export default async function MarketHistoryPage() {
 
             <p className="mt-8 max-w-3xl text-xs leading-relaxed text-stone-500">
                 Monthly averages describe the active market observed on captured days. They are not counts of distinct
-                jobs posted during the month. Skill shares are averaged day by day using each day's readable-posting
+                jobs posted during the month. Skill shares are averaged day by day using each day's readable jobs
                 denominator. The latest weekly publication remains the current inventory.
             </p>
         </main>
