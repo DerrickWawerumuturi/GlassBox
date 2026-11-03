@@ -162,10 +162,10 @@ _SOFTWARE_QA = re.compile(r"\b(?:software|sdet|automation|automated|api|web|mobi
 # Crusoe's construction and commissioning roles, OpenAI's Physical Design.
 _SOFTWARE_WORD = re.compile(r"\b(?:software|developer|programmer|coder|swe|sde|technical staff|entwickler\w*|"
                             r"softwareentwickl\w*|informati(?:k|ker|cs)\w*)\b")
-_HARDWARE_DESIGN = re.compile(r"\b(?:hardware|asic|rtl|silicon|physical design|(?:design|digital) verification|"
+_HARDWARE_DESIGN = re.compile(r"\b(?:hardware|asic|rtl|silicon|semiconductor|physical design|(?:design|digital) verification|"
                               r"signal integrity|power integrity|pcb\w*|power electronics|electronics|rf|radio frequency|"
                               r"emc|wireless|analog|ee|component)\b")
-_PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mechanical|hvac|plumbing|construction|"
+_PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mechanical|electromechanical|thermomechanical|product design|hvac|plumbing|construction|"
                             r"commissioning|power (?:generation|systems?|plant)|transmission|battery|thermal|actuators?|"
                             r"structural|civil|electrical|cabling|fiber|osp|rack|data ?cent(?:er|re)s?|datacenter|controls|"
                             r"instrumentation|scada|propulsion|metrology|manufacturing|npi|quality control|qc|accident|"
@@ -194,6 +194,13 @@ def classify_family(title: str | None, description: str | None = None) -> str:
     family = _first(_FAMILIES, t, "other")
     if family == "other" and (_IT_CAPITALS.search(title or "") or _IT_WORDS.search(t)):
         return "it_support"
+    # Software-defined radio hardware is RF/electronics work, not software engineering.
+    if family == "software_engineering" and re.search(r"\bsoftware defined radio\b", t) and re.search(r"\bhardware\b", t):
+        return "embedded"
+    # German "Hardware Entwickler" titles describe hardware development; the
+    # shared "entwickler" token must not make them software jobs.
+    if family == "software_engineering" and re.search(r"\bhardware\b", t) and re.search(r"\bentwickler\w*\b", t) and not re.search(r"\bsoftware\b", t):
+        return "embedded"
     if family in ("software_engineering", "solutions", "devops"):
         generic = not _SOFTWARE_WORD.search(t)
         if _serves_function(title, t, family, generic and family == "software_engineering"):
