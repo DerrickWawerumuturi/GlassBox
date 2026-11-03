@@ -208,15 +208,15 @@ def classify_family(title: str | None, description: str | None = None) -> str:
     # Some titles use a physical-engineering domain while the description
     # explicitly names the software function. Keep those software roles in
     # the software family rather than classifying from the domain word alone.
-    if family == "software_engineering" and re.search(r"\\baerospace\\b", t) and re.search(r"\\bsoftware internship\\b", d):
+    if family == "software_engineering" and re.search(r"\baerospace\b", t) and re.search(r"\bsoftware internship\b", d):
         return "software_engineering"
     # Semiconductor product/performance internships are hardware validation
     # work, not software product engineering.
-    if family == "software_engineering" and re.search(r"\\bproduct engineering intern\\b", t) and re.search(r"\\b(?:semiconductor|asic|silicon|hardware|chip|manufacturing|packaging)\\b", d):
+    if family == "software_engineering" and re.search(r"\bproduct engineering intern\b", t) and re.search(r"\b(?:semiconductor|asic|silicon|hardware|chip|manufacturing|packaging)\b", d):
         return "embedded"
-    if family == "software_engineering" and re.search(r"\\bperformance engineering intern\\b", t) and re.search(r"\\b(?:silicon|hardware|semiconductor|chip|cxl|memory subsystem)\\b", d):
+    if family == "software_engineering" and re.search(r"\bperformance engineering intern\b", t) and re.search(r"\b(?:silicon|hardware|semiconductor|chip|cxl|memory subsystem)\b", d):
         return "embedded"
-    if family == "software_engineering" and re.search(r"\\bgraduate engineering summer internship\\b", t) and re.search(r"\\b(?:combustion|burner|furnace|thermal oxidizer)\\b", d):
+    if family == "software_engineering" and re.search(r"\bgraduate engineering summer internship\b", t) and re.search(r"\b(?:combustion|burner|furnace|thermal oxidizer)\b", d):
         return "non_tech"
     if family == "other" and (_IT_CAPITALS.search(title or "") or _IT_WORDS.search(t)):
         return "it_support"
