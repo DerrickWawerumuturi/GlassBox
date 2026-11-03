@@ -543,3 +543,31 @@ def test_digital_design_engineer_with_product_designer_description_is_design():
 ])
 def test_expanded_physical_family_audit_v9(title, family):
     assert classify_family(title) == family
+
+
+def test_product_engineering_intern_with_semiconductor_description_is_embedded():
+    assert classify_family(
+        "Product Engineering Intern",
+        "Support semiconductor product engineering, silicon validation and hardware manufacturing."
+    ) == "embedded"
+
+
+def test_performance_engineering_intern_with_hardware_description_is_embedded():
+    assert classify_family(
+        "Performance Engineering Intern",
+        "Benchmark silicon, CXL memory subsystems and hardware workloads."
+    ) == "embedded"
+
+
+def test_aerospace_title_with_explicit_software_internship_description_stays_software():
+    assert classify_family(
+        "Summer 2027 Engineering Internship - Aerospace",
+        "Mach's Summer 2027 Engineering Internship, Software is open to future software engineers."
+    ) == "software_engineering"
+
+
+def test_combustion_company_generic_graduate_engineering_internship_is_non_tech():
+    assert classify_family(
+        "Graduate Engineering Summer Internship 2027",
+        "Support combustion systems, industrial burners and thermal oxidizer engineering."
+    ) == "non_tech"
