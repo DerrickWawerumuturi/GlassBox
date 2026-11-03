@@ -84,34 +84,17 @@ jobs:
       # If it was added as a plain environment value, move it into the secret
       # store without printing it. If it exists as a secret under a common
       # spelling, map that secret to the expected environment variable.
-      - name: Ensure internal scan key is mapped as a backend secret
+      # Rotate the internal-only key on deploy. Azure does not return secret
+      # values from secret list, so keep this run's masked value in GITHUB_ENV
+      # for the credentialed verification step below.
+      - name: Provision internal scan key as a backend secret
         run: |
           set -euo pipefail
-          ENV_JSON="$(az containerapp show -n jobradar-backend -g jobradar-rg --query properties.template.containers[0].env -o json)"
-          SECRET_REF="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .secretRef // empty' | head -n1)"
-          if [ -z "$SECRET_REF" ]; then
-            SECRET_NAMES="$(az containerapp secret list -n jobradar-backend -g jobradar-rg --query '[].name' -o tsv)"
-            SECRET_REF="$(printf '%s\n' "$SECRET_NAMES" | awk 'tolower($0)=="glassbox-test-key" || tolower($0)=="glassbox_test_key" || tolower($0)=="glassboxtestkey" || tolower($0)=="internal-test-key" {print; exit}')"
-            if [ -z "$SECRET_REF" ]; then
-              DIRECT_VALUE="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .value // empty' | head -n1)"
-              if [ -n "$DIRECT_VALUE" ]; then
-                echo "::add-mask::$DIRECT_VALUE"
-                az containerapp secret set -n jobradar-backend -g jobradar-rg --secrets "glassbox-test-key=$DIRECT_VALUE" -o none
-                SECRET_REF="glassbox-test-key"
-              fi
-            fi
-            if [ -z "$SECRET_REF" ]; then
-              # No key exists in the app yet. Provision a fresh random internal
-              # credential in Azure rather than blocking every backend release.
-              # It is masked immediately, never written to GitHub or printed.
-              DIRECT_VALUE="$(openssl rand -hex 32)"
-              echo "::add-mask::$DIRECT_VALUE"
-              az containerapp secret set -n jobradar-backend -g jobradar-rg --secrets "glassbox-test-key=$DIRECT_VALUE" -o none
-              SECRET_REF="glassbox-test-key"
-              echo "Provisioned a new backend-only internal scan credential in Azure."
-            fi
-            az containerapp update -n jobradar-backend -g jobradar-rg --set-env-vars "GLASSBOX_TEST_KEY=secretref:$SECRET_REF" -o none
-          fi
+          TEST_KEY="$(openssl rand -hex 32)"
+          echo "::add-mask::$TEST_KEY"
+          az containerapp secret set -n jobradar-backend -g jobradar-rg --secrets "glassbox-test-key=$TEST_KEY" -o none
+          az containerapp update -n jobradar-backend -g jobradar-rg --set-env-vars "GLASSBOX_TEST_KEY=secretref:glassbox-test-key" -o none
+          echo "GLASSBOX_TEST_KEY=$TEST_KEY" >> "$GITHUB_ENV"
 
       - name: Update container app
         # -o none: the default output dumps the full app config, env values
@@ -159,12 +142,8 @@ jobs:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
         run: |
           set -euo pipefail
-          ENV_JSON="$(az containerapp show -n jobradar-backend -g jobradar-rg --query properties.template.containers[0].env -o json)"
-          SECRET_REF="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .secretRef // empty' | head -n1)"
-          if [ -z "$SECRET_REF" ]; then echo "GLASSBOX_TEST_KEY is not mapped from an Azure Container App secret"; exit 1; fi
-          TEST_KEY="$(az containerapp secret list -n jobradar-backend -g jobradar-rg --query "[?name=='$SECRET_REF'].value | [0]" -o tsv)"
-          if [ -z "$TEST_KEY" ]; then echo "The mapped GLASSBOX_TEST_KEY secret is empty or unavailable"; exit 1; fi
-          echo "::add-mask::$TEST_KEY"
+          TEST_KEY="${GLASSBOX_TEST_KEY:-}"
+          if [ -z "$TEST_KEY" ]; then echo "Internal scan key was not provisioned for this workflow run"; exit 1; fi
           docker run --rm -e DATABASE_URL -e TEST_KEY -e BASE_URL=https://jobradar-backend.agreeabledune-79b95957.southafricanorth.azurecontainerapps.io "$IMAGE" python - <<'PY'
           import os, time
           import psycopg, requests
