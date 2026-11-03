@@ -10,6 +10,7 @@ authentication, request models and status codes live here; the work does not.
     .../extract                 pasted job links (src/jobpool)
     .../import                  a spreadsheet of past applications (services/application_import.py)
     /market/look, /market/ad    public: today's count, a pasted ad's asks (src/api/market.py)
+    /market/history          public: monthly averages with coverage and profiler version
     a scan, a new account       counted as daily totals (src/api/daily_counts.py)
 """
 import asyncio
