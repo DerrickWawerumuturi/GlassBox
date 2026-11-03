@@ -62,7 +62,7 @@ _FAMILIES = [
               r"\bbusiness develop|\b(?:real estate|property|curriculum|course|content|talent|people|leadership) develop|"
               r"\bsales (?:executive|representative|rep|manager|associate|director|lead|agent)\b"),
     ("solutions", r"\b(?:solutions?|sales|pre ?sales|customer(?: success)?|forward deployed|deployed|implementation|"
-                  r"integrations?|field|technical account|(?<!business )partner(?: success)?|professional services|"
+                  r"integrations?|field applications|product applications|engineering operations|field|technical account|(?<!business )partner(?: success)?|professional services|"
                   r"consulting|value) "
                   r"(?:engineer\w*|architect)\b|\btechnical account manager\b|"
                   r"\bdeveloper (?:advocate|relations)\b|\bdevrel\b"),
@@ -90,7 +90,7 @@ _FAMILIES = [
                  r"detection|threat|red team|cryptography|identity|iam|grc|sirt)(?: \w+){0,3}? "
                  r"(?:engineer\w*|analyst|architect|specialist|tester)\b|\bpentester\b|"
                  r"\bcyber ?security\b|\binformation security\b|\bproduct security\b|\b(?:dev)?secops\b"),
-    ("qa", r"\b(?:qa|quality assurance|test|testing|sdet|software tester|tester|quality engineer|quality engineering)\b"),
+    ("qa", r"\b(?:qa|quality assurance|test|testing|sdet|software tester|tester|quality engineer|quality engineering|system validation|system verification|quality inspector|quality control inspector)\b"),
     ("devops", r"\b(?:devops|dev ops|site reliability|sre|platform|infrastructure|cloud|systems?|release|build|"
                r"kubernetes|linux)(?: operations| reliability)? (?:engineer\w*|architect|developer|specialist)\b|"
                r"\bdevops\b|\bsre\b"),
@@ -161,18 +161,22 @@ _SOFTWARE_QA = re.compile(r"\b(?:software|sdet|automation|automated|api|web|mobi
 # (Facilities, Fire Protection, Fluids, Optical, Rack Design, Controls...),
 # Crusoe's construction and commissioning roles, OpenAI's Physical Design.
 _SOFTWARE_WORD = re.compile(r"\b(?:software|developer|programmer|coder|swe|sde|technical staff|entwickler\w*|"
-                            r"softwareentwickl\w*|informati(?:k|ker|cs)\w*)\b")
+                            r"softwareentwickl\w*|informati(?:k|ker|cs)\w*|algorithm\w*|gnc)\b")
 _HARDWARE_DESIGN = re.compile(r"\b(?:hardware|asic|rtl|silicon|semiconductor|electromechanical|physical design|(?:design|digital) verification|"
                               r"signal integrity|power integrity|pcb\w*|power electronics|power engineer|electronics|rf|radio frequency|"
                               r"emc|wireless|analog|ee|component|avionics|harness|digital design|digital ic|integrated circuit|"
-                              r"photonic|photonics|mmic|chiplet|quantum design)\b")
+                              r"photonic|photonics|mmic|chiplet|quantum design|ate engineer|(?:advanced )?dv engineer|dft|"
+                              r"emulation engineer|design architecture engineer|packaging engineer)\b")
 _PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mechanical|thermomechanical|hvac|plumbing|construction|"
                             r"commissioning|power (?:generation|systems?|plant)|transmission|battery|thermal|actuators?|"
                             r"structural|civil|electrical|cabling|fiber|osp|rack|data ?cent(?:er|re)s?|datacenter|controls|"
                             r"instrumentation|scada|propulsion|metrology|manufacturing|npi|quality control|qc|accident|"
                             r"helicopter|estimator|welder|physical|turbomachinery|tooling|piping|aerospace|air vehicle|"
                             r"composite|industrial engineering|functional safety|process safety|systems safety|system safety|"
-                            r"environmental health|ehs|fuel cell|equipment|overhead line|power line|munition|nuclear|pvd)\b")
+                            r"environmental health|ehs|fuel cell|equipment|overhead line|power line|munition|nuclear|pvd|additive|materials engineer|"
+                            r"architectural engineering|airworthiness|loads|dynamics|structures|vehicle performance|aerodynamics|"
+                            r"combustion|hitl|r&d engineering|lab strategy|cad engineer|radiation effects|satellite engineer|"
+                            r"mechanisms engineer|optics engineer|patent engineer)\b")
 # A job function named before the technical word makes that word its subject,
 # not its job: "Legal Engineer", "Recruiter, Field Engineering", "Executive
 # Assistant to Head of Engineering". And the role part of a title (before the
@@ -201,6 +205,19 @@ def classify_family(title: str | None, description: str | None = None) -> str:
     if re.search(r"\bdigital design engineer\b", t) and re.search(r"\b(?:product designer|user experience|ux design|figma)\b", d):
         return "design"
     family = _first(_FAMILIES, t, "other")
+    # Some titles use a physical-engineering domain while the description
+    # explicitly names the software function. Keep those software roles in
+    # the software family rather than classifying from the domain word alone.
+    if family == "software_engineering" and re.search(r"\\baerospace\\b", t) and re.search(r"\\bsoftware internship\\b", d):
+        return "software_engineering"
+    # Semiconductor product/performance internships are hardware validation
+    # work, not software product engineering.
+    if family == "software_engineering" and re.search(r"\\bproduct engineering intern\\b", t) and re.search(r"\\b(?:semiconductor|asic|silicon|hardware|chip|manufacturing|packaging)\\b", d):
+        return "embedded"
+    if family == "software_engineering" and re.search(r"\\bperformance engineering intern\\b", t) and re.search(r"\\b(?:silicon|hardware|semiconductor|chip|cxl|memory subsystem)\\b", d):
+        return "embedded"
+    if family == "software_engineering" and re.search(r"\\bgraduate engineering summer internship\\b", t) and re.search(r"\\b(?:combustion|burner|furnace|thermal oxidizer)\\b", d):
+        return "non_tech"
     if family == "other" and (_IT_CAPITALS.search(title or "") or _IT_WORDS.search(t)):
         return "it_support"
     # Software-defined radio hardware is RF/electronics work, not software engineering.
