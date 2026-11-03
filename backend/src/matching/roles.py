@@ -202,7 +202,7 @@ def classify_family(title: str | None, description: str | None = None) -> str:
     d = (description or "").lower()
     # Mach labels its Aerospace track as an Engineering Internship, Software.
     # The explicit track in the description overrides the aerospace domain word.
-    if re.search(r"\\baerospace\\b", t) and re.search(r"engineering internship, software", d):
+    if re.search(r"\baerospace\b", t) and re.search(r"engineering internship, software", d):
         return "software_engineering"
     # A digital-design title can also be a UX/Product Designer role (as in the
     # HP IQ production sample). Prefer that explicit function evidence over
