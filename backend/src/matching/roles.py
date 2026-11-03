@@ -36,7 +36,7 @@ _NON_TECH_WORDS = (r"\b(?:sales|marketing|account (?:executive|manager)|recruit\
                    r"administrative|admin assistant|copywrit\w*|content (?:writer|creator|marketing)|social media|"
                    r"community manager|public relations|communications|brand|nurse|nursing|clinical|medical|pharmac\w*|"
                    r"doctor|physician|dentist|laboratory|lab technician|teacher|tutor|lecturer|driver|rider|chef|cook|"
-                   r"waiter|waitress|hotel|housekeep\w*|guard|cctv|warehouse|logistics|procurement|supply chain|"
+                   r"waiter|waitress|hotel|housekeep\w*|guard|cctv|warehouse|logistics|procurement|einkäufer|einkaeufer|supply chain|"
                    r"storekeeper|farm|agronom\w*|veterinar\w*|social work\w*|counsell?or|photograph\w*|videograph\w*|"
                    r"merchandis\w*|cashier|teller|loan officer|credit officer|debt collect\w*|insurance|underwrit\w*|"
                    r"actuar\w*|electrician|plumber|mechanic|welder|machine operator|production supervisor|literacy|"
@@ -62,7 +62,7 @@ _FAMILIES = [
               r"\bbusiness develop|\b(?:real estate|property|curriculum|course|content|talent|people|leadership) develop|"
               r"\bsales (?:executive|representative|rep|manager|associate|director|lead|agent)\b"),
     ("solutions", r"\b(?:solutions?|sales|pre ?sales|customer(?: success)?|forward deployed|deployed|implementation|"
-                  r"integrations?|field applications|product applications|engineering operations|field|technical account|(?<!business )partner(?: success)?|professional services|"
+                  r"integrations?|field applications|product applications|(?:nx )?cad application|plm application|engineering operations|field|technical account|(?<!business )partner(?: success)?|professional services|"
                   r"consulting|value) "
                   r"(?:engineer\w*|architect)\b|\btechnical account manager\b|"
                   r"\bdeveloper (?:advocate|relations)\b|\bdevrel\b"),
@@ -175,7 +175,7 @@ _PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mecha
                             r"composite|industrial engineering|functional safety|process safety|systems safety|system safety|"
                             r"environmental health|ehs|fuel cell|equipment|overhead line|power line|munition|nuclear|pvd|additive|materials engineer|"
                             r"architectural engineering|airworthiness|loads|dynamics|structures|vehicle performance|aerodynamics|"
-                            r"combustion|hitl|r d engineering|research and development engineering|lab strategy|cad engineer|radiation effects|facade|"
+                            r"combustion|hitl|r d engineering|research and development engineering|lab strategy|cad engineer|aircraft engine|prototyping engineer|radiation effects|facade|"
                             r"safety analysis|satellite engineer|"
                             r"mechanisms engineer|optics engineer|patent engineer)\b")
 # A job function named before the technical word makes that word its subject,
