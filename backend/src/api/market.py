@@ -4,6 +4,7 @@ Public market routes: no sign-in, nothing about the visitor is read or kept.
     GET  /market/look   the published count per role family (src/jobpool/market_look.py)
     GET  /market/page/{name}  one public market page's counts (src/jobpool/market_pages.py)
                         Both serve the latest weekly publication (src/jobpool/publish.py).
+    GET  /market/history monthly averages of comparable daily snapshots (src/jobpool/market_history.py).
     POST /market/ad     a pasted ad or link -> what it asks for (src/jobpool/ad_reader.py)
 
 Kept out of main.py so its routes stay about the signed-in product. The
@@ -16,7 +17,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from src.api import rate_limit
-from src.jobpool import ad_reader, market_look, market_pages
+from src.jobpool import ad_reader, market_history, market_look, market_pages
 from src.jobpool.safe_fetch import BlockedLink, UnreadableLink
 
 router = APIRouter(prefix="/market")
@@ -44,6 +45,16 @@ def _built(read):
 def look():
     # Only ever reads the loaded publication (market_look.look), so this answers in microseconds.
     return _built(market_look.look)
+
+
+@router.get("/history")
+def history():
+    """Monthly average active inventory; versions and missing days stay explicit."""
+    try:
+        body = market_history.read()
+    except market_history.NotAvailable as err:
+        raise HTTPException(status_code=503, detail=str(err)) from err
+    return JSONResponse(body, headers={"Cache-Control": "public, max-age=3600"})
 
 
 # The name is checked against the known pages before anything is read, so a
