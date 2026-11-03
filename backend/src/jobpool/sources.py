@@ -83,11 +83,17 @@ def ashby_board(slug) -> list[dict]:
 
 
 def ashby_job(j: dict, slug: str) -> Job:
+    # Ashby's isRemote flag also returns true for Hybrid postings. The pool's
+    # remote boolean means remote-only, while the exact workplace type stays
+    # in raw_payload for display. Prefer the explicit workplace type whenever
+    # Ashby supplies one; only fall back to isRemote when it does not.
+    workplace_type = str(j.get("workplaceType") or "").strip().lower().replace("-", "").replace("_", "")
+    remote = (workplace_type == "remote") if workplace_type in ("remote", "hybrid", "onsite") else j.get("isRemote")
     return Job(
         provider="ashby", external_id=j.get("id"),
         title=j.get("title"), company=_company(slug),
         description=_description(j.get("descriptionPlain") or j.get("descriptionHtml")),
-        location=j.get("location"), remote=j.get("isRemote"),
+        location=j.get("location"), remote=remote,
         employment_type=j.get("employmentType"),
         url=j.get("jobUrl"),
         posted_at=j.get("publishedAt"), posted_at_utc=iso_utc(j.get("publishedAt")),
