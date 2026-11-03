@@ -398,9 +398,9 @@ def test_an_early_career_title_cannot_require_many_years():
 ])
 def test_experience_is_read_under_common_requirements_headings(heading):
     text = (
-        "ABOUT US\\nWe build products for developers.\\n\\n"
-        f"{heading}\\n\\n"
-        "- 2+ years of experience in software engineering.\\n"
+        "ABOUT US\nWe build products for developers.\n\n"
+        f"{heading}\n\n"
+        "- 2+ years of experience in software engineering.\n"
         "- Experience with Python and distributed systems."
     )
     assert extract_experience("FullStack Engineer", text) == {"years": 2, "kind": "required"}
