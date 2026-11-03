@@ -6,7 +6,9 @@ import {publicPage} from "@/lib/seo";
 import {cn} from "@/lib/utils";
 import t from "@/components/stories/story.module.css";
 
-export const revalidate = 3600;
+// Keep the route dynamic so a Vercel build cannot cache a temporary backend 404.
+// The backend itself caches the aggregate for one hour.
+export const dynamic = "force-dynamic";
 export const metadata = publicPage("/market/history", {
     title: "Monthly market history | Glassbox",
     description: "Monthly averages of active tech job postings, with snapshot coverage and profiler versions shown.",
@@ -47,7 +49,7 @@ type History = {
 async function getHistory(): Promise<History | null> {
     try {
         const response = await fetch(`${API_BASE_URL}/market/history`, {
-            next: {revalidate: 3600},
+            cache: "no-store",
         });
         if (!response.ok) return null;
         return await response.json() as History;
