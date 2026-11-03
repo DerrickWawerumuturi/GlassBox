@@ -464,3 +464,128 @@ def test_at_least_and_minimum_year_phrases_are_required(phrase):
     assert extract_experience("Software Engineer", f"Required qualifications:\n- {phrase}") == {
         "years": 2, "kind": "required"
     }
+
+
+# v9 physical-engineering family audit regressions (2026-11-03).
+@pytest.mark.parametrize("title, family", [
+    ("Senior Turbomachinery Design Engineer", "non_tech"),
+    ("Tooling Design Engineer", "non_tech"),
+    ("Piping Design Engineer", "non_tech"),
+    ("Aerospace Engineer", "non_tech"),
+    ("Air Vehicle Design Engineer", "non_tech"),
+    ("Composite CAD Design Engineer", "non_tech"),
+    ("Industrial Engineering Intern", "non_tech"),
+    ("Functional Safety Engineer", "non_tech"),
+    ("Process Safety Engineer", "non_tech"),
+    ("Systems Safety Engineer", "non_tech"),
+    ("Equipment Engineer", "non_tech"),
+    ("Environmental Health and Safety Engineer", "non_tech"),
+    ("Senior Systems Safety Engineer - Loitering Munition", "non_tech"),
+    ("Avionics Associate Engineer", "embedded"),
+    ("Harness Design Engineer", "embedded"),
+    ("Digital Design Engineer", "embedded"),
+    ("Senior Digital IC Design Engineer", "embedded"),
+    ("Photonic IC Design Engineer", "embedded"),
+    ("Senior MMIC Design Engineer", "embedded"),
+    ("Quantum Design Engineer", "embedded"),
+    ("Power Electronics Engineer", "embedded"),
+    ("Avionics Software Engineer", "software_engineering"),
+    ("Software Engineer in Hardware Infrastructure", "software_engineering"),
+    ("Software Engineer, Safety Engineering", "software_engineering"),
+    ("Design Engineer", "software_engineering"),
+])
+def test_physical_engineering_family_audit_v9(title, family):
+    assert classify_family(title) == family
+
+
+def test_digital_design_engineer_with_product_designer_description_is_design():
+    assert classify_family(
+        "Digital Design Engineer",
+        "Product Designer responsible for user experience and Figma prototypes."
+    ) == "design"
+
+
+# Expanded v9 physical-family audit: semiconductor, aerospace and industrial roles.
+@pytest.mark.parametrize("title, family", [
+    ("ATE Engineer Intern", "embedded"),
+    ("Advanced DV Engineer Intern", "embedded"),
+    ("DFT Engineering Intern", "embedded"),
+    ("Design Architecture Engineer Intern", "embedded"),
+    ("Emulation Engineering Intern", "embedded"),
+    ("Packaging Engineering Intern", "embedded"),
+    ("System Validation Engineer Intern", "qa"),
+    ("Field Applications Engineer Intern", "solutions"),
+    ("Product Applications Engineer Intern", "solutions"),
+    ("Lab Strategy Engineer Intern", "non_tech"),
+    ("CAD Engineer Intern", "non_tech"),
+    ("Radiation Effects Engineer Intern", "non_tech"),
+    ("Additive Engineer New Grad", "non_tech"),
+    ("Materials Engineer New Grad", "non_tech"),
+    ("Architectural Engineering Internship", "non_tech"),
+    ("Airworthiness Engineering Intern", "non_tech"),
+    ("Loads and Dynamics Engineering Intern", "non_tech"),
+    ("Structures Engineering Intern", "non_tech"),
+    ("Vehicle Performance Engineer", "non_tech"),
+    ("Aerodynamics and Analysis Engineering Internship", "non_tech"),
+    ("Propulsion Engineer", "non_tech"),
+    ("HITL Engineering Intern", "non_tech"),
+    ("R&D Engineering Intern", "non_tech"),
+    ("Electrical Engineering Internship", "non_tech"),
+    ("Satellite Engineer", "non_tech"),
+    ("Mechanisms Engineer", "non_tech"),
+    ("Optics Engineer", "non_tech"),
+    ("Patent Engineer - Life Sciences", "non_tech"),
+    ("Quality Inspector II - NDT", "qa"),
+    ("Aerospace Algorithms Engineer Co-op", "software_engineering"),
+    ("New Graduate Engineer, GNC and Modeling and Simulation", "software_engineering"),
+    ("Platform Applications Engineer Intern - Tools and Validation Infrastructure", "software_engineering"),
+    ("Platform Software Diagnostics Intern", "software_engineering"),
+])
+def test_expanded_physical_family_audit_v9(title, family):
+    assert classify_family(title) == family
+
+
+def test_product_engineering_intern_with_semiconductor_description_is_embedded():
+    assert classify_family(
+        "Product Engineering Intern",
+        "Support semiconductor product engineering, silicon validation and hardware manufacturing."
+    ) == "embedded"
+
+
+def test_performance_engineering_intern_with_hardware_description_is_embedded():
+    assert classify_family(
+        "Performance Engineering Intern",
+        "Benchmark silicon, CXL memory subsystems and hardware workloads."
+    ) == "embedded"
+
+
+def test_aerospace_title_with_explicit_software_internship_description_stays_software():
+    assert classify_family(
+        "Summer 2027 Engineering Internship - Aerospace",
+        "Mach's Summer 2027 Engineering Internship, Software is open to future software engineers."
+    ) == "software_engineering"
+
+
+def test_combustion_company_generic_graduate_engineering_internship_is_non_tech():
+    assert classify_family(
+        "Graduate Engineering Summer Internship 2027",
+        "Support combustion systems, industrial burners and thermal oxidizer engineering."
+    ) == "non_tech"
+
+
+def test_facade_engineer_is_not_software_engineering():
+    assert classify_family("Graduate Facade Engineer") == "non_tech"
+
+
+def test_deployment_consulting_role_is_solutions_not_software_engineering():
+    assert classify_family(
+        "Associate Deployment Engineer - Graduate Program",
+        "Join our services organization for strategic implementation consulting and customer transformation."
+    ) == "solutions"
+
+
+def test_robot_installation_deployment_role_is_physical_not_software_engineering():
+    assert classify_family(
+        "Deployment Engineer",
+        "Install robotics systems at customer sites, commission mechanical and electrical equipment, and travel with the field team."
+    ) == "non_tech"
