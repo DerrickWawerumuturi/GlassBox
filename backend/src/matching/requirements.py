@@ -39,7 +39,7 @@ from src.matching.skills import find_skills, scan, tokens
 # team" as requirements headings; both occur in live technical postings (2026-11-03).
 # v9: expand title-only physical engineering family signals after the v8
 # second-pass audit (avionics, IC/photonics, harness, aerospace, safety, etc.).
-PROFILER_VERSION = "requirements-v9"
+PROFILER_VERSION = "requirements-v10"
 
 # Postings too short to judge: Kenyan boards syndicate 100-500 byte summaries.
 THIN_BELOW = 800
