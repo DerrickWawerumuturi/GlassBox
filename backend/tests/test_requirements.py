@@ -571,3 +571,21 @@ def test_combustion_company_generic_graduate_engineering_internship_is_non_tech(
         "Graduate Engineering Summer Internship 2027",
         "Support combustion systems, industrial burners and thermal oxidizer engineering."
     ) == "non_tech"
+
+
+def test_facade_engineer_is_not_software_engineering():
+    assert classify_family("Graduate Facade Engineer") == "non_tech"
+
+
+def test_deployment_consulting_role_is_solutions_not_software_engineering():
+    assert classify_family(
+        "Associate Deployment Engineer - Graduate Program",
+        "Join our services organization for strategic implementation consulting and customer transformation."
+    ) == "solutions"
+
+
+def test_robot_installation_deployment_role_is_physical_not_software_engineering():
+    assert classify_family(
+        "Deployment Engineer",
+        "Install robotics systems at customer sites, commission mechanical and electrical equipment, and travel with the field team."
+    ) == "non_tech"
