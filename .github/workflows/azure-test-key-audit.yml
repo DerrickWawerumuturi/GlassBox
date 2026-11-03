@@ -29,15 +29,18 @@ jobs:
           python3 -c '
           import json, sys
           app = json.load(sys.stdin)
-          containers = app.get("properties", {}).get("template", {}).get("containers", [])
+          properties = app.get("properties") or {}
+template = properties.get("template") or {}
+configuration = properties.get("configuration") or {}
+containers = template.get("containers") or []
           env_names = sorted({
               env.get("name", "")
               for container in containers
-              for env in container.get("env", [])
+              for env in (container.get("env") or [])
           })
           secret_names = sorted({
               item.get("name", "")
-              for item in app.get("properties", {}).get("configuration", {}).get("secrets", [])
+              for item in (configuration.get("secrets") or [])
           })
           print("Backend container environment names: " + ", ".join(env_names))
           print("Container Apps secret names: " + ", ".join(secret_names))
