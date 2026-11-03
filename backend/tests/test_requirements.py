@@ -589,3 +589,18 @@ def test_robot_installation_deployment_role_is_physical_not_software_engineering
         "Deployment Engineer",
         "Install robotics systems at customer sites, commission mechanical and electrical equipment, and travel with the field team."
     ) == "non_tech"
+
+
+# v10 live-pool residual false-positive regressions from the 2026-11-03 refresh.
+@pytest.mark.parametrize("title, family", [
+    ("Senior NX CAD Application Engineer", "solutions"),
+    ("Senior Prototyping Engineer (f/m/d) – Aircraft Engine", "non_tech"),
+    ("Operativer Einkäufer (m/w/d) - IT-Hardware & Software", "non_tech"),
+    ("GNC Hardware Engineering Intern (Summer 2027)", "embedded"),
+    ("Software Engineer, 5G Physical Layer", "software_engineering"),
+    ("Teamleiter Hardware & Software Entwicklung (m/w/d)", "software_engineering"),
+    ("Software Engineer in Hardware Infrastructure", "software_engineering"),
+    ("Flight Software Engineering Intern (Simulation/Hardware-In-The-Loop)", "software_engineering"),
+])
+def test_v10_live_pool_residual_family_audit(title, family):
+    assert classify_family(title) == family
