@@ -108,7 +108,9 @@ export default async function MarketHub() {
                     </ol>
                 </HubFilter>
                 <p className={s.open}>The weekly counts are also open data, as CSV files on{" "}
-                    <a href={"https://github.com/DerrickWawerumuturi/glassbox-job-counts"}>GitHub</a>.</p>
+                    <a href={"https://github.com/DerrickWawerumuturi/glassbox-job-counts"}>GitHub</a>.
+                    {" "}<span aria-hidden>·</span>{" "}
+                    <Link href={"/market/history"}>See monthly history</Link>.</p>
             </div>
         </div>
     );
