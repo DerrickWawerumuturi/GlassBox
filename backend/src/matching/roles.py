@@ -166,7 +166,7 @@ _HARDWARE_DESIGN = re.compile(r"\b(?:hardware|asic|rtl|silicon|semiconductor|ele
                               r"signal integrity|power integrity|pcb\w*|power electronics|power engineer|electronics|rf|radio frequency|"
                               r"emc|wireless|analog|ee|component|avionics|harness|digital design|digital ic|integrated circuit|"
                               r"photonic|photonics|mmic|chiplet|quantum design|ate engineer|(?:advanced )?dv engineer|dft|"
-                              r"emulation engineer|design architecture engineer|packaging engineer)\b")
+                              r"emulation engineer|emulation engineering|design architecture engineer|packaging engineer|packaging engineering)\b")
 _PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mechanical|thermomechanical|hvac|plumbing|construction|"
                             r"commissioning|power (?:generation|systems?|plant)|transmission|battery|thermal|actuators?|"
                             r"structural|civil|electrical|cabling|fiber|osp|rack|data ?cent(?:er|re)s?|datacenter|controls|"
@@ -175,7 +175,8 @@ _PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mecha
                             r"composite|industrial engineering|functional safety|process safety|systems safety|system safety|"
                             r"environmental health|ehs|fuel cell|equipment|overhead line|power line|munition|nuclear|pvd|additive|materials engineer|"
                             r"architectural engineering|airworthiness|loads|dynamics|structures|vehicle performance|aerodynamics|"
-                            r"combustion|hitl|r&d engineering|lab strategy|cad engineer|radiation effects|satellite engineer|"
+                            r"combustion|hitl|r d engineering|research and development engineering|lab strategy|cad engineer|radiation effects|"
+                            r"safety analysis|satellite engineer|"
                             r"mechanisms engineer|optics engineer|patent engineer)\b")
 # A job function named before the technical word makes that word its subject,
 # not its job: "Legal Engineer", "Recruiter, Field Engineering", "Executive
