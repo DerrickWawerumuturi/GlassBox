@@ -171,7 +171,13 @@ def posted_estimate(raw: str | None, seen_at: datetime | None) -> datetime | Non
 
 def workplace(job) -> str | None:
     """Remote / hybrid / onsite, only on evidence. A wrong guess is worse than a blank."""
-    stated = str((job.raw or {}).get("workplaceType") or "").lower().replace("-", "").replace("_", "")
+    raw = job.raw or {}
+    # Providers and older stored payloads use different spellings for the same
+    # structured field. Prefer the first explicit value over fuzzy text/flags.
+    stated_raw = next((raw.get(key) for key in (
+        "workplaceType", "workplace_type", "workplace_type_label", "workplace"
+    ) if raw.get(key) not in (None, "")), "")
+    stated = re.sub(r"[\\s_-]+", "", str(stated_raw).strip().lower())
     if stated in ("remote", "hybrid", "onsite"):
         return stated
     head = f"{job.title or ''} {job.location or ''}".lower()
