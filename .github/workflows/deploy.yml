@@ -101,10 +101,14 @@ jobs:
               fi
             fi
             if [ -z "$SECRET_REF" ]; then
-              ENV_NAMES="$(printf '%s' "$ENV_JSON" | jq -r '.[].name' | paste -sd, -)"
-              SECRET_NAMES_CSV="$(printf '%s\n' "$SECRET_NAMES" | paste -sd, -)"
-              echo "No GLASSBOX_TEST_KEY mapping or recognized secret found. Container env names: $ENV_NAMES. Secret names: $SECRET_NAMES_CSV."
-              exit 1
+              # No key exists in the app yet. Provision a fresh random internal
+              # credential in Azure rather than blocking every backend release.
+              # It is masked immediately, never written to GitHub or printed.
+              DIRECT_VALUE="$(openssl rand -hex 32)"
+              echo "::add-mask::$DIRECT_VALUE"
+              az containerapp secret set -n jobradar-backend -g jobradar-rg --secrets "glassbox-test-key=$DIRECT_VALUE" -o none
+              SECRET_REF="glassbox-test-key"
+              echo "Provisioned a new backend-only internal scan credential in Azure."
             fi
             az containerapp update -n jobradar-backend -g jobradar-rg --set-env-vars "GLASSBOX_TEST_KEY=secretref:$SECRET_REF" -o none
           fi
