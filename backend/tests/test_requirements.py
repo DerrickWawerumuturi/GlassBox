@@ -119,13 +119,13 @@ def test_extract_experience(description, expected):
 def test_live_pool_experience_headings_reopen_requirements():
     # These headings must reopen requirements after earlier "About Us"/benefits sections.
     assert extract_experience("Software Engineer Internship (UNPAID)",
-        "What You'll Have\\n2+ years of experience working with the MERN stack.") == {
+        "What You'll Have\n2+ years of experience working with the MERN stack.") == {
             "years": 2, "kind": "required"}
     assert extract_experience("Engineering Manager",
-        "What You'll Bring:\\n7+ years of professional experience as a mobile engineer and at least 2+ years of experience in leadership roles") == {
+        "What You'll Bring:\n7+ years of professional experience as a mobile engineer and at least 2+ years of experience in leadership roles") == {
             "years": 7, "kind": "required"}
     assert extract_experience("Software Engineer III, Trading - FBG",
-        "Experience and Skills\\nAt least 3-5 years of real-world demonstrable experience building applications.\\n2+ years of experience with C# and cloud platforms.") == {
+        "Experience and Skills\nAt least 3-5 years of real-world demonstrable experience building applications.\n2+ years of experience with C# and cloud platforms.") == {
             "years": 3, "kind": "required"}
 
 
@@ -418,3 +418,49 @@ def test_experience_is_read_under_common_requirements_headings(heading):
 ])
 def test_physical_engineering_titles_do_not_leak_into_software_family(title, family):
     assert classify_family(title) == family
+
+
+# Production regressions from issue #22 (2026-11-03). Keep the real section
+# headings and wording that exposed the old stored-profile mismatches.
+def test_holiday_world_intern_2_year_requirement_is_retained():
+    description = (
+        "What You'll Have\n\n"
+        "2+ years of experience working with the MERN stack "
+        "(MongoDB, Express.js, React, Node.js).\n"
+        "Proficiency in TypeScript."
+    )
+    assert extract_experience("Software Engineer Internship (UNPAID)", description) == {
+        "years": 2, "kind": "required"
+    }
+
+
+def test_langchain_fullstack_year_requirement_under_success_heading_is_retained():
+    description = (
+        "ABOUT US\nWe build agent engineering tools.\n\n"
+        "HOW TO BE SUCCESSFUL IN THIS ROLE\n\n"
+        "- 2+ years of experience in software engineering working on complex platform products."
+    )
+    assert extract_experience("FullStack Engineer, AI Observability & Evals Platform", description) == {
+        "years": 2, "kind": "required"
+    }
+
+
+def test_tebi_manager_uses_highest_years_requirement_when_at_least_is_also_present():
+    description = (
+        "What You'll Bring:\n\n"
+        "7+ years of professional experience as a mobile engineer and at least "
+        "2+ years of experience in leadership roles."
+    )
+    assert extract_experience("Engineering Manager", description) == {
+        "years": 7, "kind": "required"
+    }
+
+
+@pytest.mark.parametrize("phrase", [
+    "At least 2 years of experience with Python.",
+    "Minimum 2 years of relevant experience with Postgres.",
+])
+def test_at_least_and_minimum_year_phrases_are_required(phrase):
+    assert extract_experience("Software Engineer", f"Required qualifications:\n- {phrase}") == {
+        "years": 2, "kind": "required"
+    }
