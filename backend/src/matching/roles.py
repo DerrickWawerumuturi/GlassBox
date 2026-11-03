@@ -198,7 +198,7 @@ def classify_family(title: str | None, description: str | None = None) -> str:
     # A digital-design title can also be a UX/Product Designer role (as in the
     # HP IQ production sample). Prefer that explicit function evidence over
     # the hardware-design title token.
-    if re.search(r"\\bdigital design engineer\\b", t) and re.search(r"\\b(?:product designer|user experience|ux design|figma)\\b", d):
+    if re.search(r"\bdigital design engineer\b", t) and re.search(r"\b(?:product designer|user experience|ux design|figma)\b", d):
         return "design"
     family = _first(_FAMILIES, t, "other")
     if family == "other" and (_IT_CAPITALS.search(title or "") or _IT_WORDS.search(t)):
