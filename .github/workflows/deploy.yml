@@ -111,3 +111,54 @@ jobs:
             sleep 15
           done
           echo "backend never became healthy"; exit 1
+
+      # A credentialed malformed upload is intentional: it exercises the
+      # production middleware and counter classification without consuming a
+      # real CV, invoking the model or creating user data. Only test counters
+      # may change. The key is read from the Container App secret store and is
+      # never printed or passed on a command line.
+      - name: Verify internal scan credential isolation
+        env:
+          DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          ENV_JSON="$(az containerapp show -n jobradar-backend -g jobradar-rg --query properties.template.containers[0].env -o json)"
+          SECRET_REF="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .secretRef // empty' | head -n1)"
+          if [ -z "$SECRET_REF" ]; then echo "GLASSBOX_TEST_KEY is not mapped from an Azure Container App secret"; exit 1; fi
+          TEST_KEY="$(az containerapp secret list -n jobradar-backend -g jobradar-rg --query "[?name=='$SECRET_REF'].value | [0]" -o tsv)"
+          if [ -z "$TEST_KEY" ]; then echo "The mapped GLASSBOX_TEST_KEY secret is empty or unavailable"; exit 1; fi
+          echo "::add-mask::$TEST_KEY"
+          docker run --rm -e DATABASE_URL -e TEST_KEY -e BASE_URL=https://jobradar-backend.agreeabledune-79b95957.southafricanorth.azurecontainerapps.io "$IMAGE" python - <<'PY'
+          import os, time
+          import psycopg, requests
+
+          def totals():
+              with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.cursor() as cur:
+                  cur.execute("""
+                      select coalesce(sum(scans_started), 0), coalesce(sum(scans_failed), 0),
+                             coalesce(sum(test_scans_started), 0), coalesce(sum(test_scans_failed), 0)
+                      from daily_counts where day = (now() at time zone 'utc')::date
+                  """)
+                  return tuple(cur.fetchone())
+
+          before = totals()
+          response = requests.post(
+              os.environ["BASE_URL"] + "/analyze",
+              headers={"X-Glassbox-Test-Key": os.environ["TEST_KEY"]},
+              files={"file": ("internal-test.pdf", b"PK\\x03\\x04 not-a-pdf", "application/pdf")},
+              timeout=120,
+          )
+          if response.status_code != 415:
+              raise SystemExit(f"Internal scan probe returned unexpected HTTP {response.status_code}")
+          after = before
+          for _ in range(15):
+              time.sleep(1)
+              after = totals()
+              if after[2] == before[2] + 1 and after[3] == before[3] + 1:
+                  break
+          if after[2] != before[2] + 1 or after[3] != before[3] + 1:
+              raise SystemExit("Credentialed probe did not increment exactly one internal started/failed counter")
+          if after[0] != before[0] or after[1] != before[1]:
+              raise SystemExit("Credentialed probe contaminated production scan counters")
+          print("Internal credential verified: test counters incremented; production counters unchanged.")
+          PY
