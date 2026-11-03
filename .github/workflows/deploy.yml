@@ -80,6 +80,35 @@ jobs:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
         run: docker run --rm -e DATABASE_URL "$IMAGE" python -m src.jobpool.daily --profile-only
 
+      # GLASSBOX_TEST_KEY must be a backend-only Container App secret.
+      # If it was added as a plain environment value, move it into the secret
+      # store without printing it. If it exists as a secret under a common
+      # spelling, map that secret to the expected environment variable.
+      - name: Ensure internal scan key is mapped as a backend secret
+        run: |
+          set -euo pipefail
+          ENV_JSON="$(az containerapp show -n jobradar-backend -g jobradar-rg --query properties.template.containers[0].env -o json)"
+          SECRET_REF="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .secretRef // empty' | head -n1)"
+          if [ -z "$SECRET_REF" ]; then
+            SECRET_NAMES="$(az containerapp secret list -n jobradar-backend -g jobradar-rg --query '[].name' -o tsv)"
+            SECRET_REF="$(printf '%s\n' "$SECRET_NAMES" | awk 'tolower($0)=="glassbox-test-key" || tolower($0)=="glassbox_test_key" || tolower($0)=="glassboxtestkey" || tolower($0)=="internal-test-key" {print; exit}')"
+            if [ -z "$SECRET_REF" ]; then
+              DIRECT_VALUE="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .value // empty' | head -n1)"
+              if [ -n "$DIRECT_VALUE" ]; then
+                echo "::add-mask::$DIRECT_VALUE"
+                az containerapp secret set -n jobradar-backend -g jobradar-rg --secrets "glassbox-test-key=$DIRECT_VALUE" -o none
+                SECRET_REF="glassbox-test-key"
+              fi
+            fi
+            if [ -z "$SECRET_REF" ]; then
+              ENV_NAMES="$(printf '%s' "$ENV_JSON" | jq -r '.[].name' | paste -sd, -)"
+              SECRET_NAMES_CSV="$(printf '%s\n' "$SECRET_NAMES" | paste -sd, -)"
+              echo "No GLASSBOX_TEST_KEY mapping or recognized secret found. Container env names: $ENV_NAMES. Secret names: $SECRET_NAMES_CSV."
+              exit 1
+            fi
+            az containerapp update -n jobradar-backend -g jobradar-rg --set-env-vars "GLASSBOX_TEST_KEY=secretref:$SECRET_REF" -o none
+          fi
+
       - name: Update container app
         # -o none: the default output dumps the full app config, env values
         # included — never printable on a public repo's Actions log.
@@ -111,6 +140,10 @@ jobs:
             sleep 15
           done
           echo "backend never became healthy"; exit 1
+
+      - name: Verify monthly market history endpoint
+        run: |
+          curl --silent --show-error --fail --max-time 45 https://jobradar-backend.agreeabledune-79b95957.southafricanorth.azurecontainerapps.io/market/history | python3 -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d.get("series"), list); print("Monthly history API verified:", len(d["series"]), "rows")'
 
       # A credentialed malformed upload is intentional: it exercises the
       # production middleware and counter classification without consuming a
