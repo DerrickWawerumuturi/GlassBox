@@ -496,3 +496,10 @@ def test_at_least_and_minimum_year_phrases_are_required(phrase):
 ])
 def test_physical_engineering_family_audit_v9(title, family):
     assert classify_family(title) == family
+
+
+def test_digital_design_engineer_with_product_designer_description_is_design():
+    assert classify_family(
+        "Digital Design Engineer",
+        "Product Designer responsible for user experience and Figma prototypes."
+    ) == "design"
