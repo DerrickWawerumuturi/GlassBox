@@ -464,3 +464,35 @@ def test_at_least_and_minimum_year_phrases_are_required(phrase):
     assert extract_experience("Software Engineer", f"Required qualifications:\n- {phrase}") == {
         "years": 2, "kind": "required"
     }
+
+
+# v9 physical-engineering family audit regressions (2026-11-03).
+@pytest.mark.parametrize("title, family", [
+    ("Senior Turbomachinery Design Engineer", "non_tech"),
+    ("Tooling Design Engineer", "non_tech"),
+    ("Piping Design Engineer", "non_tech"),
+    ("Aerospace Engineer", "non_tech"),
+    ("Air Vehicle Design Engineer", "non_tech"),
+    ("Composite CAD Design Engineer", "non_tech"),
+    ("Industrial Engineering Intern", "non_tech"),
+    ("Functional Safety Engineer", "non_tech"),
+    ("Process Safety Engineer", "non_tech"),
+    ("Systems Safety Engineer", "non_tech"),
+    ("Equipment Engineer", "non_tech"),
+    ("Environmental Health and Safety Engineer", "non_tech"),
+    ("Senior Systems Safety Engineer - Loitering Munition", "non_tech"),
+    ("Avionics Associate Engineer", "embedded"),
+    ("Harness Design Engineer", "embedded"),
+    ("Digital Design Engineer", "embedded"),
+    ("Senior Digital IC Design Engineer", "embedded"),
+    ("Photonic IC Design Engineer", "embedded"),
+    ("Senior MMIC Design Engineer", "embedded"),
+    ("Quantum Design Engineer", "embedded"),
+    ("Power Electronics Engineer", "embedded"),
+    ("Avionics Software Engineer", "software_engineering"),
+    ("Software Engineer in Hardware Infrastructure", "software_engineering"),
+    ("Software Engineer, Safety Engineering", "software_engineering"),
+    ("Design Engineer", "software_engineering"),
+])
+def test_physical_engineering_family_audit_v9(title, family):
+    assert classify_family(title) == family
