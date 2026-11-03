@@ -10,12 +10,13 @@ Scope: documentation, AI coding instructions, dependency manifests, and frontend
 
 ## Audit findings
 
-- **Dependencies:** no packages were removed. The GitHub source view did not provide a complete, reliable repository-wide import and runtime/configuration analysis to prove any dependency unused. Keep the existing frontend and backend packages until that analysis can be run in a checkout.
-- **Components and routes:** no code was removed. The current frontend architecture documents the editorial routes and shared components, but a static documentation review is insufficient proof that any component is dead or duplicated at runtime.
+- **Dependencies:** removed frontend `recharts` after current source searches found no Recharts imports or API symbols; the only current source match was an orphan helper file. Removed its 33 now-unreachable lockfile package entries. Backend requirements were left unchanged because source search did not establish a removable package.
+- **Components and routes:** removed `frontend/src/lib/chart-ramp.ts`. Its five exports had no callers, and its comments describe the retired Recharts charts. Left active route, dashboard, hand-built SVG chart, and editorial story components unchanged.
 - **Branches:** inspected the branch list before work. Existing topic and parallel `*-current-main` branches were left unchanged.
 
 ## Verification
 
 - Confirmed repository default branch `main` at the commit above and found no open pull requests before creating this hygiene branch.
-- Reviewed the root README, architecture overview, frontend and backend architecture references, applications API contract, frontend coding rules, dependency manifests, route inventory, and the stale todo entries.
-- Tests, typecheck, lint, and build were not run: this workspace is a read-only project mirror without a writable repository checkout or installed project dependencies. The changes are documentation-only; GitHub Actions validation may run after the PR opens.
+- Reviewed the root README, architecture overview, frontend and backend architecture references, applications API contract, frontend coding rules, dependency manifests, route inventory, stale todo entries, and GitHub source-search results for Recharts/helper references.
+- Parsed the updated manifest and lockfile and statically pruned lockfile entries unreachable from all remaining root dependencies (574 package entries before; 541 after).
+- Vitest, typecheck, lint, and local build were not run: this workspace is a read-only project mirror without installed dependencies. A Vercel preview build is expected on the follow-up PR.
