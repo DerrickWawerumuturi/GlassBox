@@ -1,0 +1,51 @@
+name: Azure internal test-key audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/azure-test-key-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verify backend-only secret reference (never read the value)
+        shell: bash
+        run: |
+          az containerapp show \
+            --name jobradar-backend \
+            --resource-group jobradar-rg \
+            --output json |
+          python3 -c '
+          import json, sys
+          app = json.load(sys.stdin)
+          containers = app.get("properties", {}).get("template", {}).get("containers", [])
+          matches = [
+              env
+              for container in containers
+              for env in container.get("env", [])
+              if env.get("name") == "GLASSBOX_TEST_KEY"
+          ]
+          if len(matches) != 1:
+              raise SystemExit("FAIL: expected exactly one GLASSBOX_TEST_KEY environment mapping on the backend container.")
+          secret_ref = matches[0].get("secretRef")
+          if not secret_ref:
+              raise SystemExit("FAIL: GLASSBOX_TEST_KEY is not mapped through a Container Apps secret reference.")
+          secret_names = {
+              item.get("name")
+              for item in app.get("properties", {}).get("configuration", {}).get("secrets", [])
+          }
+          if secret_ref not in secret_names:
+              raise SystemExit("FAIL: the referenced Container Apps secret does not exist.")
+          print("PASS: GLASSBOX_TEST_KEY is mapped to an existing backend Container Apps secret. Value was not read.")
+          '
