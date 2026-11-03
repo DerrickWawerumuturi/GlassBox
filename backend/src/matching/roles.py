@@ -213,7 +213,7 @@ def classify_family(title: str | None, description: str | None = None) -> str:
     # Some titles use a physical-engineering domain while the description
     # explicitly names the software function. Keep those software roles in
     # the software family rather than classifying from the domain word alone.
-    if family == "software_engineering" and re.search(r"\baerospace\b", t) and re.search(r"\bsoftware internship\b", d):
+    if family in ("software_engineering", "non_tech") and re.search(r"\baerospace\b", t) and re.search(r"\bsoftware internship\b", d):
         return "software_engineering"
     # Semiconductor product/performance internships are hardware validation
     # work, not software product engineering.
