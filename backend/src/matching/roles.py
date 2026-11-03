@@ -199,6 +199,10 @@ def _serves_function(title: str | None, t: str, family: str, generic: bool) -> b
 
 def classify_family(title: str | None, description: str | None = None) -> str:
     t = normalise_title(title)
+    # Hardware-focused GNC internships are not software roles even though
+    # the team may also own flight software.
+    if re.search(r"\bgnc hardware engineering intern\b", t):
+        return "embedded"
     d = (description or "").lower()
     # Mach labels its Aerospace track as an Engineering Internship, Software.
     # The explicit track in the description overrides the aerospace domain word.
