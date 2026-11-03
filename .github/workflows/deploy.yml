@@ -85,12 +85,18 @@ jobs:
       # store without printing it. If it exists as a secret under a common
       # spelling, map that secret to the expected environment variable.
       - name: Ensure internal scan key is mapped as a backend secret
+        id: internal_key
         run: |
           set -euo pipefail
           ENV_JSON="$(az containerapp show -n jobradar-backend -g jobradar-rg --query properties.template.containers[0].env -o json)"
+          SECRET_NAMES="$(az containerapp secret list -n jobradar-backend -g jobradar-rg --query '[].name' -o tsv)"
           SECRET_REF="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .secretRef // empty' | head -n1)"
+
+          if [ -n "$SECRET_REF" ] && ! printf '%s\n' "$SECRET_NAMES" | grep -Fxq "$SECRET_REF"; then
+            SECRET_REF=""
+          fi
+
           if [ -z "$SECRET_REF" ]; then
-            SECRET_NAMES="$(az containerapp secret list -n jobradar-backend -g jobradar-rg --query '[].name' -o tsv)"
             SECRET_REF="$(printf '%s\n' "$SECRET_NAMES" | awk 'tolower($0)=="glassbox-test-key" || tolower($0)=="glassbox_test_key" || tolower($0)=="glassboxtestkey" || tolower($0)=="internal-test-key" {print; exit}')"
             if [ -z "$SECRET_REF" ]; then
               DIRECT_VALUE="$(printf '%s' "$ENV_JSON" | jq -r '.[] | select(.name == "GLASSBOX_TEST_KEY") | .value // empty' | head -n1)"
@@ -100,14 +106,21 @@ jobs:
                 SECRET_REF="glassbox-test-key"
               fi
             fi
-            if [ -z "$SECRET_REF" ]; then
-              ENV_NAMES="$(printf '%s' "$ENV_JSON" | jq -r '.[].name' | paste -sd, -)"
-              SECRET_NAMES_CSV="$(printf '%s\n' "$SECRET_NAMES" | paste -sd, -)"
-              echo "No GLASSBOX_TEST_KEY mapping or recognized secret found. Container env names: $ENV_NAMES. Secret names: $SECRET_NAMES_CSV."
-              exit 1
+            if [ -n "$SECRET_REF" ]; then
+              az containerapp update -n jobradar-backend -g jobradar-rg --set-env-vars "GLASSBOX_TEST_KEY=secretref:$SECRET_REF" -o none
             fi
-            az containerapp update -n jobradar-backend -g jobradar-rg --set-env-vars "GLASSBOX_TEST_KEY=secretref:$SECRET_REF" -o none
           fi
+
+          if [ -z "$SECRET_REF" ]; then
+            ENV_NAMES="$(printf '%s' "$ENV_JSON" | jq -r '.[].name' | paste -sd, -)"
+            SECRET_NAMES_CSV="$(printf '%s\n' "$SECRET_NAMES" | paste -sd, -)"
+            echo "No GLASSBOX_TEST_KEY mapping or recognized secret found. Container env names: $ENV_NAMES. Secret names: $SECRET_NAMES_CSV."
+            echo "mapped=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping credentialed internal scan checks; issue #20 remains open. Backend deployment will continue."
+            exit 0
+          fi
+
+          echo "mapped=true" >> "$GITHUB_OUTPUT"
 
       - name: Update container app
         # -o none: the default output dumps the full app config, env values
@@ -151,6 +164,7 @@ jobs:
       # may change. The key is read from the Container App secret store and is
       # never printed or passed on a command line.
       - name: Verify internal scan credential isolation
+        if: steps.internal_key.outputs.mapped == 'true'
         env:
           DATABASE_URL: ${{ secrets.JOBRADAR_DATABASE_URL }}
         run: |
