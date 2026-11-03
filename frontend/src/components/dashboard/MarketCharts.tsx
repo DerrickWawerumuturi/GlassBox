@@ -31,7 +31,7 @@ interface Views {
  * needle dial on the left picks the view (a half circle at the bottom on a
  * small tablet, a tab bar on a phone; decisions/market-navigation.md), and
  * the view lives in the URL (?view=gaps) so a refresh or a shared link lands on the same chart. Each
- * chart is an object on the desk (docs/brand/charts.html).
+ * chart is an object on the desk (docs/decisions/design-system.md).
  */
 function MarketCharts() {
     const {analysis, hydrated, fileName} = useAnalysis();
