@@ -157,7 +157,7 @@
   --panel-green-frame: oklch(0.96 0.04 140 / 45%);
   --panel-green-ink: oklch(0.985 0.01 120);
   --panel-green-ink-muted: oklch(0.88 0.05 148);
-  /* The Market tab's chart panels, "an object on the desk" (docs/brand/charts.html):
+  /* The Market tab's chart panels, "an object on the desk" (docs/decisions/design-system.md):
      a forest green-black ground, darker than --panel-green, with its own ink,
      grid and frame scale. One look in both themes, like the other panels. */
   /* On paper the chart panels are cards, like on the desk, with dark alphas. */

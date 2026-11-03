@@ -116,6 +116,8 @@ takes the first match and gets Summit wrong).
   offer (`remotive.com/api/remote-jobs`, documented at
   remotive.com/remote-jobs/api, with a credit asked for). Still read; the
   founder decides whether to ask.
+- **BrighterMonday** is not read by the pool: its robots rules disallow the
+  search and page URLs needed to crawl it, and no public feed is available.
 - Everything else read is allowed: Remote OK (`Crawl-delay: 1`, one request a
   run), Arbeitnow, Jobicy, Himalayas (no robots.txt), We Work Remotely, MyJobMag
   (`Disallow: /*?`; the feed has no query), Corporate Staffing, Career Point

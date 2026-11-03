@@ -1,6 +1,6 @@
 # Todo
 
-Deferred work, with enough context to pick it up cold.
+Open product work that is not already tracked in the decisions or changelog.
 
 ## Bookmark UI (frontend)
 
@@ -54,3 +54,11 @@ The code reads `DATABASE_URL_DIRECT` for migrations; the local `.env` names it
 Two simultaneous clicks can both see "no existing row" and both insert; the
 second hits `application_user_job_key`. Theoretical at current scale. The fix is
 catching `UniqueViolation` in `toggle_bookmark` and treating it as already saved.
+
+## Local migration variable (unverified)
+
+The migration connection reads `DATABASE_URL_DIRECT` in
+`backend/src/database/session.py`. An earlier local note reported that the
+ignored `.env` used `DATABASE_DIRECT_URL`; that file was not inspected during
+this cleanup. If local migrations fail, verify the key name without exposing
+its value.
