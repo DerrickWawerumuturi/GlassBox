@@ -175,7 +175,7 @@ _PHYSICAL_WORK = re.compile(r"\b(?:facilit\w*|fire|fluids?|optical|opto\w*|mecha
                             r"composite|industrial engineering|functional safety|process safety|systems safety|system safety|"
                             r"environmental health|ehs|fuel cell|equipment|overhead line|power line|munition|nuclear|pvd|additive|materials engineer|"
                             r"architectural engineering|airworthiness|loads|dynamics|structures|vehicle performance|aerodynamics|"
-                            r"combustion|hitl|r d engineering|research and development engineering|lab strategy|cad engineer|radiation effects|"
+                            r"combustion|hitl|r d engineering|research and development engineering|lab strategy|cad engineer|radiation effects|facade|"
                             r"safety analysis|satellite engineer|"
                             r"mechanisms engineer|optics engineer|patent engineer)\b")
 # A job function named before the technical word makes that word its subject,
@@ -219,6 +219,11 @@ def classify_family(title: str | None, description: str | None = None) -> str:
         return "embedded"
     if family == "software_engineering" and re.search(r"\bgraduate engineering summer internship\b", t) and re.search(r"\b(?:combustion|burner|furnace|thermal oxidizer)\b", d):
         return "non_tech"
+    if family == "software_engineering" and re.search(r"\bdeployment engineer\b", t):
+        if re.search(r"\b(?:customer sites?|field team|install robots?|commission(?:ing)?|mechanical|electrical|robotics)\b", d):
+            return "non_tech"
+        if re.search(r"\b(?:implementation consulting|services organization|customer adoption|transformation)\b", d):
+            return "solutions"
     if family == "other" and (_IT_CAPITALS.search(title or "") or _IT_WORDS.search(t)):
         return "it_support"
     # Software-defined radio hardware is RF/electronics work, not software engineering.
