@@ -282,4 +282,11 @@ MARKET_DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/glassbox_site NEX
 - `docs/decisions/`: one file per decision, with the reasons and what was
   measured (matching, the skill vocabulary, snapshots, deployment, privacy and
   more).
-- `docs/changelog/`: dated notes for each change.
+- `docs/brand/README.md` and `docs/decisions/design-system.md`: current brand,
+  typography, colour roles and chart grammar. Original logo assets are in
+  `docs/brand/assets/logo/`.
+- `docs/editorial/`: editorial standards, references, workflow and the approved
+  two-years investigation direction. Local prototypes and outreach remain in
+  ignored `docs/local/`.
+- `docs/changelog/`: a short record of product and editorial milestones. Git
+  history carries the routine fix-by-fix record.

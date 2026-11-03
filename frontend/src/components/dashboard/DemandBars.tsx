@@ -7,7 +7,7 @@ import {barPath, HatchDefs, PlotFrame, useHatch} from "@/components/Market/Chart
 import {markTip, monoWidth, TICK_FS, TipBox, useTip, useWidth} from "@/components/dashboard/MarketParts";
 
 /*
- * Ranked horizontal bars, chart A of docs/brand/charts.html: one row per
+ * Ranked horizontal bars, chart A of docs/decisions/design-system.md: one row per
  * skill, the name on the left, the bar in a framed plot, "count/N" at the
  * tip. Yours is solid green; not yet is the neutral hatch. Share ticks sit
  * under the frame. No rank badge: the brand never says "1st".

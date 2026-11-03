@@ -7,7 +7,7 @@ import {MarketAnalysis} from "@/types/jobradar";
 import {significantGaps, SkillMark} from "@/lib/market";
 
 /*
- * The Market tab's chart chrome, docs/brand/charts.html made real: every
+ * The Market tab's chart chrome, following docs/decisions/design-system.md: every
  * chart is an object on the desk. A forest green-black panel, a short
  * uppercase title, a mono subtitle split by the orange slash (the only orange
  * in a chart), a legend, a "Good to know" row and a table twin for screen

@@ -107,8 +107,7 @@ Two things surfaced during verification that are independent of this failure:
 
 - **`/analyze` returned 500 before it reached any of the above**, for an
   unrelated reason: the Groq query interpreter was failing intermittently with
-  `400 json_validate_failed`. Fixed separately in
-  `docs/changelog/2026-08-25-groq-reasoning-effort.md`.
+  `400 json_validate_failed`. Fixed separately.
 - **Images must be built `--platform linux/amd64`.** A native build on Apple
   Silicon produces arm64, which pushes to ACR without complaint and then cannot
   run on an ACA node.

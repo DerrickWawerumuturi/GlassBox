@@ -15,8 +15,8 @@ docs/growth/
 docs/brand/
 docs/local/
 
-# Claude rules (private, like docs/brand)
-CLAUDE.md
+# Shared assistant instructions live in the repository.
+frontend/CLAUDE.md
 
 # The Figma plugin: a local tool, never part of the repo.
 backend/GlassBox/
@@ -24,6 +24,15 @@ backend/GlassBox/
 # Founder reference screenshots for design work: never published or committed.
 frontend/public/inspo/
 
-# Editorial working notes and third-party reference images (founder, 15 Oct 2026): kept on this machine only
+# Private editorial research, prototype workspaces and third-party reference captures stay local.
 docs/editorial/
 docs/glassbox-editorial-foundation/
+
+# The adopted editorial standards and a compact brand guide are shared.
+!docs/editorial/
+!docs/brand/
+docs/brand/*
+!docs/brand/README.md
+!docs/brand/assets/
+!docs/brand/assets/**
+docs/brand/assets/**/.DS_Store
