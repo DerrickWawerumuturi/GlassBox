@@ -70,3 +70,14 @@ def test_relative_dates_become_labelled_estimates_anchored_where_they_were_read(
     assert posting.posted_estimate("yesterday", seen) == seen - timedelta(days=1)
     assert posting.posted_estimate("2026-09-13T00:00:00Z", seen) is None      # absolute: not an estimate
     assert posting.posted_estimate("3 days ago", None) is None
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ({"workplaceType": "Remote"}, "remote"),
+    ({"workplace_type": "HYBRID"}, "hybrid"),
+    ({"workplace_type_label": "On-site"}, "onsite"),
+    ({"workplace": "On Site"}, "onsite"),
+])
+def test_workplace_normalizes_provider_field_aliases(raw, expected):
+    job = SimpleNamespace(raw=raw, title="Engineer", location=None, description=None, remote=None)
+    assert posting.workplace(job) == expected
