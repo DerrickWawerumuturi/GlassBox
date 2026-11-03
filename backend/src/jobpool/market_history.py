@@ -8,10 +8,15 @@ reported as gaps, not interpolated.
 import calendar
 from collections import defaultdict
 from datetime import date, datetime, timezone
+from threading import Lock
+from time import monotonic
 
 from src.database.session import connection, is_configured
 
 MAX_MONTHS = 6
+CACHE_SECONDS = 3600
+_cache: dict[int, tuple[float, dict]] = {}
+_cache_lock = Lock()
 
 
 class NotAvailable(RuntimeError):
@@ -111,9 +116,15 @@ def aggregate(rows: list[dict], as_of: date | None = None, months: int = MAX_MON
 
 
 def read(months: int = MAX_MONTHS) -> dict:
-    """Read the bounded daily history and return its monthly aggregation."""
+    """Read bounded daily history; cache the public aggregate for one hour."""
     if not is_configured():
         raise NotAvailable("Market history is not configured.")
+    now = monotonic()
+    with _cache_lock:
+        cached = _cache.get(months)
+        if cached and cached[0] > now:
+            return cached[1]
+
     today = datetime.now(timezone.utc).date()
     start = _month_start(date(today.year, today.month, 1), months - 1)
     with connection() as conn, conn.cursor() as cur:
@@ -127,4 +138,7 @@ def read(months: int = MAX_MONTHS) -> dict:
             (start, today),
         )
         rows = cur.fetchall()
-    return aggregate(rows, as_of=today, months=months)
+    body = aggregate(rows, as_of=today, months=months)
+    with _cache_lock:
+        _cache[months] = (monotonic() + CACHE_SECONDS, body)
+    return body
