@@ -98,3 +98,15 @@ def test_invalid_month_window_is_rejected():
     import pytest
     with pytest.raises(ValueError):
         aggregate([], as_of=date(2026, 11, 3), months=7)
+
+
+def test_six_month_gate_never_combines_versions_to_reach_six_months():
+    rows = [
+        snapshot(f"2026-{month:02d}-01", version="requirements-v6")
+        for month in range(6, 9)
+    ] + [
+        snapshot(f"2026-{month:02d}-01", version="requirements-v7")
+        for month in range(9, 12)
+    ]
+    result = aggregate(rows, as_of=date(2026, 11, 30), months=6)
+    assert result["six_month_available"] is False
