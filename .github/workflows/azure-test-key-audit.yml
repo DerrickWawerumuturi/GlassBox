@@ -30,9 +30,9 @@ jobs:
           import json, sys
           app = json.load(sys.stdin)
           properties = app.get("properties") or {}
-template = properties.get("template") or {}
-configuration = properties.get("configuration") or {}
-containers = template.get("containers") or []
+          template = properties.get("template") or {}
+          configuration = properties.get("configuration") or {}
+          containers = template.get("containers") or []
           env_names = sorted({
               env.get("name", "")
               for container in containers
@@ -47,7 +47,7 @@ containers = template.get("containers") or []
           matches = [
               env
               for container in containers
-              for env in container.get("env", [])
+              for env in (container.get("env") or [])
               if env.get("name") == "GLASSBOX_TEST_KEY"
           ]
           if len(matches) != 1:
