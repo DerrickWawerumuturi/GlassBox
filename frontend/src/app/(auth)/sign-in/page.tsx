@@ -76,7 +76,7 @@ const Page = () => {
 
                     <p className={"border-t border-border pt-5 text-sm text-muted-foreground"}>
                         First time here?{" "}
-                        <Link href={"/#upload"} className={"text-foreground underline underline-offset-4 hover:text-primary"}>
+                        <Link href={"/#cv"} className={"text-foreground underline underline-offset-4 hover:text-primary"}>
                             Try it with your CV first
                         </Link>
                         {" "}(no account needed).

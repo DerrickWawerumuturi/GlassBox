@@ -20,7 +20,7 @@ export default function Hero({total, ask, scanning, onFind}: {total: string | nu
             <div className={"kick"}>{H.eyebrow(total)}</div>
             <h1>{H.title}</h1>
             <p className={"lede"}>{H.lede}</p>
-            {ask && ask.skills.length > 0 && <CompareCv onClick={onFind} scanning={scanning} where={"hero"} className={"hero-cta"} />}
+            {ask && ask.skills.length > 0 && <CompareCv onClick={onFind} scanning={scanning} where={"hero"} className={"hero-cta"} showHandoff={false} />}
         </header>
     );
 }

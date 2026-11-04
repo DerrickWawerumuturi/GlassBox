@@ -35,7 +35,7 @@ describe("the hero", () => {
         expect(h).toContain(COPY.hero.lede);
         expect(buttons(h)).toEqual(["Compare your CV"]);
         expect(nothingUnder(h)).toBe(true);
-        expect(raw(createElement(Hero, {total: "9,722", ask, scanning: false, onFind: () => {}}))).toContain(`<div class="cv-handoff">`);
+        expect(raw(createElement(Hero, {total: "9,722", ask, scanning: false, onFind: () => {}}))).not.toContain(`class="cv-handoff"`);
         expect(peeks(h)).toBe(true);
         expect(h).not.toContain("Free. No account needed.");
         expect(h).not.toMatch(/\?\s*of\b/);
