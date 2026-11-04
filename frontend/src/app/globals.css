@@ -196,9 +196,10 @@
  * Ground:    near-black #0b0c0e
  * Surfaces:  card #121416 → popover #1a1c1f → muted #232528 (three raised steps)
  * Hairline:  white @ 8%
- * Accent:    one vivid orange-red #f5532a — data marks + primary action only
- * Chart:     a single-hue ramp around the accent (light → dark, validated
- *            ordinal on the card surface); chart-3 is the accent itself.
+ * Accent:    one vivid orange-red #f5532a — product actions and annotations.
+ * Legacy:    chart-1…5/ramp tokens remain for the older /analysis charts;
+ *            chart-3 is the accent there. New dashboard/editorial figures use
+ *            semantic have/gap/neutral roles; orange is not a data category.
  */
 .dark {
   /* The desk: a warm charcoal, not black, so the green chart panels sit on it

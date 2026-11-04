@@ -17,7 +17,8 @@ export function parseChoice(stored: string | null): ThemeChoice {
 }
 
 /** A story's address: /market/<page>/<story slug>. */
-const STORY_PATH = new RegExp(`^/market/[^/]+/(${STORY_SLUGS.join("|")})/?$`);
+const ARTICLE_SLUGS = ["when-the-job-description-says-ai"] as const;
+const STORY_PATH = new RegExp(`^/market/[^/]+/(?:${[...STORY_SLUGS, ...ARTICLE_SLUGS].join("|")})/?$`);
 
 export const isStoryPath = (path: string) => STORY_PATH.test(path);
 
