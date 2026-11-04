@@ -1,6 +1,17 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
-const posthog = vi.hoisted(() => ({init: vi.fn(), capture: vi.fn(), identify: vi.fn(), reset: vi.fn()}));
+const posthog = vi.hoisted(() => {
+    let distinctId = "anonymous-1";
+    const captured: Array<{event: string; distinctId: string}> = [];
+    return {
+        init: vi.fn(),
+        capture: vi.fn((event: string, _props: Record<string, unknown>) => captured.push({event, distinctId})),
+        identify: vi.fn((id: string) => { distinctId = id; }),
+        reset: vi.fn(() => { distinctId = `anonymous-${captured.length + 1}`; }),
+        captured,
+        resetMockState() { distinctId = "anonymous-1"; captured.length = 0; },
+    };
+});
 vi.mock("posthog-js", () => ({default: posthog}));
 
 /** A fresh module each time: analytics keeps an "is it on" flag. */
@@ -8,7 +19,11 @@ const load = () => import("./analytics");
 
 beforeEach(() => {
     vi.resetModules();
-    Object.values(posthog).forEach((fn) => fn.mockClear());
+    posthog.init.mockClear();
+    posthog.capture.mockClear();
+    posthog.identify.mockClear();
+    posthog.reset.mockClear();
+    posthog.resetMockState();
     vi.stubGlobal("window", {});
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "");
 });
@@ -112,6 +127,21 @@ describe("analytics with a key", () => {
             expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where});
         }
         (a.track as (e: string, p: object) => void)("cta_clicked", {where: "story_the_two_years"});
+        expect(posthog.capture).toHaveBeenLastCalledWith("cta_clicked", {});
+    });
+
+    it("the AI professional expertise article records each CV ask position", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        for (const where of ["story_ai_professional_expertise_intro", "story_ai_professional_expertise_midpoint", "story_ai_professional_expertise_end", "story_ai_professional_expertise_sidebar"] as const) {
+            a.track("cta_clicked", {where});
+            expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where});
+            const scan = a.scanEvents("upload", where);
+            scan.finished(12);
+            expect(posthog.capture).toHaveBeenCalledWith("scan_started", {from: where});
+            expect(posthog.capture).toHaveBeenCalledWith("scan_finished", expect.objectContaining({from: where, jobs: 12}));
+        }
+        (a.track as (e: string, p: object) => void)("cta_clicked", {where: "story_ai_professional_expertise_unknown"});
         expect(posthog.capture).toHaveBeenLastCalledWith("cta_clicked", {});
     });
 
@@ -251,6 +281,71 @@ describe("where a visit came from", () => {
         const [first, second] = posthog.capture.mock.calls.map((c) => c[1]);
         expect(first).toEqual({$current_url: "/", ref_domain: "reddit.com", utm_source: "reddit", utm_campaign: "launch"});
         expect(second).toEqual({$current_url: "/product"});
+    });
+
+    it("keeps a tagged anonymous visit connected through initial auth resolution and a scan", async () => {
+        visit("https://www.linkedin.com/", "?utm_source=linkedin&utm_medium=organic_social&utm_campaign=entry_level_market_oct2026");
+        const a = await load();
+        a.initAnalytics("phc_test");
+        const syncIdentity = a.createSessionIdentitySync();
+
+        a.trackPageview("/market/entry-level-software");
+        syncIdentity("loading");
+        syncIdentity("unauthenticated");
+        a.track("cta_clicked", {where: "entry-level-software"});
+        const scan = a.scanEvents("upload", "entry-level-software");
+        scan.finished(12);
+
+        expect(posthog.reset).not.toHaveBeenCalled();
+        expect(posthog.captured.map(({distinctId}) => distinctId)).toEqual(Array(5).fill("anonymous-1"));
+        expect(posthog.capture.mock.calls[0]).toEqual(["$pageview", {
+            $current_url: "/market/entry-level-software",
+            ref_domain: "linkedin.com",
+            utm_source: "linkedin",
+            utm_medium: "organic_social",
+            utm_campaign: "entry_level_market_oct2026",
+        }]);
+        expect(posthog.capture).toHaveBeenCalledWith("cta_clicked", {where: "entry-level-software"});
+        expect(posthog.capture).toHaveBeenCalledWith("scan_started", {from: "entry-level-software"});
+        expect(posthog.capture).toHaveBeenCalledWith("cv_uploaded", {});
+        expect(posthog.capture).toHaveBeenCalledWith("scan_finished", expect.objectContaining({from: "entry-level-software", jobs: 12}));
+    });
+
+    it("resets the previous identity on genuine sign-out and before switching accounts", async () => {
+        const a = await load();
+        a.initAnalytics("phc_test");
+        const syncIdentity = a.createSessionIdentitySync();
+
+        syncIdentity("loading");
+        syncIdentity("unauthenticated");
+        expect(posthog.reset).not.toHaveBeenCalled();
+
+        await syncIdentity("authenticated", "account-a");
+        syncIdentity("unauthenticated");
+        expect(posthog.reset).toHaveBeenCalledTimes(1);
+
+        await syncIdentity("authenticated", "account-b");
+        expect(posthog.reset).toHaveBeenCalledTimes(1);
+        await syncIdentity("authenticated", "account-c");
+        expect(posthog.reset).toHaveBeenCalledTimes(2);
+        expect(posthog.identify).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not finish identifying an account after a newer auth transition", async () => {
+        const digests: Array<(digest: ArrayBuffer) => void> = [];
+        vi.stubGlobal("crypto", {subtle: {digest: () => new Promise<ArrayBuffer>((resolve) => digests.push(resolve))}});
+        const a = await load();
+        a.initAnalytics("phc_test");
+        const syncIdentity = a.createSessionIdentitySync();
+
+        const oldIdentity = syncIdentity("authenticated", "account-a");
+        const newIdentity = syncIdentity("authenticated", "account-b");
+        digests[0](new ArrayBuffer(32));
+        await oldIdentity;
+        expect(posthog.identify).not.toHaveBeenCalled();
+        digests[1](new ArrayBuffer(32));
+        await newIdentity;
+        expect(posthog.identify).toHaveBeenCalledTimes(1);
     });
 
     it("is the same for a story landed on from a tagged link as for a market page, its query string left off", async () => {

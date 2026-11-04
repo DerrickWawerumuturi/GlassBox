@@ -4,7 +4,7 @@ import React, {useCallback, useReducer, useState} from "react";
 
 import CvSheet from "@/components/cv-ask/CvSheet";
 import Analyze, {AnalyzeReuse, ProcessCv, wakeApi} from "@/lib/api";
-import {MarketPage, scanEvents, track} from "@/lib/analytics";
+import {scanEvents, track, type ScanSource} from "@/lib/analytics";
 import {useAnalysis} from "@/lib/analysis-store";
 import {Ask, failReason, IDLE, runUpload, scanStep} from "@/lib/cv-ask";
 import {useCv} from "@/lib/cv-store";
@@ -15,9 +15,10 @@ import {reuseError, useLatestCV} from "@/lib/latest-cv";
  * /product, the header, /analysis): the CV sheet and the same scan the
  * dashboard runs. With an ask (the page's skills) the answer lands in the
  * sheet, "9 of 15", and the page lights up; without one, `onDone` takes the
- * visitor to their results. `from` names the market page, for its analytics.
+ * visitor to their results. `from` names a market page or explicitly allowed
+ * article CTA, for scan attribution.
  */
-export function useCvScan({onDone, from}: {onDone?: () => void; from?: MarketPage} = {}) {
+export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSource} = {}) {
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
     const [open, setOpen] = useState(false);

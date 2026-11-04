@@ -22,10 +22,12 @@ export type MarketPage = MarketName;
 // its address ("story_pick_a_side"). Is entry level dead? also asks mid story: after the guess ("_guess") and at the
 // internships turn ("_turn"), counted apart so the ending's own clicks stay comparable. Do you need AI on your CV now?
 // asks after the guess ("_guess") and at the street of doors ("_street") the same way.
+const AI_PRO_EXPERTISE_CTA_PLACES = ["story_ai_professional_expertise_intro", "story_ai_professional_expertise_midpoint", "story_ai_professional_expertise_end", "story_ai_professional_expertise_sidebar"] as const;
 const CTA_PLACES = ["closing", "inside", "hero", "product", "header", "menu", "years", "market", "about", ...STORY_SLUGS.map(storyPlace),
-    "story_is_entry_level_dead_guess", "story_is_entry_level_dead_turn", "story_ai_on_your_cv_guess", "story_ai_on_your_cv_street"] as const;
+    "story_is_entry_level_dead_guess", "story_is_entry_level_dead_turn", "story_ai_on_your_cv_guess", "story_ai_on_your_cv_street", ...AI_PRO_EXPERTISE_CTA_PLACES] as const;
 /** Where a "Compare your CV" or "Try it out" click, or a phone's cv_handoff (lib/cv-handoff.ts), came from. */
 export type CtaPlace = (typeof CTA_PLACES)[number] | MarketPage;
+export type ScanSource = MarketPage | (typeof AI_PRO_EXPERTISE_CTA_PLACES)[number];
 /**
  * A story's interactions, by a short name: the first one a reader uses in a page view is story_interacted
  * (docs/decisions/analytics.md). Pick a side: pick_side, scratch, reveal_all. The lobby: lift, all_floors.
@@ -43,10 +45,10 @@ export const FAIL_REASONS = ["timeout", "too_big", "not_pdf", "server", "network
 export type FailReason = (typeof FAIL_REASONS)[number];
 
 type Events = {
-    scan_started: {from?: MarketPage; internal_test?: boolean};
+    scan_started: {from?: ScanSource; internal_test?: boolean};
     cv_uploaded: {internal_test?: boolean};
     cv_reused: {internal_test?: boolean};
-    scan_finished: {duration_s: number; jobs: number; from?: MarketPage; internal_test?: boolean};
+    scan_finished: {duration_s: number; jobs: number; from?: ScanSource; internal_test?: boolean};
     scan_failed: {stage: "upload" | "reuse"; reason?: FailReason; internal_test?: boolean};
     file_refused: {reason: (typeof REFUSALS)[number]};
     view_opened: {page: Page; view?: string};
@@ -78,7 +80,7 @@ export const PROXY_PATH = "/ingest";
 
 // Properties that name a place or a kind take only known names, so no free text rides in on them.
 const NAMED: Partial<Record<keyof Events, Record<string, readonly string[]>>> = {
-    fact_copied: {page: MARKET_NAMES}, scan_started: {from: MARKET_NAMES}, scan_finished: {from: MARKET_NAMES},
+    fact_copied: {page: MARKET_NAMES}, scan_started: {from: [...MARKET_NAMES, ...AI_PRO_EXPERTISE_CTA_PLACES]}, scan_finished: {from: [...MARKET_NAMES, ...AI_PRO_EXPERTISE_CTA_PLACES]},
     cta_clicked: {where: [...CTA_PLACES, ...MARKET_NAMES]},
     story_interacted: {story: STORY_SLUGS, kind: STORY_KINDS},
     scan_failed: {stage: ["upload", "reuse"], reason: FAIL_REASONS}, file_refused: {reason: REFUSALS},
@@ -243,9 +245,10 @@ export function storyInteracted(story: StorySlug, kind: StoryKind) {
  * Ties events to a person by a one-way hash of the account id, never the
  * account id, a name or an email.
  */
-export async function identifyUser(accountId: string) {
+export async function identifyUser(accountId: string, isCurrent: () => boolean = () => true) {
     if (!initAnalytics()) return;
     const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`glassbox:${accountId}`)));
+    if (!isCurrent()) return;
     posthog.identify(`u_${[...bytes].slice(0, 16).map((b) => b.toString(16).padStart(2, "0")).join("")}`);
 }
 
@@ -254,13 +257,37 @@ export function forgetUser() {
 }
 
 /**
+ * Tracks resolved auth transitions without treating the initial anonymous
+ * session lookup as a sign-out. A direct account switch starts a fresh
+ * PostHog identity before identifying the new account.
+ */
+export function createSessionIdentitySync() {
+    let accountId: string | null = null;
+    let revision = 0;
+    return (status: "loading" | "authenticated" | "unauthenticated", nextAccountId?: string) => {
+        if (status === "loading") return;
+        if (status === "unauthenticated") {
+            revision++;
+            if (accountId !== null) forgetUser();
+            accountId = null;
+            return;
+        }
+        if (!nextAccountId) return;
+        if (accountId !== null && accountId !== nextAccountId) forgetUser();
+        accountId = nextAccountId;
+        const currentRevision = ++revision;
+        return identifyUser(nextAccountId, () => revision === currentRevision && accountId === nextAccountId);
+    };
+}
+
+/**
  * A scan's events in one place: scan_started plus cv_uploaded or cv_reused
  * now, then scan_finished (seconds, jobs found) or scan_failed (which kind,
  * and why: lib/cv-ask.ts failReason).
- * `from` names the market page a scan started on, so its visits can be
- * counted through to a finished scan.
+ * `from` names the market page or article CTA that started the scan, so its
+ * visits can be counted through to a finished scan.
  */
-export function scanEvents(kind: "upload" | "reuse", from?: MarketPage) {
+export function scanEvents(kind: "upload" | "reuse", from?: ScanSource) {
     const start = Date.now();
     track("scan_started", {from});
     if (kind === "upload") track("cv_uploaded", {}); else track("cv_reused", {});

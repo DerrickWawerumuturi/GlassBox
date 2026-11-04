@@ -1,10 +1,10 @@
 'use client'
 
-import {useEffect} from "react";
+import {useEffect, useRef} from "react";
 import {usePathname} from "next/navigation";
 import {useSession} from "next-auth/react";
 
-import {forgetUser, identifyUser, initAnalytics, Page, track, trackPageview} from "@/lib/analytics";
+import {createSessionIdentitySync, initAnalytics, Page, track, trackPageview} from "@/lib/analytics";
 
 /**
  * Starts analytics (a no-op without a key), sends a pageview per route
@@ -14,13 +14,13 @@ export default function AnalyticsProvider() {
     const pathname = usePathname();
     const {data: session, status} = useSession();
     const accountId = session?.user?.id;
+    const syncIdentity = useRef(createSessionIdentitySync()).current;
 
     useEffect(() => { initAnalytics(); }, []);
     useEffect(() => { if (pathname) trackPageview(pathname); }, [pathname]);
     useEffect(() => {
-        if (status === "authenticated" && accountId) void identifyUser(accountId);
-        else if (status === "unauthenticated") forgetUser();
-    }, [status, accountId]);
+        void syncIdentity(status, accountId);
+    }, [status, accountId, syncIdentity]);
     return null;
 }
 
