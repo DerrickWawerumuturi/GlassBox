@@ -1,5 +1,7 @@
 # Decision: design system
 
+**Current source of truth:** [`docs/brand/README.md`](../brand/README.md) for the brand entry point and [`docs/editorial/VISUAL_LANGUAGE.md`](../editorial/VISUAL_LANGUAGE.md) for current shared and editorial rules. This decision preserves implementation history; read those documents before applying a rule to a new surface.
+
 **Files:** `src/app/globals.css`, `src/app/layout.tsx`
 
 ## Direction
@@ -25,10 +27,12 @@ declared in `src/app/globals.css`:
 - `:root` — light values: "paper" (see Light mode below).
 - `.dark` — the shipping palette.
 
-The app is **locked to dark** via `className="dark"` on `<html>` in
-`layout.tsx`. `next-themes` is installed but only referenced by `ui/sonner.tsx`;
-there is no toggle, deliberately — committing to one look means it can be good,
-rather than acceptable in two.
+The app supports **Light, Dark and System** through the account theme menu.
+`lib/theme.ts` applies a saved choice before paint and follows the OS preference
+for System. The old dark-only statement was superseded when the paper theme and
+theme menu shipped on 2026-10-05. Editorial stories retain their route-specific
+paper/night styling as implemented; do not infer a theme behavior from this
+historical paragraph.
 
 ## The palette
 
@@ -40,13 +44,14 @@ rather than acceptable in two.
 | Text | warm white, plus a muted step |
 | **Accent** | **`#f5532a`** orange-red |
 
-The accent drives `--primary` and the legacy `--chart-1…5` ramp that the
-anonymous `/analysis` charts still read. It no longer drives the Market tab's
-charts: there, orange is the brand and never marks data (see "Chart grammar"
-below). Accent use is restricted to: the primary CTA, the active-tab indicator,
-section heading ticks, small numerals and the slash in a chart subtitle.
-Everywhere else is foreground/muted ink. **Text wears text tokens, never the
-series colour.**
+The accent drives `--primary` for product actions and annotations. The legacy
+`/analysis` route still has older `--chart-1…5` and `--chart-ramp-*` ramps,
+including orange hues; this is a scoped legacy encoding, not the shared data
+palette. The current dashboard Market tab, market pages and story figures use
+semantic have/gap/neutral conventions and do not use action orange as a data
+category. See “Chart grammar” and the current
+[`VISUAL_LANGUAGE.md`](../editorial/VISUAL_LANGUAGE.md). **Text uses text tokens,
+never a series colour.**
 
 ## Chart grammar (Market tab, 2026-10-02)
 
@@ -114,6 +119,12 @@ It is never the action orange. Gaps in the market (charts, Overview, Your
 skills, /analysis) stay grey and hatched or dashed.
 
 ## Typography
+
+For the complete current route-by-route role matrix, including the separately
+loaded story display faces, see
+[`docs/editorial/VISUAL_LANGUAGE.md`](../editorial/VISUAL_LANGUAGE.md). The older
+five-face summary below describes the original product/market foundation; it is
+not the full current editorial font inventory.
 
 - **Space Grotesk** (`font-space`, `font-heading`) — display. Bold, tight,
   uppercase for headings; `font-heading` on every h1 and chart title.

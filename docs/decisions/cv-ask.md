@@ -2,7 +2,7 @@
 
 **Status:** built 2026-10-07 as a question; since 2026-10-12 one "Compare your
 CV" button per page (founder; see "One button, no question" below). **Founder's pick:** `docs/local/cv-ask-prototype.html`
-(decision log in `docs/brand/guidelines.html`, 7 Oct, "The CV ask becomes a
+(decision recorded in `docs/changelog/archive/2026-10-07-cv-ask.md`, "The CV ask becomes a
 question"). **Code:** `frontend/src/lib/cv-ask.ts` (words, which skills, the
 count, the scan's states and steps; tested in `cv-ask.test.ts`),
 `frontend/src/components/cv-ask/` (`CompareCv` the button, `AskCard` the

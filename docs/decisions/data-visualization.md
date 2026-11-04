@@ -31,9 +31,9 @@ a link lands on the same chart.
 | View | Question | Form |
 |---|---|---|
 | Overview | Where do I stand, in brief? | stat cells (coverage with its meter), the top of each list |
-| Demand | What does the market ask for, and do I have it? | ranked bars, green = on the CV, orange = not |
+| Demand | Which skills do these jobs ask for, and which are on this CV? | ranked bars, green = on the CV, neutral hatch = not |
 | Your skills | How much is each of my skills wanted? | ranked bars |
-| Gaps | What should I learn next? | a table: share, count and priority per skill |
+| Gaps | Which frequently requested skills are not on this CV? | a table: share, count and stated priority per skill |
 | Landscape | Do my skills sit where the demand is? | a strip plot: two lanes (on the CV, missing) on one demand axis |
 
 **Colour carries identity, not magnitude.** Bar length already shows demand.
@@ -42,7 +42,9 @@ length and leaves no colour for anything else. On the Market tab colour
 says one thing: on the CV (`--chart-have`) or not (`--chart-gap`). The pair
 was checked with the dataviz validator against the dark card surface:
 inside the lightness band, colour-blind ΔE 9.6, contrast above 3:1. The app's
-`--success` was too light to pass, so the chart green is its own token.
+`--success` was too light to pass, so the chart green is its own token. The
+dashboard's Demand bars follow this have/hatch pair; orange is not used for the
+gap category there.
 
 **Every value is labelled, so there is no axis.** Bars are plain HTML rows
 (name, bar, value), which also removed the fixed-width category axis that
@@ -61,8 +63,9 @@ edge sits left of its dot.
 as a filled bar on a lighter track of the same hue. It sits in the coverage stat
 cell rather than a section of its own, which only repeated the cell.
 
-**Nothing else takes a hue.** Footnotes and "view all" links are muted ink, so
-green and orange keep their one meaning. A Priority column appears on Gaps only
+**Nothing else takes a hue.** Footnotes and "view all" links are muted ink.
+Green identifies on-CV marks; orange stays in action UI and does not encode
+data. A Priority column appears on Gaps only
 when some gap is high priority; a column reading "Medium" on every row says
 nothing.
 
@@ -70,7 +73,11 @@ The layout was reviewed from rendered screenshots at 390px and 1280px, by a
 second model (Fable) as well; its six changes are in.
 
 The landing flow's `/analysis` pages still use the older panel components
-(`src/components/Market/*`), including the magnitude ramp.
+(`src/components/Market/*`), including the magnitude ramp. This is a scoped
+legacy surface: orange/chart ramps there are not the shared palette and do not
+change the meaning of the current dashboard Market tab. The dashboard encodes
+on-CV skills with `--chart-have` and gaps with neutral `--chart-gap`/hatching.
+Keep this distinction explicit until that legacy route is separately migrated.
 
 ## Form before styling
 
@@ -89,7 +96,7 @@ chart has nowhere to put one. `SkillGapChart` renders rows with inline meters
 grouped into priority buckets. It is the one section that deliberately does not
 use the shared chart.
 
-## One hue per chart
+## Legacy `/analysis`: one hue per chart
 
 Bar length already encodes magnitude. A second colour would imply a second
 dimension that is not in the data, so every bar chart uses a single hue read
@@ -98,8 +105,9 @@ from `var(--chart-3)`.
 Percentage is direct-labelled on the bar because it is the ranked measure; the
 raw job count lives in the tooltip. Each bar carries exactly one number.
 
-All colour comes from CSS custom properties, never literals — which is what let
-the entire palette change from green to orange-red in one token edit.
+This section describes the older `/analysis` components only. All colour comes
+from CSS custom properties, never literals. Do not apply its orange-red ramp to
+the dashboard Market tab or new market/editorial figures.
 
 ## `SkillLandscape` has one axis on purpose
 

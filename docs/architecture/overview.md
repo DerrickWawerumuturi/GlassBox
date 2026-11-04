@@ -1,8 +1,9 @@
 # System overview
 
-JobRadar answers: *where does this CV stand in the job market, which jobs does
-it actually fit, and what should be learned next?* — and keeps track of the
-applications that follow.
+Glassbox shows where a CV's skills overlap with the job market, which jobs fit,
+and what job ads say about the skills they request. The reader decides what to
+learn or where to apply. The product also keeps track of the applications that
+follow.
 
 It is one repository, two deployables and a scheduled job:
 

@@ -151,7 +151,11 @@ frontend/
   src/lib/             API calls, stores and display helpers
   public/product/      product screenshots
 docs/
-  architecture/  decisions/  changelog/
+  architecture/  current system and deployable boundaries
+  brand/         shared identity and approved marks
+  decisions/     durable product and engineering choices
+  editorial/     editorial standards and story investigations
+  changelog/     selected milestones; older local notes are archived
 .github/workflows/     deploy.yml, job-pool.yml
 ```
 
@@ -277,9 +281,9 @@ MARKET_DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/glassbox_site NEX
 
 ## Docs
 
-- `docs/architecture/`: how the system fits together. Start with `overview.md`,
-  then `backend.md` and `frontend.md`.
-- `docs/decisions/`: one file per decision, with the reasons and what was
-  measured (matching, the skill vocabulary, snapshots, deployment, privacy and
-  more).
-- `docs/changelog/`: dated notes for each change.
+- [Architecture](docs/architecture/overview.md): system overview, backend, frontend and API boundaries.
+- [Brand](docs/brand/README.md): current product identity and approved assets.
+- [Editorial](docs/editorial/README.md): visual language, standards, references and story process.
+- [Decisions](docs/decisions/): durable product and engineering choices.
+- [Changelog](docs/changelog/README.md): selected milestones; current behavior remains in architecture and decisions.
+- [Todo](docs/todo.md): verified open product work.

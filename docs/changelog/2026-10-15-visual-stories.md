@@ -1,7 +1,7 @@
 # 2026-10-15: five visual stories, and /market as a grid of stories (refs #10)
 
 Decision: `docs/decisions/market-pages.md` ("Stories"); also `design-system.md` (the stories' faces),
-`cv-ask.md` (the story and grid asks), `analytics.md` (new `where` places). Brand book: `docs/brand/guidelines.html`
+`cv-ask.md` (the story and grid asks), `analytics.md` (new `where` places). Current visual source: `docs/editorial/VISUAL_LANGUAGE.md`; the former local brand workbook is not part of the repository.
 (06, 10, the log, still open). Review page: `docs/local/stories-review.html`. Prototypes the founder approved today:
 `docs/local/editorial-sprint/stories/` and `market-home/`.
 

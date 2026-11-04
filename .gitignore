@@ -7,23 +7,64 @@ __pycache__/
 # IDE state. dataSources.xml also carries the Neon endpoint hostname.
 .idea/
 
-# Growth strategy and market research: private plans, kept out of the repo.
+# Growth strategy and market research are private local working material.
 docs/growth/
 
-# Local-only pages: brand workbook, code reviews. The repo is public; these are
-# read on localhost and never committed.
+# Only the shared brand guide and approved logo package are repository docs.
 docs/brand/
+!docs/brand/
+docs/brand/*
+!docs/brand/README.md
+!docs/brand/assets/
+docs/brand/assets/*
+!docs/brand/assets/README.md
+!docs/brand/assets/index.html
+!docs/brand/assets/app-icon/
+docs/brand/assets/app-icon/*
+!docs/brand/assets/app-icon/*.svg
+!docs/brand/assets/app-icon/*.png
+!docs/brand/assets/app-icon/*.ico
+!docs/brand/assets/lockup/
+docs/brand/assets/lockup/*
+!docs/brand/assets/lockup/*.svg
+!docs/brand/assets/symbol/
+docs/brand/assets/symbol/*
+!docs/brand/assets/symbol/*.svg
+!docs/brand/assets/wordmark/
+docs/brand/assets/wordmark/*
+!docs/brand/assets/wordmark/*.svg
+
+# The editorial guides, published investigation notes, and own reference captures
+# are shared documentation. Keep experiments outside this allowlist local.
+docs/editorial/
+!docs/editorial/
+docs/editorial/*
+!docs/editorial/*.md
+!docs/editorial/articles/
+docs/editorial/articles/*
+!docs/editorial/articles/*.md
+!docs/editorial/experiments/
+docs/editorial/experiments/*
+!docs/editorial/experiments/visual-concepts.md
+!docs/editorial/investigations/
+!docs/editorial/investigations/where-do-the-two-years-come-from/
+docs/editorial/investigations/where-do-the-two-years-come-from/*
+!docs/editorial/investigations/where-do-the-two-years-come-from/*.md
+!docs/editorial/references/
+docs/editorial/references/*
+!docs/editorial/references/*.png
+!docs/editorial/sprints/
+docs/editorial/sprints/*
+!docs/editorial/sprints/*.md
+
+# Local research, prototypes, private outreach, and review captures.
 docs/local/
 
-# Claude rules (private, like docs/brand)
-CLAUDE.md
-
-# The Figma plugin: a local tool, never part of the repo.
+# Local Figma plugin.
 backend/GlassBox/
 
-# Founder reference screenshots for design work: never published or committed.
+# Founder reference screenshots for design work.
 frontend/public/inspo/
 
-# Editorial working notes and third-party reference images (founder, 15 Oct 2026): kept on this machine only
-docs/editorial/
-docs/glassbox-editorial-foundation/
+# Ignore macOS metadata even inside explicitly shared asset folders.
+**/.DS_Store
