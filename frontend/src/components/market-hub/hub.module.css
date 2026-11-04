@@ -64,11 +64,27 @@
 .cvcard p.fine { font-size: 14px; margin-top: 12px; }
 
 .open { margin: 72px 0 0; padding: 22px 0 0; border-top: 1px solid var(--hub-line); color: var(--hub-muted); font-size: 16px; }
+.featured { margin: 42px 0 64px; padding: 22px; background: #efe8df; border: 1px solid var(--hub-line); }
+.featuredMeta { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 14px; color: var(--hub-muted); font: 500 10px/1.5 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+.featuredLink { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(250px,.8fr); gap: clamp(20px,4vw,48px); align-items: center; color: var(--hub-ink); text-decoration: none; }
+.featuredCover { overflow: hidden; background: #e9dfd4; border: 1px solid #c8b9a9; }
+.featuredCover :global(figure) { max-width: none; margin: 0; box-shadow: none; }
+.featuredCover :global(figcaption) { display: none; }
+.featuredCover svg { display: block; width: 100%; height: auto; transition: transform .35s ease; }
+.featuredLink:hover .featuredCover svg { transform: scale(1.025); }
+.featuredText h2 { margin: 0 0 14px; font: 600 clamp(28px,3.4vw,44px)/1.06 var(--read); letter-spacing: -.025em; }
+.featuredText p { margin: 0 0 20px; color: var(--hub-muted); font-size: 16px; line-height: 1.5; }
+.featuredText span { color: var(--orange); font: 500 12px var(--mono); text-decoration: underline; text-underline-offset: 4px; }
+.featuredLink:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
 .hub .open a { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
 
 @media (max-width: 1320px) { .badge { right: -20px; top: 8px; } .mast { max-width: none; padding-right: 150px; } }
 @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px 24px; } }
 @media (max-width: 640px) {
+  .featured { margin: 36px 0 48px; padding: 14px; }
+  .featuredLink { grid-template-columns: minmax(0,1fr); gap: 18px; }
+  .featuredText h2 { font-size: 30px; }
+  .featuredText p { font-size: 15px; }
   .wrap { padding: 0 16px 24px; }
   .mast { padding: 36px 0 0; padding-right: 0; }
   .badge { position: static; width: 104px; margin: 18px 0 0; transform: rotate(-6deg); }
@@ -79,6 +95,7 @@
   .card h2 { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) { .cover svg, .chip { transition: none; } .card:hover .cover svg { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .featuredCover svg { transition: none; } .featuredLink:hover .featuredCover svg { transform: none; } }
 
 /* "By job type": each card at its place in the market pages' order (app/market/page.tsx sets --type). */
 .filtered[data-order="type"] .card { order: var(--type); }

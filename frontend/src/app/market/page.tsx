@@ -10,6 +10,7 @@ import {methodCover, yearsCover} from "@/components/market-hub/covers";
 import s from "@/components/market-hub/hub.module.css";
 import HubCv from "@/components/market-hub/HubCv";
 import HubFilter from "@/components/market-hub/HubFilter";
+import {CoverPoster} from "@/components/stories/ai-professional-expertise/Visuals";
 import {STORY_COVERS} from "@/components/stories/covers";
 import t from "@/components/stories/story.module.css";
 import {weekDate, weekStart} from "@/lib/market-page";
@@ -99,6 +100,15 @@ export default async function MarketHub() {
                     <p className={s.dek}>{HUB.dek}</p>
                     <Badge />
                     {counted && <p className={s.when}><time dateTime={weekStart(counted)}>Counted in the week of {weekDate(counted)}</time></p>}
+                </section>
+                <section className={s.featured} aria-labelledby="featured-investigation-title">
+                    <div className={s.featuredMeta}><span>FEATURED INVESTIGATION</span><time dateTime="2026-11-04">4 November 2026</time></div>
+                    <Link className={s.featuredLink} href="/market/ai-professional-expertise">
+                        <div className={s.featuredCover}><CoverPoster /></div>
+                        <div className={s.featuredText}><h2 id="featured-investigation-title">The Experts Being Recruited to Teach AI Their Professions</h2>
+                            <p>Air traffic controllers, biostatisticians, lawyers and engineers are being recruited to create the problems, reference answers and professional standards used to train and evaluate AI systems.</p>
+                            <span>Read the investigation <b aria-hidden="true">→</b></span></div>
+                    </Link>
                 </section>
                 <HubFilter filters={hubFilters(cards)}>
                     <ol className={s.grid}>
