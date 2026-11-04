@@ -20,8 +20,12 @@ Visual investigations built from the weekly count of technology job ads. This is
 - `sprints/`: dated art-direction decisions.
 - `references/`: Glassbox screenshots and diagrams; third-party artwork is not stored here.
 
+Each investigation can include `research.md`, `creative-brief.md`, `storyboard.md` and `implementation-notes.md`. The approved two-years investigation direction is recorded under `investigations/where-do-the-two-years-come-from/` and `sprints/`.
+
 ## Working sequence
 
 Read this index, the vision, creative principles and visual language, then the active investigation. Verify the evidence and method before developing materially different concepts. Storyboard and prototype the opening, main visual and phone state; review rendered screenshots at 390px and 1280px against the rubric. Publish only after figures and wording are verified and approved.
+
+Before production code, verify the evidence, present materially different concepts, get the selected direction approved, then storyboard and prototype the opening, main visual and a phone state. Review rendered screenshots against `DESIGN_REVIEW.md`.
 
 Use the shared repository instructions in [`../../AGENTS.md`](../../AGENTS.md). Local prototypes, distribution drafts and captured reviews stay in ignored `docs/local/`; they are working records, not another policy source.

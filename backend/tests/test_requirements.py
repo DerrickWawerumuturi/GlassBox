@@ -99,6 +99,7 @@ def test_only_headings_open_sections():
     ("Requirements: two (2) years of experience with React.", {"years": 2, "kind": "required"}),
     ("We have 10+ years in business. You need 2+ years of experience.", {"years": 2, "kind": "required"}),
     ("Requirements: 0-2 years of professional experience.", {"years": 0, "kind": "required"}),
+
     # Real phrasings, 2026-10-07. A range after "experience" read its upper end.
     ("- Experience: 5-7+ years in data center commissioning, construction, or critical infrastructure delivery",
      {"years": 5, "kind": "required"}),
@@ -113,6 +114,19 @@ def test_only_headings_open_sections():
 ])
 def test_extract_experience(description, expected):
     assert extract_experience("Engineer", description) == expected
+
+
+def test_live_pool_experience_headings_reopen_requirements():
+    # These headings must reopen requirements after earlier "About Us"/benefits sections.
+    assert extract_experience("Software Engineer Internship (UNPAID)",
+        "What You'll Have\n2+ years of experience working with the MERN stack.") == {
+            "years": 2, "kind": "required"}
+    assert extract_experience("Engineering Manager",
+        "What You'll Bring:\n7+ years of professional experience as a mobile engineer and at least 2+ years of experience in leadership roles") == {
+            "years": 7, "kind": "required"}
+    assert extract_experience("Software Engineer III, Trading - FBG",
+        "Experience and Skills\nAt least 3-5 years of real-world demonstrable experience building applications.\n2+ years of experience with C# and cloud platforms.") == {
+            "years": 3, "kind": "required"}
 
 
 def test_required_and_preferred_skills_are_separated_per_clause():
@@ -373,3 +387,220 @@ def test_an_early_career_title_cannot_require_many_years():
     assert extract_experience("Software Engineer", text) == {"years": 8, "kind": "required"}
     assert extract_experience("Software Engineering Intern", "Requirements:\n- 1+ years of coding.")["years"] == 1
     assert posting("Member of Technical Staff, Intern (Spring 2027)", text * 40).seniority == "intern"
+
+
+# Production QA follow-up, 2026-11-03: these headings appear in current job
+# descriptions after an "About Us" stop section. They introduce actual
+# qualifications, not generic prose.
+@pytest.mark.parametrize("heading", [
+    "HOW TO BE SUCCESSFUL IN THIS ROLE",
+    "WHAT YOU BRING TO THE TEAM",
+])
+def test_experience_is_read_under_common_requirements_headings(heading):
+    text = (
+        "ABOUT US\nWe build products for developers.\n\n"
+        f"{heading}\n\n"
+        "- 2+ years of experience in software engineering.\n"
+        "- Experience with Python and distributed systems."
+    )
+    assert extract_experience("FullStack Engineer", text) == {"years": 2, "kind": "required"}
+
+
+@pytest.mark.parametrize("title, family", [
+    ("Product Design Engineer", "design"),
+    ("Product Design Engineering Intern", "design"),
+    ("Quality Engineering Intern - Summer 2027", "qa"),
+    ("Software Defined Radio Hardware Associate", "embedded"),
+    ("Electromechanical Design Engineering Intern", "embedded"),
+    ("Semiconductor Product Engineer", "embedded"),
+    ("Senior Thermomechanical Analysis Engineer", "non_tech"),
+    ("Hardware Entwickler*in", "embedded"),
+])
+def test_physical_engineering_titles_do_not_leak_into_software_family(title, family):
+    assert classify_family(title) == family
+
+
+# Production regressions from issue #22 (2026-11-03). Keep the real section
+# headings and wording that exposed the old stored-profile mismatches.
+def test_holiday_world_intern_2_year_requirement_is_retained():
+    description = (
+        "What You'll Have\n\n"
+        "2+ years of experience working with the MERN stack "
+        "(MongoDB, Express.js, React, Node.js).\n"
+        "Proficiency in TypeScript."
+    )
+    assert extract_experience("Software Engineer Internship (UNPAID)", description) == {
+        "years": 2, "kind": "required"
+    }
+
+
+def test_langchain_fullstack_year_requirement_under_success_heading_is_retained():
+    description = (
+        "ABOUT US\nWe build agent engineering tools.\n\n"
+        "HOW TO BE SUCCESSFUL IN THIS ROLE\n\n"
+        "- 2+ years of experience in software engineering working on complex platform products."
+    )
+    assert extract_experience("FullStack Engineer, AI Observability & Evals Platform", description) == {
+        "years": 2, "kind": "required"
+    }
+
+
+def test_tebi_manager_uses_highest_years_requirement_when_at_least_is_also_present():
+    description = (
+        "What You'll Bring:\n\n"
+        "7+ years of professional experience as a mobile engineer and at least "
+        "2+ years of experience in leadership roles."
+    )
+    assert extract_experience("Engineering Manager", description) == {
+        "years": 7, "kind": "required"
+    }
+
+
+@pytest.mark.parametrize("phrase", [
+    "At least 2 years of experience with Python.",
+    "Minimum 2 years of relevant experience with Postgres.",
+])
+def test_at_least_and_minimum_year_phrases_are_required(phrase):
+    assert extract_experience("Software Engineer", f"Required qualifications:\n- {phrase}") == {
+        "years": 2, "kind": "required"
+    }
+
+
+# v9 physical-engineering family audit regressions (2026-11-03).
+@pytest.mark.parametrize("title, family", [
+    ("Senior Turbomachinery Design Engineer", "non_tech"),
+    ("Tooling Design Engineer", "non_tech"),
+    ("Piping Design Engineer", "non_tech"),
+    ("Aerospace Engineer", "non_tech"),
+    ("Air Vehicle Design Engineer", "non_tech"),
+    ("Composite CAD Design Engineer", "non_tech"),
+    ("Industrial Engineering Intern", "non_tech"),
+    ("Functional Safety Engineer", "non_tech"),
+    ("Process Safety Engineer", "non_tech"),
+    ("Systems Safety Engineer", "non_tech"),
+    ("Equipment Engineer", "non_tech"),
+    ("Environmental Health and Safety Engineer", "non_tech"),
+    ("Senior Systems Safety Engineer - Loitering Munition", "non_tech"),
+    ("Avionics Associate Engineer", "embedded"),
+    ("Harness Design Engineer", "embedded"),
+    ("Digital Design Engineer", "embedded"),
+    ("Senior Digital IC Design Engineer", "embedded"),
+    ("Photonic IC Design Engineer", "embedded"),
+    ("Senior MMIC Design Engineer", "embedded"),
+    ("Quantum Design Engineer", "embedded"),
+    ("Power Electronics Engineer", "embedded"),
+    ("Avionics Software Engineer", "software_engineering"),
+    ("Software Engineer in Hardware Infrastructure", "software_engineering"),
+    ("Software Engineer, Safety Engineering", "software_engineering"),
+    ("Design Engineer", "software_engineering"),
+])
+def test_physical_engineering_family_audit_v9(title, family):
+    assert classify_family(title) == family
+
+
+def test_digital_design_engineer_with_product_designer_description_is_design():
+    assert classify_family(
+        "Digital Design Engineer",
+        "Product Designer responsible for user experience and Figma prototypes."
+    ) == "design"
+
+
+# Expanded v9 physical-family audit: semiconductor, aerospace and industrial roles.
+@pytest.mark.parametrize("title, family", [
+    ("ATE Engineer Intern", "embedded"),
+    ("Advanced DV Engineer Intern", "embedded"),
+    ("DFT Engineering Intern", "embedded"),
+    ("Design Architecture Engineer Intern", "embedded"),
+    ("Emulation Engineering Intern", "embedded"),
+    ("Packaging Engineering Intern", "embedded"),
+    ("System Validation Engineer Intern", "qa"),
+    ("Field Applications Engineer Intern", "solutions"),
+    ("Product Applications Engineer Intern", "solutions"),
+    ("Lab Strategy Engineer Intern", "non_tech"),
+    ("CAD Engineer Intern", "non_tech"),
+    ("Radiation Effects Engineer Intern", "non_tech"),
+    ("Additive Engineer New Grad", "non_tech"),
+    ("Materials Engineer New Grad", "non_tech"),
+    ("Architectural Engineering Internship", "non_tech"),
+    ("Airworthiness Engineering Intern", "non_tech"),
+    ("Loads and Dynamics Engineering Intern", "non_tech"),
+    ("Structures Engineering Intern", "non_tech"),
+    ("Vehicle Performance Engineer", "non_tech"),
+    ("Aerodynamics and Analysis Engineering Internship", "non_tech"),
+    ("Propulsion Engineer", "non_tech"),
+    ("HITL Engineering Intern", "non_tech"),
+    ("R&D Engineering Intern", "non_tech"),
+    ("Electrical Engineering Internship", "non_tech"),
+    ("Satellite Engineer", "non_tech"),
+    ("Mechanisms Engineer", "non_tech"),
+    ("Optics Engineer", "non_tech"),
+    ("Patent Engineer - Life Sciences", "non_tech"),
+    ("Quality Inspector II - NDT", "qa"),
+    ("Aerospace Algorithms Engineer Co-op", "software_engineering"),
+    ("New Graduate Engineer, GNC and Modeling and Simulation", "software_engineering"),
+    ("Platform Applications Engineer Intern - Tools and Validation Infrastructure", "software_engineering"),
+    ("Platform Software Diagnostics Intern", "software_engineering"),
+])
+def test_expanded_physical_family_audit_v9(title, family):
+    assert classify_family(title) == family
+
+
+def test_product_engineering_intern_with_semiconductor_description_is_embedded():
+    assert classify_family(
+        "Product Engineering Intern",
+        "Support semiconductor product engineering, silicon validation and hardware manufacturing."
+    ) == "embedded"
+
+
+def test_performance_engineering_intern_with_hardware_description_is_embedded():
+    assert classify_family(
+        "Performance Engineering Intern",
+        "Benchmark silicon, CXL memory subsystems and hardware workloads."
+    ) == "embedded"
+
+
+def test_aerospace_title_with_explicit_software_internship_description_stays_software():
+    assert classify_family(
+        "Summer 2027 Engineering Internship - Aerospace",
+        "Mach's Summer 2027 Engineering Internship, Software is open to future software engineers."
+    ) == "software_engineering"
+
+
+def test_combustion_company_generic_graduate_engineering_internship_is_non_tech():
+    assert classify_family(
+        "Graduate Engineering Summer Internship 2027",
+        "Support combustion systems, industrial burners and thermal oxidizer engineering."
+    ) == "non_tech"
+
+
+def test_facade_engineer_is_not_software_engineering():
+    assert classify_family("Graduate Facade Engineer") == "non_tech"
+
+
+def test_deployment_consulting_role_is_solutions_not_software_engineering():
+    assert classify_family(
+        "Associate Deployment Engineer - Graduate Program",
+        "Join our services organization for strategic implementation consulting and customer transformation."
+    ) == "solutions"
+
+
+def test_robot_installation_deployment_role_is_physical_not_software_engineering():
+    assert classify_family(
+        "Deployment Engineer",
+        "Install robotics systems at customer sites, commission mechanical and electrical equipment, and travel with the field team."
+    ) == "non_tech"
+
+
+# v10 live-pool residual false-positive regressions from the 2026-11-03 refresh.
+@pytest.mark.parametrize("title, family", [
+    ("Senior NX CAD Application Engineer", "solutions"),
+    ("Senior Prototyping Engineer (f/m/d) – Aircraft Engine", "non_tech"),
+    ("Operativer Einkäufer (m/w/d) - IT-Hardware & Software", "non_tech"),
+    ("GNC Hardware Engineering Intern (Summer 2027)", "embedded"),
+    ("Software Engineer, 5G Physical Layer", "software_engineering"),
+    ("Teamleiter Hardware & Software Entwicklung (m/w/d)", "software_engineering"),
+    ("Software Engineer in Hardware Infrastructure", "software_engineering"),
+    ("Flight Software Engineering Intern (Simulation/Hardware-In-The-Loop)", "software_engineering"),
+])
+def test_v10_live_pool_residual_family_audit(title, family):
+    assert classify_family(title) == family

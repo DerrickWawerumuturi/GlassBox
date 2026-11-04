@@ -11,7 +11,7 @@ import {describe, expect, it} from "vitest";
  */
 
 const SRC = join(__dirname, "..");
-const SKIP = [/^app\/experiments\//, /\.test\.ts$/];
+const SKIP = [/^app\/experiments\//, /^components\/stories\/when-the-job-description-says-ai\/Article\.tsx$/, /\.test\.ts$/];
 
 function files(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {

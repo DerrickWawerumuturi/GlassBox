@@ -1,6 +1,7 @@
 'use client'
 
 import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {useRouter} from "next/navigation";
 
 import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {track} from "@/lib/analytics";
@@ -35,7 +36,10 @@ export default function LookAround({initial}: {initial?: Look}) {
     const [look, setLook] = useState<Look | null>(initial ?? null);
     const [failed, setFailed] = useState(false);
     const reduce = useReducedMotion();
-    const scan = useCvScan();
+    const router = useRouter();
+    // A CV scan remains useful when weekly market data is unavailable.
+    // Route visitors to their results instead of closing the sheet and stranding them.
+    const scan = useCvScan({onDone: () => router.push("/analysis")});
 
     useEffect(() => {
         if (initial) return;

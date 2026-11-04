@@ -1,3 +1,5 @@
+The repository-wide rules in `../AGENTS.md` also apply to this directory.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

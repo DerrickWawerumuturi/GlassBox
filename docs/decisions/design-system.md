@@ -55,8 +55,8 @@ never a series colour.**
 
 ## Chart grammar (Market tab, 2026-10-02)
 
-The approved designs are `docs/brand/charts.html`. Every chart is an object on
-the desk, and every chart is the same object:
+The current grammar is recorded here. Every chart is an object on the desk,
+and every chart is the same object:
 
 - the plain card surface every other section uses (`.chart-panel.chart-panel-desk`,
   tokens `--panel-chart*`, which point at `--card`). The first build used a
@@ -107,7 +107,8 @@ The brand colours hold on paper with their own light values: a darker
 deeper so white button text reads, and a lime-ink hairline on lime pills
 (`--accent-lime-edge`), because lime is barely lighter than cream. Lime text
 turns to the lime ink. Chart panels re-scope to dark alphas; the plot well is
-`--chart-well`. Measured in `docs/changelog/2026-10-05-paper-light-mode.md`.
+`--chart-well`. Earlier chart mockups remain local references; this decision
+describes the current tokens and behavior.
 
 ## Missing for one job: soft red (2026-10-05)
 

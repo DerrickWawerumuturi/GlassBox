@@ -116,8 +116,21 @@ def run(now: datetime | None = None, force: bool = False, accept: date | None = 
         row_id = publication_repository.insert(conn, week, cand["as_of"], status, PROFILER_VERSION, cand["jobs"],
                                                checks, cand["look"] if kept else None, cand["pages"] if kept else None)
     if kept:
-        refresh_site.refresh()      # the site shows it now, not on its next visit (refresh_site.py)
+        refresh_site.refresh(expected_week=week, expected_pages=cand['pages'])  # verify actual rendered HTML
     return {"id": row_id, "status": status, "week": week, "jobs": cand["jobs"], "gates": checks}
+
+
+def refresh_latest_site() -> bool:
+    """Verify the latest already-published week on the public site without collecting or inserting a snapshot."""
+    if not is_configured():
+        print("no DATABASE_URL; cannot verify the published site")
+        return False
+    with connection() as conn:
+        latest = publication_repository.latest(conn)
+    if not latest:
+        print("no published market exists yet")
+        return False
+    return refresh_site.refresh(expected_week=latest["week"], expected_pages=latest["pages"] or {})
 
 
 def held_back(result: dict) -> str:
@@ -155,6 +168,8 @@ def main(argv: list[str]) -> int:
     if "--status" in argv:
         status()
         return 0
+    if "--refresh-site" in argv:
+        return 0 if refresh_latest_site() else 1
     accept = parse_week(argv[argv.index("--accept") + 1]) if "--accept" in argv else None
     result = run(force="--now" in argv, accept=accept)
     _print(result)

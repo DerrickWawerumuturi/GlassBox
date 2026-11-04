@@ -156,3 +156,49 @@ def test_engine_dedupes_by_storage_identity_and_filters_by_tier(monkeypatch):
     kept, ineligible = SearchEngine._filter_eligible(unique, resolved)
     assert [j.external_id for j in kept] == ["1", "4"] and ineligible == 2
     assert SearchEngine._filter_eligible(unique, loc.ResolvedLocation()) == (unique, 0)
+
+
+def test_pool_provider_uses_profiled_shared_pool_and_candidate_fields(monkeypatch):
+    from contextlib import nullcontext
+    from src.Agent.Framework.providers import PoolProvider
+
+    query = SearchQuery.from_parsed(ParsedQuery(
+        primary_role="Machine Learning Engineer",
+        secondary_roles=["Data Scientist"],
+        skills=["Python", "PyTorch"],
+        experience_level="Entry Level",
+        experience=[{"role": "Software Engineer Intern", "start_date": "Jan 2025", "end_date": "Dec 2025"}],
+        education="BSc Data Science",
+        languages=["English"],
+    ))
+    rows = [{
+        "id": 101, "provider": "greenhouse", "external_id": "job-101",
+        "title": "Applied Machine Learning Engineer", "company": "Example",
+        "description": "Python and PyTorch required. " * 40,
+        "location": "Remote", "remote": True, "remote_eligibility": "Worldwide",
+        "employment_type": "Full-time", "experience_level": "Entry Level",
+        "url": "https://example.com/jobs/101", "posted_at": None,
+        "posted_at_raw": "2 days ago",
+    }]
+    captured = {}
+    monkeypatch.setattr(providers_module, "connection", lambda: nullcontext(object()))
+    def pool(conn, params):
+        captured.update(params)
+        return rows
+    monkeypatch.setattr(providers_module.profile_repository, "pool", pool)
+
+    provider = PoolProvider()
+    assert provider.supports(REMOTE)
+    assert not provider.supports(LOCAL)
+    result = provider.fetch(query, REMOTE, outcome := {})
+
+    assert len(result) == 1
+    assert result[0].db_id == 101
+    assert result[0].external_id == "job-101"
+    assert result[0].description.startswith("Python and PyTorch")
+    assert captured["limit"] == 5000
+    assert captured["version"]
+    assert "machine_learning" in captured["families"]
+    assert "data_science" in captured["families"]
+    assert outcome["request_params"]["candidate_pool_rows"] == 1
+    assert outcome["request_params"]["eligible_rows"] == 1

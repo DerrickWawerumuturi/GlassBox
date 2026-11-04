@@ -26,6 +26,7 @@ These standards are mandatory for all Glassbox work. They apply to routine tasks
 ## Code quality and verification
 
 - Follow the existing architecture and local instructions. Reuse current components, styles, conventions and dependencies. Avoid broad changes.
+- Read any nested `AGENTS.md` files that apply to the touched area, including `frontend/AGENTS.md` for frontend changes.
 - Confirm actual callers and behavior before removing or replacing code. Keep secrets, CV text, personal data and sensitive headers out of logs, analytics, screenshots and tests.
 - Add focused regression coverage for behavior changes. Run relevant checks and report exact commands/results. Never run plain backend `pytest` if it can load `backend/.env`; use the documented safe database-free or throwaway-database command.
 - Do not run migrations, production writes, deploys, secret rotations, load tests or service configuration changes without explicit authorization.

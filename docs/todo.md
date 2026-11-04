@@ -20,12 +20,12 @@ The fit matcher leaves a top-K slot after the gates. Revisit only when there are
 
 ## Source coverage
 
-BrighterMonday is not currently part of the pool: the documented search URLs are disallowed by its robots rules and no feed was identified. Recheck only if the source offers a permitted access method.
+BrighterMonday is not currently part of the pool: the documented `?q=` and `?page=` search URLs are disallowed by its robots rules and no public feed was identified. A separate user-specific tool has fetched it; pool access remains unavailable. Recheck only if the source offers a permitted access method.
 
 ## Toggle race
 
-Two simultaneous bookmark toggles can both observe no row and race on `application_user_job_key`. This was considered theoretical at current scale; handle the unique violation as already saved if the user-visible error becomes material.
+Two simultaneous bookmark toggles can both observe no row and race on `application_user_job_key`. This was considered theoretical at current scale; if it becomes material, catch the unique violation and treat it as already saved.
 
 ## Local migration variable (unverified)
 
-The migration connection reads `DATABASE_URL_DIRECT` in `backend/src/database/session.py`. An earlier local note reported a different key name in the ignored local configuration; that file was not inspected. If local migrations fail, verify the key name without exposing its value.
+The migration connection reads `DATABASE_URL_DIRECT` in `backend/src/database/session.py`. An earlier note reported that a local `.env` used the different name `DATABASE_DIRECT_URL`; that file was not inspected. If local migrations fail, verify the key name without exposing its value.

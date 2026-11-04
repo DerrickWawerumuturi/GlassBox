@@ -26,8 +26,8 @@ const ask = {skills: [{key: "python", name: "Python"}], what: "skills backend jo
 const data = {readable: 10} as never;
 
 describe("the handoff on every CV ask", () => {
-    it("the landing's hero and closing section", () => {
-        expect(places(renderToStaticMarkup(createElement(Hero, {total: "1,000", ask, scanning: false, onFind: () => {}})))).toEqual(["hero"]);
+    it("the landing's closing section, with no hero handoff", () => {
+        expect(places(renderToStaticMarkup(createElement(Hero, {total: "1,000", ask, scanning: false, onFind: () => {}})))).toEqual([]);
         expect(places(renderToStaticMarkup(createElement(CvSection, {asks: [], data, have: null, scanning: false, onCv: () => {}})))).toEqual(["closing"]);
     });
 

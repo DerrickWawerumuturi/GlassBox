@@ -132,7 +132,7 @@ def _steps() -> dict:
 @needs_workflow
 def test_the_step_does_nothing_without_its_token(tmp_path):
     step = _steps()["Add the week to the open dataset"]
-    assert step["if"] == "steps.collect.outputs.published != ''"           # only after a publication
+    assert step["if"] == "inputs.verify_latest_site != true && steps.collect.outputs.published != ''"  # only after a non-verification publication
     called = tmp_path / "called"
     for tool in ("git", "docker"):
         fake = tmp_path / tool

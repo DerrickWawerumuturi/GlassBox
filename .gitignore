@@ -7,6 +7,9 @@ __pycache__/
 # IDE state. dataSources.xml also carries the Neon endpoint hostname.
 .idea/
 
+# Generated local frontend instructions are not shared project guidance.
+frontend/CLAUDE.md
+
 # Growth strategy and market research are private local working material.
 docs/growth/
 
@@ -59,6 +62,7 @@ docs/editorial/sprints/*
 
 # Local research, prototypes, private outreach, and review captures.
 docs/local/
+docs/glassbox-editorial-foundation/
 
 # Local Figma plugin.
 backend/GlassBox/

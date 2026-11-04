@@ -340,3 +340,15 @@ def test_wrong_internal_test_key_remains_production_traffic(client, counted, mon
                            headers={"X-Glassbox-Test-Key": "wrong-secret"})
     assert response.status_code == 200
     assert counted() == [("scans_started",), ("scans_finished",)]
+
+
+def test_credentialed_internal_cv_reuse_uses_separate_counters(client, counted, monkeypatch):
+    monkeypatch.setenv("GLASSBOX_TEST_KEY", "test-secret-for-unit-test")
+    monkeypatch.setattr(users.user_service, "latest_profile", lambda user: {"skills": ["Python"]})
+    monkeypatch.setattr(main.user_service, "fetch_location_preferences", lambda user: None)
+    response = client.post(
+        "/analyze/reuse",
+        headers={**client.signed_in, "X-Glassbox-Test-Key": "test-secret-for-unit-test"},
+    )
+    assert response.status_code == 200
+    assert counted() == [("test_scans_started", "test_cv_reused"), ("test_scans_finished",)]

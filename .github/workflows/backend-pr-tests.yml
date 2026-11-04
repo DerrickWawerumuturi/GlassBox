@@ -1,0 +1,32 @@
+name: backend PR tests
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-pr-tests.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-pr-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend test image
+        run: docker build --platform linux/amd64 -t glassbox-backend-test ./backend
+
+      # Match the deploy workflow's test command and image dependencies.
+      # No Azure login, registry push, production secrets, migrations or deploy.
+      - name: Run backend tests
+        run: |
+          docker run --rm \
+            -v "$PWD/backend/tests:/app/tests:ro" \
+            glassbox-backend-test \
+            sh -c "pip install -q pytest && DATABASE_URL='' python -m pytest -q -p no:cacheprovider tests"

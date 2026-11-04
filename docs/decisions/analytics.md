@@ -27,10 +27,10 @@ changed with `NEXT_PUBLIC_POSTHOG_HOST`.
 | Event | Properties |
 |---|---|
 | `$pageview` | the path only, e.g. `/dashboard/market` (no query string, no hash); the first of a page load also `ref_domain` and `utm_*` (see below) |
-| `scan_started` | `from`: the market page the scan started on (`entry-level-software`), else nothing |
+| `scan_started` | `from`: the market page the scan started on (`entry-level-software`), else nothing; the visit source (`ref_domain` and clean `utm_*`) when known |
 | `cv_uploaded`, `cv_reused` | none |
-| `scan_finished` | `duration_s`, `jobs` (jobs found), `from` as on `scan_started` |
-| `scan_failed` | `stage`: `upload` or `reuse`; `reason` (since 2026-10-12): `timeout`, `too_big`, `not_pdf`, `server` (a 500: the server's fault or a PDF it couldn't read, which it answers the same way), `network` (the request never reached the API), `not_kept` (a rescan with nothing kept) or `other`. A kind from `failReason` in `lib/cv-ask.ts`, never the error's text |
+| `scan_finished` | `duration_s`, `jobs` (jobs found), `from` as on `scan_started`, and the same visit source as the first pageview |
+| `scan_failed` | `stage`: `upload` or `reuse`; the same visit source as the first pageview; `reason` (since 2026-10-12): `timeout`, `too_big`, `not_pdf`, `server` (a 500: the server's fault or a PDF it couldn't read, which it answers the same way), `network` (the request never reached the API), `not_kept` (a rescan with nothing kept) or `other`. A kind from `failReason` in `lib/cv-ask.ts`, never the error's text |
 | `file_refused` | `reason`: `not_pdf` or `too_big`. A chosen file the sheet refuses before anything is sent (since 2026-10-12; before, these visitors looked like they closed the sheet). Never the file's name, type or size |
 | `view_opened` | `page` (overview, market, skills, opportunities, applications), `view` (a Market view) |
 | `ad_pasted` | `kind`: `text` or `url` (never the ad itself) |
@@ -62,7 +62,7 @@ from, and nothing more. The first pageview of a page load carries:
   The link keeps the visit's `utm_source`, so a LinkedIn visit taken to a
   laptop reads `linkedin` + `phone-handoff`.
 
-`visitSource` builds them; `scrub` checks them again before sending:
+`visitSource` builds them; the source is held in memory for the current page load and copied onto scan start, finish and failure events, so a completed scan can be attributed to the same source as its first pageview. `scrub` checks them again before sending:
 `ref_domain` must be a bare hostname and every utm value passes the same rule,
 or the property goes. PostHog's own events may carry no other properties of
 ours: `$pageview` only these six, `$pageleave` and `$identify` none.

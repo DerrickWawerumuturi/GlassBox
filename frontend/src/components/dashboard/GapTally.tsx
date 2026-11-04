@@ -7,7 +7,7 @@ import {PlotFrame} from "@/components/Market/ChartPatterns";
 import {markTip, monoWidth, TipBox, useTip, useWidth} from "@/components/dashboard/MarketParts";
 
 /*
- * The tally, chart B of docs/brand/charts.html: one row per skill the CV
+ * The tally, chart B of docs/decisions/design-system.md: one row per skill the CV
  * lacks, one mark per posting in the scan, grouped in fives like tally marks.
  * The postings that ask for the skill are drawn solid, the rest faint. Calm
  * and neutral by design: no lime, no red, one grey.

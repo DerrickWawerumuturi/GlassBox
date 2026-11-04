@@ -283,7 +283,7 @@ MARKET_DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/glassbox_site NEX
 
 - [Architecture](docs/architecture/overview.md): system overview, backend, frontend and API boundaries.
 - [Brand](docs/brand/README.md): current product identity and approved assets.
-- [Editorial](docs/editorial/README.md): visual language, standards, references and story process.
+- [Editorial](docs/editorial/README.md): visual language, standards, references and story process, including investigation source material.
 - [Decisions](docs/decisions/): durable product and engineering choices.
 - [Changelog](docs/changelog/README.md): selected milestones; current behavior remains in architecture and decisions.
 - [Todo](docs/todo.md): verified open product work.

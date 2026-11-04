@@ -114,3 +114,7 @@ repository-visible summary; local study captures remain private.
 - Product/brand decision: `docs/decisions/design-system.md`; data grammar and legacy surface: `docs/decisions/data-visualization.md`.
 - Editorial index: `docs/editorial/README.md`. Private process and review notes stay local and are not linked as repository files.
 - Brand source overview: `docs/brand/README.md`; mark rendering: `frontend/src/components/brand/`; approved mark exports: `docs/brand/assets/`.
+
+## Historical experiment: Market home (15 October 2026)
+
+An ignored prototype explored sticker-like filters, a responsive grid of story-specific square covers, and a CV ask within the story sequence. Each cover carried its story's own number and visual metaphor. This records one experiment, not a requirement to reproduce another publication's home page; see the local `docs/local/editorial-sprint/market-home/` prototype when that history is relevant.

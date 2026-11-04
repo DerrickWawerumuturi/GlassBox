@@ -6,6 +6,8 @@ This directory contains the approved brand expression and its assets. The live p
 
 Glassbox is counted clarity: we show what technology job ads say, how the count was made, and leave decisions to the reader. The phrase **“We show, you decide”** describes the product voice. Preserve the open-box mark, custom wordmark and restrained orange dot. Do not replace the approved marks or existing story artwork with a generic template.
 
+Glassbox is job-hunt intelligence: it counts what today's jobs ask for and shows people where they stand. Glassbox serves job seekers everywhere; it is not a regional job board.
+
 ## Source of truth
 
 - [`../editorial/VISUAL_LANGUAGE.md`](../editorial/VISUAL_LANGUAGE.md) — current three-layer identity, colour meanings, type roles, stories/covers, provenance, accessibility and motion.
