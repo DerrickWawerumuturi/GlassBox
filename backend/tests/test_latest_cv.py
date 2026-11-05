@@ -57,7 +57,7 @@ def world(monkeypatch):
 
     monkeypatch.setattr(main, "_agent", lambda: SimpleNamespace(parse=interpreter.parse, match=match))
 
-    async def text(data):
+    async def text(data, request=None):
         return data.decode().removeprefix(PDF)
     monkeypatch.setattr(main, "_pdf_text", text)
 

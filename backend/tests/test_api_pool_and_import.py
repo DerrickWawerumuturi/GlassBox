@@ -262,7 +262,7 @@ def test_a_scan_shows_its_jobs_in_opportunities_at_once(client, pool, monkeypatc
             JobIngestionService().persist_jobs(None, [found])            # what a scan stores
             return {"market": {}, "ranked_jobs": [], "search": {}}
 
-    async def pdf_text(data):
+    async def pdf_text(data, request=None):
         return "cv text"
 
     def titles():

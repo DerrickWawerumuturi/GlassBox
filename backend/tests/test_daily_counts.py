@@ -54,7 +54,7 @@ def counted(monkeypatch):
 @pytest.fixture
 def client(monkeypatch):
     rate_limit.scans.reset()
-    monkeypatch.setattr(main, "_pdf_text", lambda data: _text())
+    monkeypatch.setattr(main, "_pdf_text", lambda data, request=None: _text())
     monkeypatch.setattr(main, "_agent", lambda: Agent())
     monkeypatch.setattr(main, "_cv_parser", lambda: Agent())
     monkeypatch.setattr(main.opportunity_service, "forget", lambda user: None)
