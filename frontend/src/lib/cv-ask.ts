@@ -69,9 +69,7 @@ export const ASK = {
          */
         trust: (signedIn: boolean) => [
             "Your PDF is deleted after reading.",
-            "Its text goes to Groq, a US service, to read the skills.",
-            signedIn ? "We keep the skills read from your latest CV, never the file. Delete them any time."
-                : "Without an account, we keep nothing about you on our servers.",
+            ...(signedIn ? ["We keep the skills read from your latest CV, never the file. Delete them any time."] : []),
         ],
         fine: "PDF, up to 10 MB",
         fineDesk: "PDF, up to 10 MB · about a minute",

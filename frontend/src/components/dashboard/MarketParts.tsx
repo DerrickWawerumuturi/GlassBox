@@ -222,38 +222,18 @@ export function ChartPanel({title, lead, jobs, legend, children, notes, table, t
     )
 }
 
-/* ---------- overview tiles ---------- */
-
-function Tile({label, hero, small, foot, children, className}: {
-    label: string;
-    hero: React.ReactNode;
-    small?: string;
-    foot: string;
-    children?: React.ReactNode;
-    className?: string;
-}) {
-    return (
-        <div className={cn("chart-panel chart-panel-desk flex min-w-0 flex-col gap-1 px-[18px] pb-3.5 pt-4 sm:px-[22px] sm:pt-[18px]", className)}>
-            <span className={"font-mono text-[12px] font-medium uppercase tracking-[0.12em] text-panel-chart-ink-faint"}>{label}</span>
-            <div className={"flex flex-wrap items-baseline gap-2.5 font-heading text-[40px] font-bold leading-none tracking-[-0.02em]"}>
-                <span>{hero}</span>
-                {small && <small className={"font-sans text-[13px] font-medium tracking-normal text-muted-foreground"}>{small}</small>}
-            </div>
-            {children}
-            <span className={"text-[13px] text-muted-foreground"}>{foot}</span>
-        </div>
-    )
-}
-
-/** The numbers the overview leads with: coverage as a hero and a tally of the top skills, then the jobs. */
+/** Lead with the finding; keep the sample and threshold beside it. */
 export function StatTiles({market, marks}: { market: MarketAnalysis; marks: SkillMark[] }) {
     const coverage = market.skill_coverage;
     const groups: SkillMark[][] = [];
     for (let i = 0; i < marks.length; i += 5) groups.push(marks.slice(i, i + 5));
     const gaps = significantGaps(market.skill_gaps ?? []).length;
     return (
-        <div className={"grid gap-3 sm:grid-cols-[1.6fr_1fr_1fr] sm:gap-4"}>
-            <Tile label={"Coverage"} hero={coverage.covered} small={`of the ${coverage.total} skills jobs ask for most are on your CV`} foot={"One block per skill, top first. Green: on your CV."}>
+        <section aria-label={"Your scan at a glance"} className={"border-b border-border pb-6"}>
+            <p className={"mb-2 font-hand text-[22px] text-muted-foreground"}><span aria-hidden>↘ </span>Start with what’s already there</p>
+            <h2 className={"max-w-[26ch] text-balance font-heading text-[28px] leading-[1.15] font-bold tracking-tight sm:text-[38px]"}>
+                {coverage.total > 0 ? <><span className={"text-chart-have"}>{coverage.covered} of {coverage.total}</span> most-mentioned skills are on your CV.</> : "No skills to compare in this sample yet."}
+            </h2>
                 <div aria-hidden className={"my-1.5 flex flex-wrap gap-2 sm:gap-2.5"}>
                     {groups.map((group, g) => (
                         <div key={g} className={"flex gap-[3px]"}>
@@ -264,9 +244,15 @@ export function StatTiles({market, marks}: { market: MarketAnalysis; marks: Skil
                         </div>
                     ))}
                 </div>
-            </Tile>
-            <Tile label={"Jobs"} hero={market.jobs_analyzed.toLocaleString()} foot={"jobs read in this scan"} />
-            <Tile label={"Gaps"} hero={gaps} foot={"skills not on your CV, each in 1 in 5 jobs or more"} />
-        </div>
+            <p className={"mt-2 max-w-[65ch] text-[14px] leading-relaxed text-muted-foreground"}>One block per skill, most requested first. Green is on your CV; hatching means it wasn’t listed. Coverage counts skills, not how many jobs you qualify for.</p>
+            <dl className={"mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2"}>
+                <div><dt className={"font-mono text-[12px] uppercase tracking-wider text-muted-foreground"}>The sample</dt>
+                    <dd className={"mt-1 text-[16px]"}><b>{market.jobs_analyzed.toLocaleString()} jobs</b> read in this scan</dd>
+                    <dd className={"mt-1 text-[13px] text-muted-foreground"}>Chart percentages use this sample, not the whole job market.</dd></div>
+                <div><dt className={"font-mono text-[12px] uppercase tracking-wider text-muted-foreground"}>High-frequency gaps</dt>
+                    <dd className={"mt-1 text-[16px]"}><b>{gaps} skills</b> absent from your CV, each named by at least 20% of these jobs</dd>
+                    <dd className={"mt-1 text-[13px] text-muted-foreground"}>{gaps === 0 ? "Zero here doesn’t mean zero possible gaps. Less common skills and other jobs can ask for something different." : "Not listed on a CV doesn’t necessarily mean you don’t have the skill."}</dd></div>
+            </dl>
+        </section>
     )
 }

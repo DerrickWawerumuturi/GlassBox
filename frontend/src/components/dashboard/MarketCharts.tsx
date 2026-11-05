@@ -114,8 +114,17 @@ function Overview({market, jobs, top, mine, gaps, show}: Views) {
     return (
         <>
             <StatTiles market={market} marks={top} />
+            <details className={"rounded-lg border border-border px-4 py-3 text-[14px] leading-relaxed"}>
+                <summary className={"w-fit cursor-pointer font-medium focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"}>How to read your scan</summary>
+                <div className={"mt-3 grid gap-3 text-muted-foreground sm:grid-cols-3"}>
+                    <p><span aria-hidden className={"font-hand text-[22px]"}>↘ </span><b className={"text-foreground"}>Demand</b> shows how often a skill appears. A longer bar means more of these {jobs.toLocaleString()} jobs mention it, whether required, preferred or elsewhere in the ad.</p>
+                    <p><b className={"text-foreground"}>Your skills</b> are green. Hatching marks a skill absent from your CV. These are skill matches, not an assessment of every requirement for a job.</p>
+                    <p><b className={"text-foreground"}>Gaps</b> focuses on skills named by at least 1 in 5 jobs. Each small square in that chart represents one job. Less common gaps can still exist.</p>
+                </div>
+            </details>
             <div className={"grid gap-4 lg:grid-cols-2 sm:gap-6"}>
-                <ChartPanel title={"What companies ask for"} lead={`${yoursOf(top.slice(0, 6))} of the top 6 skills are yours`} jobs={jobs}
+                <ChartPanel title={"What companies ask for"} lead={`${yoursOf(top.slice(0, 6))} of the top ${Math.min(6, top.length)} skills are on your CV`} jobs={jobs}
+                            legend={[["have", "On your CV"], ["hatch", "Not listed"]]}
                             preview={<ViewLink onClick={() => show("demand")}>Demand</ViewLink>}>
                     <DemandBars marks={top} jobs={jobs} limit={6} />
                 </ChartPanel>
@@ -124,10 +133,10 @@ function Overview({market, jobs, top, mine, gaps, show}: Views) {
                     {mine.length ? <DemandBars marks={mine} jobs={jobs} limit={6} />
                         : <Quiet>None of your CV&apos;s skills appear in these jobs.</Quiet>}
                 </ChartPanel>
-                <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} skills not on your CV. One mark per job.`} jobs={jobs} className={"lg:col-span-2"}
+                <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} high-frequency gaps · each named by at least 20% of jobs. One mark per job.`} jobs={jobs} className={"lg:col-span-2"}
                             preview={<ViewLink onClick={() => show("gaps")}>Gaps</ViewLink>}>
                     {gaps.length ? <GapTally marks={gaps} jobs={jobs} limit={4} />
-                        : <Quiet>Your CV has every skill that 1 in 5 jobs or more ask for.</Quiet>}
+                        : <Quiet>No gaps at the 1-in-5 threshold. Less commonly requested skills may still be absent from your CV.</Quiet>}
                 </ChartPanel>
             </div>
         </>
@@ -139,7 +148,7 @@ function Demand({jobs, top, mine}: Views) {
     return (
         <ChartPanel title={"What companies ask for"} lead={`${yoursOf(top.slice(0, shown))} of the top ${shown} skills are yours`} jobs={jobs}
                     legend={[["have", "Yours"], ["hatch", "Not yet"]]}
-                    notes={["Green is on your CV. Hatched isn't yet.", "Longer bar, more jobs ask. 26/58 means 26 of 58 jobs."]}
+                    notes={["Green is on your CV. Hatching means it wasn’t listed; it doesn’t prove you lack it.", `Bars use a 0–100% scale. Each count is out of the ${jobs.toLocaleString()} jobs in this scan, not the whole market.`]}
                     table={{marks: top}}>
             <DemandBars marks={top} jobs={jobs} />
         </ChartPanel>
@@ -150,7 +159,7 @@ function Yours({jobs, mine}: Views) {
     return (
         <ChartPanel title={"Your skills in demand"} lead={`${mine.length} CV skills that jobs ask for, top first`} jobs={jobs}
                     legend={[["have", "Yours"]]}
-                    notes={["Every skill here is on your CV.", "Longer bar, more jobs ask. 26/58 means 26 of 58 jobs."]}
+                    notes={["Every skill here is on your CV.", `The 0–100% scale shows how often each skill appears in these ${jobs.toLocaleString()} jobs.`]}
                     table={{marks: mine}}>
             {mine.length === 0
                 ? <Quiet>None of the skills on your CV appear in these jobs. The search probably reached a different corner of the market.</Quiet>
@@ -162,12 +171,12 @@ function Yours({jobs, mine}: Views) {
 function Gaps({jobs, gaps}: Views) {
     const floor = toPercent(GAP_FREQUENCY_THRESHOLD);
     return (
-        <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} skills not on your CV. One mark per job.`} jobs={jobs}
+        <ChartPanel title={"Not on your CV yet"} lead={`${gaps.length} high-frequency gaps. One mark per job.`} jobs={jobs}
                     legend={[["solid", "Asks for it"], ["faint", "Doesn't"]]}
                     notes={["Each mark is one job. Solid marks are jobs that ask for the skill.", `Grouped in fives. Only skills that ${floor}% of jobs or more ask for.`]}
                     table={{marks: gaps}}>
             {gaps.length === 0
-                ? <Quiet>Your CV has every skill that {floor}% or more of these jobs ask for.</Quiet>
+                ? <Quiet>No gaps at the {floor}% threshold. Less commonly requested skills may still be absent from your CV; this isn’t a complete assessment of every job requirement.</Quiet>
                 : <GapTally marks={gaps} jobs={jobs} />}
         </ChartPanel>
     )

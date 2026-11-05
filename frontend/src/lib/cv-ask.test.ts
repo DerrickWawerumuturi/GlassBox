@@ -198,11 +198,11 @@ describe("the sheet's words", () => {
         expect(ASK.lead(ask())).toBe("Curious how many of the 15 skills these jobs ask for most are already on your CV?");
     });
 
-    it("says nothing is kept to someone without an account", () => {
+    it("keeps anonymous upload privacy brief and links to the full disclosure", () => {
         const lines = ASK.sheet.trust(false).join(" ");
         expect(lines).toContain("Your PDF is deleted after reading.");
-        expect(lines).toContain("Groq, a US service");
-        expect(lines).toContain("Without an account, we keep nothing about you on our servers.");
+        expect(ASK.sheet.what.href).toBe("/your-cv");
+        expect(ASK.sheet.trust(false)).toEqual(["Your PDF is deleted after reading."]);
         expect(lines).not.toMatch(/we keep the skills/i);
     });
 

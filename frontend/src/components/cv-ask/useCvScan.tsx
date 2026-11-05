@@ -1,7 +1,7 @@
 'use client'
 
-import React, {useCallback, useReducer, useRef, useState} from "react";
-import {useRouter} from "next/navigation";
+import React, {useCallback, useEffect, useReducer, useRef, useState, useTransition} from "react";
+import {usePathname, useRouter} from "next/navigation";
 
 import CvSheet from "@/components/cv-ask/CvSheet";
 import Analyze, {AnalyzeReuse, ProcessCv, createScanRequestId, wakeApi} from "@/lib/api";
@@ -21,6 +21,10 @@ import {reuseError, useLatestCV} from "@/lib/latest-cv";
  */
 export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSource} = {}) {
     const router = useRouter();
+    const pathname = usePathname();
+    const [pending, startTransition] = useTransition();
+    const [handoff, setHandoff] = useState<"idle" | "opening" | "error">("idle");
+    const navigating = useRef(false);
     const {status, setStatus, save} = useAnalysis();
     const {saveCv} = useCv();
     const [open, setOpen] = useState(false);
@@ -29,6 +33,33 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
     const [ask, setAsk] = useState<Ask | null>(null);
     const [state, dispatch] = useReducer(scanStep, IDLE);
     const lastFile = useRef<File | null>(null);
+
+    useEffect(() => {
+        if (handoff !== "opening") return;
+        if (pathname === "/analysis") {
+            setOpen(false);
+            navigating.current = false;
+            setHandoff("idle");
+        } else if (!pending) {
+            // The transition settled without reaching the destination; keep the result recoverable.
+            navigating.current = false;
+            setHandoff("error");
+        }
+    }, [handoff, pathname, pending]);
+
+    const see = () => {
+        if (navigating.current) return;
+        if (pathname === "/analysis") { setOpen(false); return; }
+        navigating.current = true;
+        setHandoff("opening");
+        startTransition(() => {
+            try { router.push("/analysis"); }
+            catch {
+                navigating.current = false;
+                setHandoff("error");
+            }
+        });
+    };
 
     const finish = useCallback((withAsk: boolean) => {
         // Without a question to answer here, the results are on /analysis.
@@ -69,6 +100,8 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
     };
 
     const show = (next: Ask | null = null) => {
+        if (navigating.current) { setOpen(true); return; }
+        setHandoff("idle");
         // Choosing a file takes a few seconds: time a sleeping API can use to wake.
         wakeApi();
         // A finished or failed scan starts over; one still reading stays on its steps.
@@ -79,7 +112,7 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
     const sheet = (
         <CvSheet open={open} onOpenChange={setOpen} ask={ask} state={state} latest={latest} signedIn={signedIn}
                  onFile={upload} onRetry={() => { if (lastFile.current) upload(lastFile.current); }}
-                 onReuse={() => void reuse()} onSee={() => { setOpen(false); if (ask) router.push("/analysis"); }} />
+                 onReuse={() => void reuse()} onSee={see} opening={handoff === "opening"} navigationError={handoff === "error"} />
     );
     return {open: show, isOpen: open, scanning: status === "analyzing", sheet};
 }
