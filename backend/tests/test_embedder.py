@@ -8,6 +8,8 @@ analysis stack's start: about 7 s on a laptop, under 1 s without it.
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -102,10 +104,112 @@ def test_batched_vectors_cosines_and_filter_agree_with_single_batch(monkeypatch)
     np.testing.assert_allclose(actual, expected, atol=1e-5, rtol=1e-4)
     np.testing.assert_allclose(np.linalg.norm(actual, axis=1), 1, atol=1e-6)
     scores = expected[1:] @ expected[0]
-    reader = embedder.SentenceEmbedder.__new__(embedder.SentenceEmbedder)
-    reader.model = model
+    reader = embedder.SentenceEmbedder(model=model)
     jobs = [SimpleNamespace(title=t) for t in titles]
     assert reader.role_relevance(query, jobs) == pytest.approx(scores.tolist(), abs=1e-5)
     kept, dropped = reader.filter_by_role(query, jobs)
     assert kept == [job for job, score in zip(jobs, scores) if score >= max(scores) * embedder.RELEVANCE_ALPHA]
     assert [job for job, _ in dropped] == [job for job in jobs if job not in kept]
+
+
+class RecordingModel:
+    def __init__(self):
+        self.calls = []
+
+    @staticmethod
+    def vectors(texts):
+        values = np.array([[len(t) + 1, sum(map(ord, t)) % 97 + 1, 7] for t in texts], dtype=np.float32)
+        return values / np.linalg.norm(values, axis=1, keepdims=True)
+
+    def encode(self, texts):
+        self.calls.append(list(texts))
+        return self.vectors(texts)
+
+
+def test_title_reuse_preserves_duplicates_order_and_does_not_cache_cv_profiles():
+    model = RecordingModel()
+    reader = embedder.SentenceEmbedder(model=model)
+    jobs = [SimpleNamespace(title=t) for t in ["Backend Engineer", "Platform Engineer", "Backend Engineer"]]
+    queries = [ParsedQuery(primary_role="Software Engineer", skills=[skill]) for skill in ["Python", "Go"]]
+    for query in queries:
+        vectors = model.vectors([embedder.profile_text(query), *[j.title for j in jobs]])
+        assert reader.role_relevance(query, jobs) == pytest.approx((vectors[1:] @ vectors[0]).tolist(), abs=1e-6)
+    assert model.calls == [[embedder.profile_text(queries[0])], ["Backend Engineer", "Platform Engineer"],
+                           [embedder.profile_text(queries[1])]]
+    assert set(reader._titles) == {j.title for j in jobs}
+    assert all(vector.base is None for vector in reader._titles.values())
+
+
+def test_title_cache_eviction_and_long_titles_never_drop_jobs(monkeypatch):
+    monkeypatch.setattr(embedder, "TITLE_CACHE_SIZE", 2)
+    model = RecordingModel()
+    reader = embedder.SentenceEmbedder(model=model)
+    long = "x" * (embedder.MAX_CACHED_TITLE_CHARS + 1)
+    titles = ["A", "B", "C", long, "A"]
+    query = ParsedQuery(primary_role="Software Engineer")
+    jobs = [SimpleNamespace(title=t) for t in titles]
+    for _ in range(2):
+        vectors = model.vectors([embedder.profile_text(query), *titles])
+        assert reader.role_relevance(query, jobs) == pytest.approx((vectors[1:] @ vectors[0]).tolist(), abs=1e-6)
+        assert len(reader._titles) <= 2
+        assert long not in reader._titles
+    # Long titles are still encoded on both requests, rather than retained without a size bound.
+    assert sum(long in batch for batch in model.calls) == 2
+
+
+def test_title_cache_failure_returns_no_partial_scores_and_can_recover():
+    model = RecordingModel()
+    original = model.encode
+    broken = True
+
+    def encode(texts):
+        if broken and texts == ["Backend Engineer"]:
+            raise RuntimeError("synthetic inference failure")
+        return original(texts)
+
+    model.encode = encode
+    reader = embedder.SentenceEmbedder(model=model)
+    query = ParsedQuery(primary_role="Software Engineer")
+    jobs = [SimpleNamespace(title="Backend Engineer")]
+    with pytest.raises(RuntimeError, match="synthetic inference failure"):
+        reader.role_relevance(query, jobs)
+    assert not reader._titles
+    broken = False
+    assert len(reader.role_relevance(query, jobs)) == 1
+
+
+def test_concurrent_profiles_share_only_job_title_vectors():
+    model = RecordingModel()
+    reader = embedder.SentenceEmbedder(model=model)
+    barrier = Barrier(2)
+    jobs = [SimpleNamespace(title="Backend Engineer")]
+    queries = [ParsedQuery(primary_role="Software Engineer", skills=[s]) for s in ["Python", "Go"]]
+
+    def run(query):
+        barrier.wait(timeout=3)
+        return reader.role_relevance(query, jobs)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        scores = list(pool.map(run, queries))
+    for query, actual in zip(queries, scores):
+        vectors = model.vectors([embedder.profile_text(query), jobs[0].title])
+        assert actual == pytest.approx([float(vectors[1] @ vectors[0])], abs=1e-6)
+    assert model.calls.count(["Backend Engineer"]) == 1
+    assert set(reader._titles) == {"Backend Engineer"}
+
+
+def test_pool_larger_than_cache_still_scores_every_job_with_bounded_batches():
+    recorded = RecordingModel()
+    model = embedder.MiniLM.__new__(embedder.MiniLM)
+    model._encode_batch = recorded.encode
+    reader = embedder.SentenceEmbedder(model=model)
+    query = ParsedQuery(primary_role="Software Engineer")
+    jobs = [SimpleNamespace(title=f"Backend Engineer {i}") for i in range(5003)]
+    for ordered in (jobs, list(reversed(jobs))):
+        vectors = recorded.vectors([embedder.profile_text(query), *[j.title for j in ordered]])
+        actual = reader.role_relevance(query, ordered)
+        assert len(actual) == len(ordered)
+        assert actual == pytest.approx((vectors[1:] @ vectors[0]).tolist(), abs=1e-6)
+        assert len(reader._titles) == embedder.TITLE_CACHE_SIZE
+        assert all(v.base is None for v in reader._titles.values())
+    assert max(map(len, recorded.calls)) <= embedder.EMBEDDING_BATCH_SIZE

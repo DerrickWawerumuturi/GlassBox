@@ -12,6 +12,8 @@ was most of a 1 GB image that every scale-from-zero pulls (decisions/deployment.
 GitHub issue #4); the vectors agree to about 1e-6.
 """
 import os
+from collections import OrderedDict
+from threading import Lock
 
 import numpy as np
 
@@ -26,6 +28,9 @@ MODEL_FILES = ("onnx/model.onnx", "tokenizer.json")
 MAX_TOKENS = 256
 # Bound ONNX token/attention tensors without dropping any retrieved jobs.
 EMBEDDING_BATCH_SIZE = 32
+# Public job titles only. Float32 vectors use at most 6 MiB, plus bounded keys.
+TITLE_CACHE_SIZE = 4096
+MAX_CACHED_TITLE_CHARS = 512
 
 # Fraction of the best-matching title's score a posting must reach to be counted
 # as part of this user's market. Relative rather than absolute because the
@@ -92,8 +97,10 @@ class MiniLM:
 
 
 class SentenceEmbedder:
-    def __init__(self):
-        self.model = MiniLM()
+    def __init__(self, model=None):
+        self.model = model if model is not None else MiniLM()
+        self._titles: OrderedDict[str, np.ndarray] = OrderedDict()
+        self._title_lock = Lock()
 
     def role_relevance(self, query: ParsedQuery, jobs: list) -> list:
         """Cosine of the user's profile against each job title."""
@@ -102,11 +109,32 @@ class SentenceEmbedder:
             return [1.0] * len(jobs)
 
         titles = [getattr(job, "title", "") or "" for job in jobs]
-        inputs = [profile, *titles]
-        with stage("embedding", input_count=len(inputs), batch_size=EMBEDDING_BATCH_SIZE,
-                   batch_count=(len(inputs) + EMBEDDING_BATCH_SIZE - 1) // EMBEDDING_BATCH_SIZE):
-            vectors = self.model.encode(inputs)  # unit length, so the dot product is the cosine
-        return (vectors[1:] @ vectors[0]).tolist()
+        # The app serializes scans; also protect the cache/tokenizer for direct callers.
+        with self._title_lock:
+            unique = list(dict.fromkeys(titles))
+            found = {}
+            for title in unique:
+                if title in self._titles:
+                    found[title] = self._titles[title]
+                    self._titles.move_to_end(title)
+            missing = [title for title in unique if title not in found]
+            with stage("embedding", input_count=len(titles) + 1, unique_titles=len(unique),
+                       cache_hits=len(found), cache_misses=len(missing), batch_size=EMBEDDING_BATCH_SIZE,
+                       batch_count=1 + (len(missing) + EMBEDDING_BATCH_SIZE - 1) // EMBEDDING_BATCH_SIZE):
+                # Never cache a CV-derived profile or mix it into the title cache.
+                profile_vector = self.model.encode([profile])[0]
+                if missing:
+                    fresh = self.model.encode(missing)  # MiniLM still bounds every ONNX call to 32.
+                    for title, vector in zip(missing, fresh):
+                        found[title] = vector
+                        if len(title) <= MAX_CACHED_TITLE_CHARS:
+                            # A row view would retain the entire inference result after eviction.
+                            self._titles[title] = vector.copy()
+                            if len(self._titles) > TITLE_CACHE_SIZE:
+                                self._titles.popitem(last=False)
+                # Use request-local references, including titles evicted during this request.
+                vectors = np.stack([found[title] for title in titles])
+                return (vectors @ profile_vector).tolist()  # unit vectors: dot product is cosine
 
     def filter_by_role(
         self,

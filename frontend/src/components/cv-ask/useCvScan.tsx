@@ -110,7 +110,7 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
     };
 
     const sheet = (
-        <CvSheet open={open} onOpenChange={setOpen} ask={ask} state={state} latest={latest} signedIn={signedIn}
+        <CvSheet open={open} onOpenChange={(next) => { if (!navigating.current) setOpen(next); }} ask={ask} state={state} latest={latest} signedIn={signedIn}
                  onFile={upload} onRetry={() => { if (lastFile.current) upload(lastFile.current); }}
                  onReuse={() => void reuse()} onSee={see} opening={handoff === "opening"} navigationError={handoff === "error"} />
     );

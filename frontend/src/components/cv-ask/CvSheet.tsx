@@ -90,11 +90,11 @@ function Result({ask, signedIn, onSee, opening, navigationError}: {ask: Ask; sig
             <D.Description className={"mx-auto mt-1.5 mb-4 max-w-[34ch] text-[16px] leading-[1.5] text-foreground/85"}>{S.resultLine(ask)}</D.Description>
             <Button className={"peek peek-button w-full"} onClick={onSee} disabled={opening} aria-busy={opening} autoFocus>
                 <span className={opening ? "animate-pulse motion-reduce:animate-none" : ""}><PeekGlyph /></span>
-                {opening ? "Opening your scan…" : S.seeThem}
+                {opening ? "Opening your report…" : S.seeThem}
             </Button>
             {opening && <p role={"status"} className={"mt-3 text-[14px] text-muted-foreground"}>Your comparison is ready. Taking you to the charts.</p>}
             {navigationError && <p role={"alert"} className={"mt-3 text-[14px] text-muted-foreground"}>The page didn’t open. Try again, or <a href={"/analysis"} className={"underline underline-offset-4"}>open your saved scan directly</a>.</p>}
-            {!signedIn && (
+            {!signedIn && !opening && (
                 <p className={"mt-3 mb-0 text-[14px] text-muted-foreground"}>
                     <Link href={"/sign-in"} className={"text-foreground underline underline-offset-[3px]"}>{S.keep}</Link>{S.keepLine}
                 </p>
@@ -118,14 +118,15 @@ export default function CvSheet({open, onOpenChange, ask, state, latest, signedI
     return (
         <D.Root open={open} onOpenChange={onOpenChange}>
             <D.Portal>
-                <D.Backdrop className={"fixed inset-0 z-50 bg-black/30 backdrop-blur-[3px] duration-200 dark:bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none! motion-reduce:duration-0!"} />
+                <D.Backdrop className={cn("fixed inset-0 z-50 bg-black/30 backdrop-blur-[3px] duration-200 dark:bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none! motion-reduce:duration-0!",
+                    opening && "bg-background! backdrop-blur-none")} />
                 <D.Popup className={cn(
                     "fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] overflow-y-auto rounded-t-[22px] bg-card px-[18px] pt-2.5 pb-[calc(22px+env(safe-area-inset-bottom))] text-foreground shadow-[0_-10px_30px_rgba(0,0,0,.18)] outline-none duration-200",
                     "max-sm:data-open:animate-in max-sm:data-open:slide-in-from-bottom max-sm:data-closed:animate-out max-sm:data-closed:slide-out-to-bottom",
                     "sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[520px] sm:max-w-[calc(100%-32px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[18px] sm:border sm:border-border sm:p-6 sm:shadow-[0_30px_60px_rgba(0,0,0,.2)]",
                     "sm:data-open:animate-in sm:data-open:fade-in-0 sm:data-open:zoom-in-95 sm:data-closed:animate-out sm:data-closed:fade-out-0 motion-reduce:animate-none! motion-reduce:duration-0!")}>
                     <div aria-hidden className={"mx-auto mb-3.5 h-1 w-10 rounded-full bg-border sm:hidden"} />
-                    <D.Close render={<Button variant={"outline"} size={"icon-sm"} className={"absolute top-4 right-4 rounded-full"} />}>
+                    <D.Close disabled={opening} render={<Button variant={"outline"} size={"icon-sm"} className={"absolute top-4 right-4 rounded-full"} />}>
                         <XIcon className={"text-muted-foreground"} /><span className={"sr-only"}>Close</span>
                     </D.Close>
                     {state.phase === "reading" ? <Reading state={state} ask={ask} />

@@ -47,6 +47,26 @@ beforeEach(() => {
 });
 
 describe("full-scan navigation", () => {
+    it("keeps the overlay open throughout an 800ms navigation and ignores dismissal", async () => {
+        vi.useFakeTimers();
+        try {
+            render().open();
+            render().sheet.props.onSee();
+            for (let i = 0; i < 8; i++) {
+                await vi.advanceTimersByTimeAsync(100);
+                const scan = render();
+                expect(scan.sheet.props.opening).toBe(true);
+                scan.sheet.props.onOpenChange(false);
+                expect(render().isOpen).toBe(true);
+            }
+            h.pending = false;
+            h.pathname = "/analysis";
+            render();
+            expect(render().isOpen).toBe(false);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
     it("keeps the modal open, prevents duplicate pushes and closes only on arrival", () => {
         render().open();
         const scan = render();

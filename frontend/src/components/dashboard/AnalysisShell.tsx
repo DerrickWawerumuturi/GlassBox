@@ -8,6 +8,7 @@ import {ExampleAnalysisProvider, useAnalysis} from "@/lib/analysis-store";
 import {JobRadarAnalysis} from "@/types/jobradar";
 import {Button} from "@/components/ui/button";
 import Sidebar from "@/components/dashboard/Sidebar";
+import AnalysisLoading from "@/components/dashboard/AnalysisLoading";
 import {useCvScan} from "@/components/cv-ask/useCvScan";
 import {ApplicationsProvider} from "@/lib/applications-store";
 import {OpportunitiesProvider} from "@/lib/opportunities-store";
@@ -29,7 +30,7 @@ export default function AnalysisShell({children}: {children: React.ReactNode}) {
         if (needExample && !example) import("@/lib/example-scan.json").then((m) => setExample(m.default as unknown as JobRadarAnalysis));
     }, [needExample, example]);
 
-    if (!hydrated || (needExample && !example)) return null;
+    if (!hydrated || (needExample && !example)) return <AnalysisLoading />;
 
     const shell = (
         <ApplicationsProvider>

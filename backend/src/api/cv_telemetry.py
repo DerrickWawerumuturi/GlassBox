@@ -14,7 +14,8 @@ if not logger.hasHandlers():
     logger.addHandler(logging.StreamHandler())
 
 scan_context = ContextVar("scan_context", default=None)
-COUNTS = frozenset({"job_count", "input_count", "batch_count", "batch_size", "batch_index"})
+COUNTS = frozenset({"job_count", "input_count", "batch_count", "batch_size", "batch_index",
+                    "unique_titles", "cache_hits", "cache_misses"})
 
 
 def memory_metrics() -> dict:
