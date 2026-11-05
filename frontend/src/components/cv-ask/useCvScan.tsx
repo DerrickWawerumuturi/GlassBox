@@ -1,10 +1,10 @@
 'use client'
 
-import React, {useCallback, useReducer, useState} from "react";
+import React, {useCallback, useReducer, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 
 import CvSheet from "@/components/cv-ask/CvSheet";
-import Analyze, {AnalyzeReuse, ProcessCv, wakeApi} from "@/lib/api";
+import Analyze, {AnalyzeReuse, ProcessCv, createScanRequestId, wakeApi} from "@/lib/api";
 import {scanEvents, track, type ScanSource} from "@/lib/analytics";
 import {useAnalysis} from "@/lib/analysis-store";
 import {Ask, failReason, IDLE, runUpload, scanStep} from "@/lib/cv-ask";
@@ -28,6 +28,7 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
     const {latest, signedIn, forget} = useLatestCV(open);
     const [ask, setAsk] = useState<Ask | null>(null);
     const [state, dispatch] = useReducer(scanStep, IDLE);
+    const lastFile = useRef<File | null>(null);
 
     const finish = useCallback((withAsk: boolean) => {
         // Without a question to answer here, the results are on /analysis.
@@ -35,6 +36,7 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
     }, [onDone]);
 
     const upload = (file: File) => {
+        lastFile.current = file;
         let events: ReturnType<typeof scanEvents> | null = null;
         void runUpload(file, {
             analyze: Analyze, parse: ProcessCv, dispatch,
@@ -52,7 +54,7 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
         setStatus("analyzing");
         const events = scanEvents("reuse", from);
         try {
-            const result = await AnalyzeReuse();
+            const result = await AnalyzeReuse(createScanRequestId());
             save(result, latest?.file_name ?? "Your last CV");
             events.finished(result.market?.jobs_analyzed ?? 0);
             dispatch({type: "done"});
@@ -76,7 +78,8 @@ export function useCvScan({onDone, from}: {onDone?: () => void; from?: ScanSourc
 
     const sheet = (
         <CvSheet open={open} onOpenChange={setOpen} ask={ask} state={state} latest={latest} signedIn={signedIn}
-                 onFile={upload} onReuse={() => void reuse()} onSee={() => { setOpen(false); if (ask) router.push("/analysis"); }} />
+                 onFile={upload} onRetry={() => { if (lastFile.current) upload(lastFile.current); }}
+                 onReuse={() => void reuse()} onSee={() => { setOpen(false); if (ask) router.push("/analysis"); }} />
     );
     return {open: show, isOpen: open, scanning: status === "analyzing", sheet};
 }

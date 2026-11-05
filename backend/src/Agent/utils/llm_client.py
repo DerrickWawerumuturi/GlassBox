@@ -73,8 +73,6 @@ class GroqModel:
             res = self._complete(user_prompt, REASONING_EFFORT, MAX_COMPLETION_TOKENS)
         except Exception as err:
             if not _should_downgrade(err):
-                print(f"LLM error ({self.kind}): {err}")
                 raise
-            print(f"LLM retrying at {FALLBACK_REASONING_EFFORT} reasoning effort: {err}")
             res = self._complete(user_prompt, FALLBACK_REASONING_EFFORT, FALLBACK_MAX_COMPLETION_TOKENS)
         return res.choices[0].message.content

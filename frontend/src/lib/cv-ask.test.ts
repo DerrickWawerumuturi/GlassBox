@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 
-import {ApiError} from "@/lib/api";
+import {ApiError, ApiTransportError} from "@/lib/api";
 import {Ask, ASK, askCount, checkFile, failReason, familyAskSkills, fileProblem, IDLE, MAX_BYTES, marketAskSkills, marketWhat, readingSteps, runUpload, scanError, ScanEvent, scanStep, ScanState, STORY_WHAT, waitClock, WAIT_LINE_SECONDS} from "@/lib/cv-ask";
 import {haveSet, Look} from "@/lib/landing/look";
 import fixture from "@/lib/landing/look.fixture.json";
@@ -113,16 +113,21 @@ describe("a chosen file", () => {
     });
 
     it("a failed scan is said in plain words", () => {
-        expect(scanError(new ApiError("pdf_inspector exploded", 500))).toBe("We couldn't read this PDF. Try exporting it again.");
+        expect(scanError(new ApiError("internal detail", 500, "a".repeat(32)))).toContain("scan service couldn't finish");
+        expect(scanError(new ApiError("internal detail", 500, "a".repeat(32)))).toContain("Reference: " + "a".repeat(32));
         expect(scanError(new ApiError("too big", 413))).toMatch(/over 10 MB/);
         expect(scanError(new ApiError("That isn't a PDF.", 415))).toBe(ASK.errors.notPdf);   // the server's own check
-        expect(scanError(new Error("Analysis timed out. The API may be starting up, try again."))).toBe("That took too long. Try again in a minute.");
+        expect(scanError(new ApiError("unreadable", 422))).toMatch(/scanned.*OCR/i);
+        expect(scanError(new ApiError("rate", 429))).toMatch(/Wait a little/i);
+        expect(scanError(new ApiError("gateway timeout", 504))).toMatch(/too long/i);
+        expect(scanError(new ApiTransportError("timed out", "timeout"))).toMatch(/too long/i);
+        expect(scanError(new ApiTransportError("offline", "network"))).toMatch(/couldn't reach/i);
     });
 });
 
 describe("one upload scan, with a mocked API", () => {
     const pdf = new File(["%PDF-1.4"], "cv.pdf", {type: "application/pdf"});
-    const deps = (analyze: () => Promise<unknown>, parse: () => Promise<unknown>) => {
+    const deps = (analyze: (file: File, requestId: string) => Promise<unknown>, parse: (file: File, requestId: string) => Promise<unknown>) => {
         const events: ScanEvent[] = [];
         const d = {analyze, parse, dispatch: (e: ScanEvent) => events.push(e),
             onStart: vi.fn(), onParsed: vi.fn(), onResult: vi.fn(), onFailed: vi.fn(), onRefused: vi.fn()};
@@ -139,11 +144,19 @@ describe("one upload scan, with a mocked API", () => {
         expect(events.reduce(scanStep, IDLE)).toMatchObject({phase: "result"});
     });
 
+    it("correlates the parallel analysis and skills parse requests", async () => {
+        let analyzeId = "", parseId = "";
+        const {d} = deps((_file, id) => { analyzeId = id; return Promise.resolve({market: {}}); }, (_file, id) => { parseId = id; return Promise.resolve({skills: []}); });
+        await runUpload(pdf, d);
+        expect(analyzeId).toMatch(/^[0-9a-f]{32}$/);
+        expect(parseId).toBe(analyzeId);
+    });
+
     it("a failed comparison ends in plain words", async () => {
         const {d, events} = deps(() => Promise.reject(new ApiError("boom", 500)), () => new Promise(() => {}));
         await runUpload(pdf, d);
-        expect(events.reduce(scanStep, IDLE)).toMatchObject({phase: "error", error: "We couldn't read this PDF. Try exporting it again."});
-        expect(d.onFailed).toHaveBeenCalledWith("We couldn't read this PDF. Try exporting it again.", "server");
+        expect(events.reduce(scanStep, IDLE)).toMatchObject({phase: "error", error: ASK.errors.processing});
+        expect(d.onFailed).toHaveBeenCalledWith(ASK.errors.processing, "server");
         expect(d.onResult).not.toHaveBeenCalled();
     });
 

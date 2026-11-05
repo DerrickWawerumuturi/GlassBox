@@ -1,5 +1,5 @@
 import type {FailReason, REFUSALS} from "@/lib/analytics";
-import {ApiError} from "@/lib/api";
+import {ApiError, ApiTransportError} from "@/lib/api";
 import {type LookFamily, normSkill} from "@/lib/landing/look";
 import type {MarketBody} from "@/lib/market-pages";
 
@@ -94,8 +94,11 @@ export const ASK = {
     errors: {
         notPdf: "That file isn't a PDF. Choose the PDF of your CV.",
         tooBig: "That PDF is over 10 MB. Try a smaller export.",
-        unreadable: "We couldn't read this PDF. Try exporting it again.",
-        slow: "That took too long. Try again in a minute.",
+        unreadable: "We couldn't extract readable text from this PDF. If it's scanned, use OCR or export a searchable PDF, then try again.",
+        processing: "The scan service couldn't finish reading this file. Try again, or choose another PDF.",
+        slow: "The scan took too long to respond. Check your connection and try again.",
+        unavailable: "We couldn't reach the scan service. Check your connection and try again.",
+        rateLimited: "Too many scans were started. Wait a little, then try again.",
     },
 } as const;
 
@@ -136,20 +139,20 @@ export function askCount(skills: AskSkill[], have: Set<string> | null): {k: numb
 // ------------------------------------------------------------ the scan
 
 export type Phase = "idle" | "reading" | "result" | "error";
-export interface ScanState {phase: Phase; kind: "upload" | "reuse"; found: boolean; file: string | null; error: string | null}
+export interface ScanState {phase: Phase; kind: "upload" | "reuse"; found: boolean; file: string | null; error: string | null; retryable: boolean}
 export type ScanEvent =
     | {type: "start"; kind: "upload" | "reuse"; file: string | null}
-    | {type: "found"} | {type: "done"} | {type: "failed"; error: string} | {type: "reset"};
+    | {type: "found"} | {type: "done"} | {type: "failed"; error: string; retryable?: boolean} | {type: "reset"};
 
-export const IDLE: ScanState = {phase: "idle", kind: "upload", found: false, file: null, error: null};
+export const IDLE: ScanState = {phase: "idle", kind: "upload", found: false, file: null, error: null, retryable: false};
 
 /** The sheet's states. Steps move only on events the browser really sees; a late answer never moves a finished scan. */
 export function scanStep(state: ScanState, event: ScanEvent): ScanState {
     switch (event.type) {
-        case "start": return {phase: "reading", kind: event.kind, found: false, file: event.file, error: null};
+        case "start": return {phase: "reading", kind: event.kind, found: false, file: event.file, error: null, retryable: false};
         case "found": return state.phase === "reading" ? {...state, found: true} : state;
         case "done": return state.phase === "reading" ? {...state, phase: "result", found: true} : state;
-        case "failed": return {...state, phase: "error", error: event.error};
+        case "failed": return {...state, phase: "error", error: event.error, retryable: event.retryable ?? false};
         case "reset": return IDLE;
     }
 }
@@ -201,8 +204,11 @@ export function failReason(error: unknown): FailReason {
         if (error.status === 413) return "too_big";
         if (error.status === 415) return "not_pdf";
         if (error.status === 404 || error.status === 409) return "not_kept";
+        if (error.status === 408 || error.status === 504) return "timeout";
         return error.status >= 500 ? "server" : "other";
     }
+    if (error instanceof ApiTransportError && error.kind === "timeout") return "timeout";
+    if (error instanceof ApiTransportError && error.kind === "network") return "network";
     if (error instanceof Error && /timed out/i.test(error.message)) return "timeout";
     // fetch rejects with a TypeError when the request never reached the API.
     if (error instanceof TypeError) return "network";
@@ -213,8 +219,22 @@ export function failReason(error: unknown): FailReason {
 export function scanError(error: unknown): string {
     if (error instanceof ApiError && error.status === 413) return ASK.errors.tooBig;
     if (error instanceof ApiError && error.status === 415) return ASK.errors.notPdf;
+    if (error instanceof ApiError && error.status === 422) return ASK.errors.unreadable;
+    if (error instanceof ApiError && error.status === 429) return ASK.errors.rateLimited;
+    if (error instanceof ApiError && (error.status === 408 || error.status === 504)) return `${ASK.errors.slow}${reference(error.requestId)}`;
+    if (error instanceof ApiError && error.status >= 500) return `${ASK.errors.processing}${reference(error.requestId)}`;
+    if (error instanceof ApiTransportError && error.kind === "timeout") return `${ASK.errors.slow}${reference(error.requestId)}`;
+    if (error instanceof ApiTransportError && error.kind === "network") return `${ASK.errors.unavailable}${reference(error.requestId)}`;
     if (error instanceof Error && /timed out/i.test(error.message)) return ASK.errors.slow;
-    return ASK.errors.unreadable;
+    return ASK.errors.processing;
+}
+
+function reference(value?: string): string {
+    return value && /^[0-9a-f]{32}$/.test(value) ? ` Reference: ${value}.` : "";
+}
+
+export function retryableScan(error: unknown): boolean {
+    return error instanceof ApiTransportError || (error instanceof ApiError && (error.status === 408 || error.status === 429 || error.status >= 500));
 }
 
 /**
@@ -225,24 +245,28 @@ export function scanError(error: unknown): string {
  * tick: the comparison alone decides whether the scan worked.
  */
 export async function runUpload<A, C>(file: File, d: {
-    analyze: (f: File) => Promise<A>; parse: (f: File) => Promise<C>;
+    analyze: (f: File, requestId: string) => Promise<A>; parse: (f: File, requestId: string) => Promise<C>;
     onStart: () => void; onParsed: (c: C) => void; onResult: (a: A) => void; onFailed: (message: string, reason: FailReason) => void;
     onRefused?: (reason: Refusal) => void; dispatch: (e: ScanEvent) => void;
 }): Promise<void> {
     const problem = fileProblem(file);
     if (problem) { d.onRefused?.(problem); d.dispatch({type: "failed", error: checkFile(file)!}); return; }
+    const requestId = globalThis.crypto?.randomUUID?.().replaceAll("-", "") ?? fallbackRequestId();
     d.dispatch({type: "start", kind: "upload", file: file.name});
     d.onStart();
     try {
-        const analysis = d.analyze(file);
-        d.parse(file).then((cv) => { d.onParsed(cv); d.dispatch({type: "found"}); })
-            .catch((e) => console.error("CV breakdown error:", e));
+        const analysis = d.analyze(file, requestId);
+        d.parse(file, requestId).then((cv) => { d.onParsed(cv); d.dispatch({type: "found"}); }).catch(() => undefined);
         const result = await analysis;
         d.onResult(result);
         d.dispatch({type: "done"});
     } catch (e) {
         const message = scanError(e);
         d.onFailed(message, failReason(e));
-        d.dispatch({type: "failed", error: message});
+        d.dispatch({type: "failed", error: message, retryable: retryableScan(e)});
     }
+}
+
+function fallbackRequestId(): string {
+    return Array.from({length: 32}, () => Math.floor(Math.random() * 16).toString(16)).join("");
 }

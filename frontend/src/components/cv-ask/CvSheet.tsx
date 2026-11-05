@@ -35,7 +35,9 @@ function Example() {
 
 function Trust({signedIn}: {signedIn: boolean}) {
     return (
-        <>
+        <div className={"mt-3.5 border-t border-border pt-2.5"}>
+            <details>
+                <summary className={"cursor-pointer font-mono text-[12px] text-muted-foreground underline underline-offset-4"}>Privacy and your CV</summary>
             <ul className={"m-0 mt-3.5 grid list-none gap-1.5 p-0 font-mono text-[12px] text-muted-foreground"}>
                 {S.trust(signedIn).map((t) => <li key={t} className={"flex items-center gap-2 before:size-1.5 before:shrink-0 before:rounded-full before:bg-chart-have before:content-['']"}>{t}</li>)}
             </ul>
@@ -43,7 +45,8 @@ function Trust({signedIn}: {signedIn: boolean}) {
                 <span><span className={"sm:hidden"}>{S.fine}</span><span className={"hidden sm:inline"}>{S.fineDesk}</span></span>
                 <Link href={S.what.href} className={"text-foreground underline underline-offset-[3px]"}>{S.what.label}</Link>
             </div>
-        </>
+            </details>
+        </div>
     );
 }
 
@@ -101,9 +104,9 @@ function Result({ask, signedIn, onSee}: {ask: Ask; signedIn: boolean; onSee: () 
  * reading the moment a file is chosen. Then the steps, then the answer where
  * the question was asked. A signed in user with a kept CV can use it instead.
  */
-export default function CvSheet({open, onOpenChange, ask, state, latest, signedIn, onFile, onReuse, onSee}: {
+export default function CvSheet({open, onOpenChange, ask, state, latest, signedIn, onFile, onRetry, onReuse, onSee}: {
     open: boolean; onOpenChange: (open: boolean) => void; ask: Ask | null; state: ScanState;
-    latest: LatestCV | null; signedIn: boolean; onFile: (file: File) => void; onReuse: () => void; onSee: () => void;
+    latest: LatestCV | null; signedIn: boolean; onFile: (file: File) => void; onRetry: () => void; onReuse: () => void; onSee: () => void;
 }) {
     const reuse = signedIn && latest?.reusable;
     return (
@@ -127,7 +130,11 @@ export default function CvSheet({open, onOpenChange, ask, state, latest, signedI
                                     <D.Description className={LINE}>{S.line(ask)}</D.Description>
                                     <Example />
                                     {state.phase === "error" && state.error && (
-                                        <p role={"alert"} className={"mt-0 mb-3 rounded-lg border border-border bg-foreground/[0.04] px-3 py-2.5 text-[14px]"}>{state.error}</p>
+                                        <div role={"alert"} className={"mt-0 mb-3 rounded-xl border border-destructive/30 bg-destructive/[0.04] px-3.5 py-3 text-[14px]"}>
+                                            <p className={"m-0 font-semibold"}>The scan didn’t finish</p>
+                                            <p className={"mt-1 mb-0 leading-relaxed"}>{state.error}</p>
+                                            {state.retryable && <Button className={"mt-3 rounded-full"} variant={"outline"} onClick={onRetry}>Try again</Button>}
+                                        </div>
                                     )}
                                     {reuse && latest && (
                                         <div className={"mb-3"}>

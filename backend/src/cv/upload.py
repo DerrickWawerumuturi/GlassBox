@@ -28,6 +28,11 @@ class NotPdf(Exception):
         super().__init__("That isn't a PDF.")
 
 
+class UnreadablePdf(Exception):
+    def __init__(self):
+        super().__init__("We couldn't extract readable text from this PDF. If it's scanned, use OCR or export a searchable PDF and try again.")
+
+
 def declared_too_big(content_length: str | None) -> bool:
     """Whether the request's Content-Length is past the limit, so it is refused unread."""
     try:

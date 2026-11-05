@@ -16,9 +16,12 @@ authentication, request models and status codes live here; the work does not.
 import asyncio
 import hmac
 import json
+import logging
 import os
+import re
 import tempfile
-import traceback
+import time
+import uuid
 from contextlib import asynccontextmanager
 from functools import cache
 from typing import Literal
@@ -80,7 +83,7 @@ def _warm_analysis_stack():
         print("analysis stack loaded")
     except Exception as err:
         # /analyze re-raises this on use; the rest of the API is unaffected.
-        print(f"analysis stack failed to load: {err}")
+        logger.error("analysis_stack_warm_failed error_type=%s", type(err).__name__)
 
 
 async def _warm_when_quiet():
@@ -117,6 +120,51 @@ app.include_router(market.router)
 # stays responsive, but it is CPU-bound (the embedder) on a 2 vCPU container,
 # so requests queue rather than compete for the same cores.
 analysis_lock = asyncio.Lock()
+CV_ENDPOINTS = frozenset({"/analyze", "/analyze/reuse", "/cv/parse"})
+REQUEST_ID_HEADER = "X-Request-ID"
+logger = logging.getLogger("glassbox.cv")
+
+
+def _request_id(value: str | None) -> str:
+    return value if value and re.fullmatch(r"[0-9a-f]{32}", value) else uuid.uuid4().hex
+
+
+def _log_cv_event(request: Request, stage: str, outcome: str, started: float,
+                  error: Exception | None = None, status_code: int | None = None) -> None:
+    if request.url.path not in CV_ENDPOINTS:
+        return
+    entry = {
+        "event": "cv_pipeline",
+        "request_id": request.state.request_id,
+        "endpoint": request.url.path,
+        "stage": stage,
+        "outcome": outcome,
+        "duration_ms": round((time.perf_counter() - started) * 1000),
+    }
+    if status_code is not None:
+        entry["status_code"] = status_code
+    if error is not None:
+        entry["error_type"] = type(error).__name__
+        provider_status = getattr(error, "status_code", None)
+        if isinstance(provider_status, int):
+            entry["provider_status"] = provider_status
+    logger.log(logging.ERROR if outcome == "failure" else logging.INFO, json.dumps(entry, sort_keys=True))
+
+
+async def _cv_stage(request: Request, stage: str, operation):
+    request.state.cv_stage = stage
+    started = time.perf_counter()
+    try:
+        result = await operation()
+    except Exception as error:
+        _log_cv_event(request, stage, "failure", started, error)
+        raise
+    _log_cv_event(request, stage, "success", started)
+    return result
+
+
+async def _run_cv_stage(request: Request | None, stage: str, operation):
+    return await _cv_stage(request, stage, operation) if request else await operation()
 
 
 @app.middleware("http")
@@ -127,11 +175,18 @@ async def unexpected_errors(request, call_next):
     "Failed to fetch". The detail is generic on purpose — raw exception text
     can carry database hostnames and internal paths.
     """
+    request.state.request_id = _request_id(request.headers.get(REQUEST_ID_HEADER.lower()))
+    request.state.cv_stage = "request"
+    started = time.perf_counter()
     try:
-        return await call_next(request)
-    except Exception:
-        traceback.print_exc()
-        return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
+        response = await call_next(request)
+    except Exception as error:
+        _log_cv_event(request, "request_failure", "failure", started, error, 500)
+        response = JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
+    response.headers[REQUEST_ID_HEADER] = request.state.request_id
+    _log_cv_event(request, "response", "success" if response.status_code < 400 else "failure", started,
+                  status_code=response.status_code)
+    return response
 
 
 @app.middleware("http")
@@ -214,7 +269,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=[ACCOUNT_CREATED_HEADER],
+    expose_headers=[ACCOUNT_CREATED_HEADER, REQUEST_ID_HEADER],
 )
 
 # Expected failures, each with its status code. Handled inside CORS, like
@@ -222,21 +277,30 @@ app.add_middleware(
 for exc, code in ((ApplicationNotFound, 404), (JobNotFound, 404), (NoProfile, 404), (NoLatestCV, 404),
                   (UserNotFound, 401), (BookmarkNotRemovable, 409), (ApplicationExists, 409),
                   (StaleLatestCV, 409), (InvalidJobUrl, 422), (InvalidSpreadsheet, 422), (BadAppliedDate, 422),
-                  (upload.PdfTooLarge, 413), (upload.NotPdf, 415)):
+                  (upload.PdfTooLarge, 413), (upload.NotPdf, 415), (upload.UnreadablePdf, 422)):
     app.add_exception_handler(
         exc,
         lambda request, err, code=code: JSONResponse(status_code=code, content={"detail": str(err)}),
     )
 
 
-async def _pdf_text(data: bytes) -> str:
+async def _pdf_text(data: bytes, request: Request | None = None) -> str:
     """The uploaded PDF's text. pdf_inspector reads from a path, hence the temp file."""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-        temp.write(data)
-    try:
-        return await run_in_threadpool(pdf_inspector.extract_text, temp.name)
-    finally:
-        os.remove(temp.name)
+    async def extract() -> str:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            temp.write(data)
+        try:
+            try:
+                text = await run_in_threadpool(pdf_inspector.extract_text, temp.name)
+            except ValueError:
+                raise upload.UnreadablePdf() from None
+            if not text.strip():
+                raise upload.UnreadablePdf()
+            return text
+        finally:
+            os.remove(temp.name)
+
+    return await _cv_stage(request, "pdf_extraction", extract) if request else await extract()
 
 
 @app.get("/health")
@@ -247,18 +311,17 @@ async def health():
 
 # ------------------------------------------------------------ CV analysis
 
-async def _location_preferences(user) -> dict | None:
+async def _location_preferences(user, request: Request | None = None) -> dict | None:
     """Signed-in users rank by their saved preferences. A failed lookup must never cost the analysis."""
     if not user:
         return None
     try:
-        return await run_in_threadpool(user_service.fetch_location_preferences, user)
-    except Exception as err:
-        print(f"location preferences unavailable: {err}")
+        return await _run_cv_stage(request, "location_preferences", lambda: run_in_threadpool(user_service.fetch_location_preferences, user))
+    except Exception:
         return None
 
 
-async def _parsed_cv(cv_text: str, file_name, user):
+async def _parsed_cv(cv_text: str, file_name, user, request: Request | None = None):
     """
     The CV as a matching profile. A signed-in user's kept profile is reused when
     this is the same text; otherwise the LLM parses it, and for a signed-in user
@@ -266,32 +329,32 @@ async def _parsed_cv(cv_text: str, file_name, user):
     """
     if user:
         try:
-            kept = await run_in_threadpool(user_service.profile_for_text, user, cv_text)
+            kept = await _run_cv_stage(request, "saved_profile_lookup", lambda: run_in_threadpool(user_service.profile_for_text, user, cv_text))
             if kept is not None:
                 return kept
-        except Exception as err:
-            print(f"kept CV profile unavailable: {err}")
-    query = await run_in_threadpool(_agent().parse, cv_text)
+        except Exception:
+            pass
+    query = await _run_cv_stage(request, "groq_profile_parse", lambda: run_in_threadpool(_agent().parse, cv_text))
     if user:
         try:
-            await run_in_threadpool(user_service.store_latest_cv, user, query, file_name, cv_text)
-        except Exception as err:
-            print(f"CV profile not kept: {err}")
+            await _run_cv_stage(request, "saved_profile_write", lambda: run_in_threadpool(user_service.store_latest_cv, user, query, file_name, cv_text))
+        except Exception:
+            pass
     return query
 
 
 @app.post("/analyze")
 @daily_counts.scan()
 async def analyze(request: Request, file: UploadFile = File(...), user=Depends(optional_user)):
-    data = await upload.pdf_bytes(file)  # too big or not a PDF fails here, before the queue
-    preferences = await _location_preferences(user)
+    data = await _cv_stage(request, "upload_validation", lambda: upload.pdf_bytes(file))
+    preferences = await _location_preferences(user, request)
     # Both steps are synchronous and slow. Running them directly in this async
     # endpoint blocked the event loop, which made the whole API (including
     # /health) unreachable for the duration of every analysis.
     async with analysis_lock:
-        cv_text = await _pdf_text(data)
-        query = await _parsed_cv(cv_text, file.filename, user)
-        result = await run_in_threadpool(_agent().match, query, preferences)
+        cv_text = await _pdf_text(data, request)
+        query = await _parsed_cv(cv_text, file.filename, user, request)
+        result = await _cv_stage(request, "matching", lambda: run_in_threadpool(_agent().match, query, preferences))
     if user:
         # The scan stored the jobs it found; Opportunities shows them now, not
         # when the user's cached list expires.
@@ -303,18 +366,19 @@ async def analyze(request: Request, file: UploadFile = File(...), user=Depends(o
 @daily_counts.scan("cv_reused")
 async def analyze_again(request: Request, user=Depends(current_user)):
     """A rescan from the kept profile of the latest CV: no upload, no LLM call. Same shape as /analyze."""
-    query = await run_in_threadpool(user_service.latest_profile, user)
-    preferences = await _location_preferences(user)
+    query = await _cv_stage(request, "saved_profile_lookup", lambda: run_in_threadpool(user_service.latest_profile, user))
+    preferences = await _location_preferences(user, request)
     async with analysis_lock:
-        result = await run_in_threadpool(_agent().match, query, preferences)
+        result = await _cv_stage(request, "matching", lambda: run_in_threadpool(_agent().match, query, preferences))
     opportunity_service.forget(user)
     return result
 
 
 @app.post("/cv/parse")
-async def parse_cv(file: UploadFile = File(...)):
-    cv_text = await _pdf_text(await upload.pdf_bytes(file))
-    return await run_in_threadpool(_cv_parser().parse, cv_text)
+async def parse_cv(request: Request, file: UploadFile = File(...)):
+    data = await _cv_stage(request, "upload_validation", lambda: upload.pdf_bytes(file))
+    cv_text = await _pdf_text(data, request)
+    return await _cv_stage(request, "groq_profile_parse", lambda: run_in_threadpool(_cv_parser().parse, cv_text))
 
 
 # ------------------------------------------------------- the user's data

@@ -43,6 +43,11 @@ const CV_TIMEOUT_MS = 120_000;
 // showed an error for a server that was only waking up.
 const SAVE_TIMEOUT_MS = 60_000;
 
+export function createScanRequestId(): string {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID().replaceAll("-", "");
+    return Array.from({length: 32}, () => Math.floor(Math.random() * 16).toString(16)).join("");
+}
+
 let apiToken : {token: string, expiresAt: number} | null = null;
 
 /** Optional local-only credential. Never configure as NEXT_PUBLIC_*.
@@ -68,7 +73,13 @@ export async function getApiToken(): Promise<string> {
 }
 
 export class ApiError extends Error {
-    constructor(message: string, public status: number) {
+    constructor(message: string, public status: number, public requestId?: string) {
+        super(message)
+    }
+}
+
+export class ApiTransportError extends Error {
+    constructor(message: string, public kind: "timeout" | "network", public requestId?: string) {
         super(message)
     }
 }
@@ -78,6 +89,7 @@ export class ApiError extends Error {
 export const ACCOUNT_CREATED = "X-Account-Created";
 
 async function request<T>(path: string, init: RequestInit, timeoutMs: number, label: string): Promise<T> {
+    const requestId = new Headers(init.headers).get("X-Request-ID") ?? undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -89,15 +101,17 @@ async function request<T>(path: string, init: RequestInit, timeoutMs: number, la
 
         if (!response.ok) {
             const detail = await response.json().then((b) => b?.detail).catch(() => null);
-            throw new ApiError(detail || `${label} failed: ${response.status}`, response.status)
+            throw new ApiError(detail || `${label} failed: ${response.status}`, response.status,
+                response.headers.get("X-Request-ID") ?? requestId)
         }
         if (response.headers.get(ACCOUNT_CREATED)) track("signed_up");
 
         return await response.json();
     } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
-            throw new Error(`${label} timed out. The API may be starting up, try again.`);
+            throw new ApiTransportError(`${label} timed out. The API may be starting up, try again.`, "timeout", requestId);
         }
+        if (error instanceof TypeError) throw new ApiTransportError(`${label} could not reach the scanning service.`, "network", requestId);
         throw error;
     } finally {
         clearTimeout(timer);
@@ -142,15 +156,15 @@ async function nullIfMissing<T>(call: Promise<T>): Promise<T | null> {
     }
 }
 
-export function ProcessCv(file: File): Promise<CvBreakdown> {
-    return postFile<CvBreakdown>("/cv/parse", file, CV_TIMEOUT_MS, "CV breakdown");
+export function ProcessCv(file: File, requestId = createScanRequestId()): Promise<CvBreakdown> {
+    return postFile<CvBreakdown>("/cv/parse", file, CV_TIMEOUT_MS, "CV breakdown", {"X-Request-ID": requestId});
 }
 
 /** Signed-in scans rank by the account's saved location preferences. */
-export default async function Analyze(file: File): Promise<JobRadarAnalysis> {
+export default async function Analyze(file: File, requestId = createScanRequestId()): Promise<JobRadarAnalysis> {
     const token = await getApiToken().catch(() => null);
-    const headers = token ? {Authorization: `Bearer ${token}`} : undefined;
-    return postFile<JobRadarAnalysis>("/analyze", file, ANALYZE_TIMEOUT_MS, "Analysis", {...headers, ...internalTestHeaders()});
+    const headers = {...(token ? {Authorization: `Bearer ${token}`} : {}), ...internalTestHeaders(), "X-Request-ID": requestId};
+    return postFile<JobRadarAnalysis>("/analyze", file, ANALYZE_TIMEOUT_MS, "Analysis", headers);
 }
 
 export function StoreCV(cv: CvBreakdown): Promise<CvBreakdown> {
@@ -313,6 +327,7 @@ export function DeleteLatestCV(): Promise<{ deleted: boolean }> {
 }
 
 /** A rescan from the kept CV skills, no upload. 404 nothing kept, 409 kept by an older parser. */
-export function AnalyzeReuse(): Promise<JobRadarAnalysis> {
-    return authed<JobRadarAnalysis>("POST", "/analyze/reuse", "Analysis", undefined, ANALYZE_TIMEOUT_MS, internalTestHeaders());
+export function AnalyzeReuse(requestId = createScanRequestId()): Promise<JobRadarAnalysis> {
+    return authed<JobRadarAnalysis>("POST", "/analyze/reuse", "Analysis", undefined, ANALYZE_TIMEOUT_MS,
+        {...internalTestHeaders(), "X-Request-ID": requestId});
 }
