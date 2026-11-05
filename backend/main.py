@@ -16,7 +16,6 @@ authentication, request models and status codes live here; the work does not.
 import asyncio
 import hmac
 import json
-import logging
 import os
 import re
 import tempfile
@@ -28,6 +27,7 @@ from typing import Literal
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -35,6 +35,7 @@ from pdf_inspector import pdf_inspector
 
 from src.Agent.utils.location import LocationPreferences
 from src.api import daily_counts, market, rate_limit
+from src.api import cv_telemetry
 from src.Agent.utils.types import (
     AnalysisPayload, AppliedDateRequest, BookmarkRequest, CVQuery, DeleteApplicationsRequest, ExtractJobRequest, ImportRequest,
     LocationPreferencesRequest, ManualApplicationRequest, TransitionRequest, UrlApplicationRequest,
@@ -122,7 +123,7 @@ app.include_router(market.router)
 analysis_lock = asyncio.Lock()
 CV_ENDPOINTS = frozenset({"/analyze", "/analyze/reuse", "/cv/parse"})
 REQUEST_ID_HEADER = "X-Request-ID"
-logger = logging.getLogger("glassbox.cv")
+logger = cv_telemetry.logger
 
 
 def _request_id(value: str | None) -> str:
@@ -133,27 +134,15 @@ def _log_cv_event(request: Request, stage: str, outcome: str, started: float,
                   error: Exception | None = None, status_code: int | None = None) -> None:
     if request.url.path not in CV_ENDPOINTS:
         return
-    entry = {
-        "event": "cv_pipeline",
-        "request_id": request.state.request_id,
-        "endpoint": request.url.path,
-        "stage": stage,
-        "outcome": outcome,
-        "duration_ms": round((time.perf_counter() - started) * 1000),
-    }
-    if status_code is not None:
-        entry["status_code"] = status_code
-    if error is not None:
-        entry["error_type"] = type(error).__name__
-        provider_status = getattr(error, "status_code", None)
-        if isinstance(provider_status, int):
-            entry["provider_status"] = provider_status
-    logger.log(logging.ERROR if outcome == "failure" else logging.INFO, json.dumps(entry, sort_keys=True))
+    cv_telemetry.emit(stage, outcome, started,
+                      context=(request.state.request_id, request.url.path),
+                      error=error, status_code=status_code)
 
 
 async def _cv_stage(request: Request, stage: str, operation):
     request.state.cv_stage = stage
     started = time.perf_counter()
+    _log_cv_event(request, stage, "start", started)
     try:
         result = await operation()
     except Exception as error:
@@ -178,15 +167,20 @@ async def unexpected_errors(request, call_next):
     request.state.request_id = _request_id(request.headers.get(REQUEST_ID_HEADER.lower()))
     request.state.cv_stage = "request"
     started = time.perf_counter()
+    token = cv_telemetry.scan_context.set((request.state.request_id, request.url.path)
+                                         if request.url.path in CV_ENDPOINTS else None)
     try:
-        response = await call_next(request)
-    except Exception as error:
-        _log_cv_event(request, "request_failure", "failure", started, error, 500)
-        response = JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
-    response.headers[REQUEST_ID_HEADER] = request.state.request_id
-    _log_cv_event(request, "response", "success" if response.status_code < 400 else "failure", started,
-                  status_code=response.status_code)
-    return response
+        try:
+            response = await call_next(request)
+        except Exception as error:
+            _log_cv_event(request, "request_failure", "failure", started, error, 500)
+            response = JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
+        response.headers[REQUEST_ID_HEADER] = request.state.request_id
+        _log_cv_event(request, "response", "success" if response.status_code < 400 else "failure", started,
+                      status_code=response.status_code)
+        return response
+    finally:
+        cv_telemetry.scan_context.reset(token)
 
 
 @app.middleware("http")
@@ -334,7 +328,7 @@ async def _parsed_cv(cv_text: str, file_name, user, request: Request | None = No
                 return kept
         except Exception:
             pass
-    query = await _run_cv_stage(request, "groq_profile_parse", lambda: run_in_threadpool(_agent().parse, cv_text))
+    query = await _run_cv_stage(request, "groq_profile_parse", lambda: run_in_threadpool(lambda: _agent().parse(cv_text)))
     if user:
         try:
             await _run_cv_stage(request, "saved_profile_write", lambda: run_in_threadpool(user_service.store_latest_cv, user, query, file_name, cv_text))
@@ -354,12 +348,13 @@ async def analyze(request: Request, file: UploadFile = File(...), user=Depends(o
     async with analysis_lock:
         cv_text = await _pdf_text(data, request)
         query = await _parsed_cv(cv_text, file.filename, user, request)
-        result = await _cv_stage(request, "matching", lambda: run_in_threadpool(_agent().match, query, preferences))
+        result = await _cv_stage(request, "matching", lambda: run_in_threadpool(lambda: _agent().match(query, preferences)))
+        response = await _cv_stage(request, "serialization", lambda: run_in_threadpool(lambda: JSONResponse(jsonable_encoder(result))))
     if user:
         # The scan stored the jobs it found; Opportunities shows them now, not
         # when the user's cached list expires.
         opportunity_service.forget(user)
-    return result
+    return response
 
 
 @app.post("/analyze/reuse")
@@ -369,9 +364,10 @@ async def analyze_again(request: Request, user=Depends(current_user)):
     query = await _cv_stage(request, "saved_profile_lookup", lambda: run_in_threadpool(user_service.latest_profile, user))
     preferences = await _location_preferences(user, request)
     async with analysis_lock:
-        result = await _cv_stage(request, "matching", lambda: run_in_threadpool(_agent().match, query, preferences))
+        result = await _cv_stage(request, "matching", lambda: run_in_threadpool(lambda: _agent().match(query, preferences)))
+        response = await _cv_stage(request, "serialization", lambda: run_in_threadpool(lambda: JSONResponse(jsonable_encoder(result))))
     opportunity_service.forget(user)
-    return result
+    return response
 
 
 @app.post("/cv/parse")

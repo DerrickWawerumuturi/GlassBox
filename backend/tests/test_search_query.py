@@ -4,6 +4,8 @@ Nothing raised — location.resolve reads fields with getattr defaults — so ev
 analysis silently searched with no location and the object's repr as the role.
 """
 import dataclasses
+import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -126,3 +128,38 @@ def test_saved_preferences_decide_where_the_search_runs(monkeypatch):
 
 def test_cv_location_used_when_nothing_is_saved(monkeypatch):
     assert loc.resolve(_captured_search(monkeypatch)).country_code == "ke"
+
+
+@pytest.mark.parametrize("failure", [None, "search", "scoring"])
+def test_match_stage_boundaries_and_failures(failure, caplog):
+    from src.api import cv_telemetry
+
+    def work(name, result):
+        if name == failure:
+            raise RuntimeError("PRIVATE_PROVIDER_DETAIL")
+        return result
+
+    agent = agent_module.JobRadarAgent.__new__(agent_module.JobRadarAgent)
+    agent.search_engine = SimpleNamespace(get_jobs=lambda *a, **kw:
+        work("search", SimpleNamespace(jobs=[], coverage={})))
+    agent.ingestion = SimpleNamespace(record_search=lambda *a: None, persist_jobs=lambda *a: {},
+                                     stored_profiles=lambda *a: {})
+    agent.sentence_embedder = SimpleNamespace(filter_by_role=lambda *a, **kw: ([], []))
+    agent.score_jobs = lambda *a: work("scoring", [])
+    agent.market_analyzer = SimpleNamespace(analyze=lambda *a: {})
+    token = cv_telemetry.scan_context.set(("d" * 32, "/analyze"))
+    try:
+        if failure:
+            with pytest.raises(RuntimeError, match="PRIVATE_PROVIDER_DETAIL"):
+                agent.match(PARSED)
+        else:
+            assert agent.match(PARSED)["ranked_jobs"] == []
+    finally:
+        cv_telemetry.scan_context.reset(token)
+    events = [json.loads(r.message) for r in caplog.records if r.name == "glassbox.cv"]
+    for name in ("search", "scoring"):
+        outcomes = [e["outcome"] for e in events if e["stage"] == name]
+        expected = [] if failure == "search" and name == "scoring" else ["start", "failure" if name == failure else "success"]
+        assert outcomes == expected
+    assert all(e["request_id"] == "d" * 32 for e in events)
+    assert "PRIVATE_PROVIDER_DETAIL" not in caplog.text

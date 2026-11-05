@@ -4,6 +4,9 @@
 """
 import pytest
 import logging
+import asyncio
+import json
+import threading
 from fastapi.testclient import TestClient
 
 import main
@@ -115,3 +118,77 @@ def test_successful_scan_logs_pipeline_and_returns_result(client, monkeypatch, c
     assert any('"stage": "groq_profile_parse"' in line for line in stages)
     assert any('"stage": "matching"' in line for line in stages)
     assert all('"duration_ms":' in line for line in stages)
+    events = [json.loads(line) for line in stages]
+    for name in ("upload_validation", "pdf_extraction", "groq_profile_parse", "matching", "serialization"):
+        assert [e["outcome"] for e in events if e["stage"] == name] == ["start", "success"]
+    assert all(e["request_id"] == request_id for e in events)
+
+
+@pytest.mark.parametrize("reuse", [False, True])
+def test_agent_initializes_and_runs_off_event_loop_under_scan_lock(monkeypatch, reuse):
+    from src.api import cv_telemetry
+
+    threads = []
+    endpoint_thread = None
+
+    class Agent:
+        def parse(self, _text):
+            threads.append(threading.get_ident())
+            return {"skills": ["Python"]}
+
+        def match(self, _query, _preferences):
+            threads.append(threading.get_ident())
+            assert main.analysis_lock.locked()
+            assert cv_telemetry.scan_context.get()[0] == "c" * 32
+            return {"market": {"jobs_analyzed": 3}}
+
+    def agent():
+        threads.append(threading.get_ident())
+        assert main.analysis_lock.locked()
+        return Agent()
+
+    async def exercise():
+        nonlocal endpoint_thread
+        from starlette.requests import Request
+        from starlette.datastructures import UploadFile
+        from io import BytesIO
+        endpoint_thread = threading.get_ident()
+        request = Request({"type": "http", "path": "/analyze", "headers": []})
+        request.state.request_id = "c" * 32
+        token = cv_telemetry.scan_context.set(("c" * 32, "/analyze"))
+        try:
+            if reuse:
+                response = await main.analyze_again(request=request, user={"sub": "synthetic"})
+            else:
+                file = UploadFile(filename="synthetic.pdf", file=BytesIO(PDF))
+                response = await main.analyze(request=request, file=file, user=None)
+            assert response.status_code == 200
+            assert json.loads(response.body) == {"market": {"jobs_analyzed": 3}}
+        finally:
+            cv_telemetry.scan_context.reset(token)
+
+    monkeypatch.setattr(main, "_agent", agent)
+    monkeypatch.setattr(main.pdf_inspector, "extract_text", lambda path: "Synthetic text")
+    monkeypatch.setattr(main.user_service, "latest_profile", lambda user: {})
+    monkeypatch.setattr(main.user_service, "fetch_location_preferences", lambda user: None)
+    monkeypatch.setattr(main.opportunity_service, "forget", lambda user: None)
+    asyncio.run(exercise())
+    assert threads and all(thread != endpoint_thread for thread in threads)
+
+
+def test_serialization_failure_is_sanitized_and_never_returns_success(client, monkeypatch, caplog):
+    class Agent:
+        def parse(self, _text):
+            return {}
+        def match(self, _query, _preferences):
+            return {}
+    def broken(_result):
+        raise ValueError("PRIVATE_SERIALIZATION_DETAIL")
+    monkeypatch.setattr(main, "_agent", lambda: Agent())
+    monkeypatch.setattr(main, "jsonable_encoder", broken)
+    with caplog.at_level(logging.INFO, logger="glassbox.cv"):
+        response = client.post("/analyze", files={"file": ("cv.pdf", PDF, "application/pdf")})
+    assert response.status_code == 500
+    assert "PRIVATE_SERIALIZATION_DETAIL" not in response.text + caplog.text
+    events = [json.loads(r.message) for r in caplog.records if r.name == "glassbox.cv"]
+    assert [e["outcome"] for e in events if e["stage"] == "serialization"] == ["start", "failure"]

@@ -16,6 +16,7 @@ import os
 import numpy as np
 
 from src.Agent.utils.types import ParsedQuery
+from src.api.cv_telemetry import stage
 
 MODEL_REPO = "sentence-transformers/all-MiniLM-L6-v2"
 # Pinned: the Dockerfile bakes these files into the image and the API reads them offline.
@@ -23,6 +24,8 @@ MODEL_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
 MODEL_FILES = ("onnx/model.onnx", "tokenizer.json")
 # sentence-transformers' max_seq_length for this model (sentence_bert_config.json).
 MAX_TOKENS = 256
+# Bound ONNX token/attention tensors without dropping any retrieved jobs.
+EMBEDDING_BATCH_SIZE = 32
 
 # Fraction of the best-matching title's score a posting must reach to be counted
 # as part of this user's market. Relative rather than absolute because the
@@ -68,6 +71,15 @@ class MiniLM:
                                                     providers=["CPUExecutionProvider"])
 
     def encode(self, texts: list[str]) -> np.ndarray:
+        batches = (len(texts) + EMBEDDING_BATCH_SIZE - 1) // EMBEDDING_BATCH_SIZE
+        vectors = []
+        for index, offset in enumerate(range(0, len(texts), EMBEDDING_BATCH_SIZE), 1):
+            batch = texts[offset:offset + EMBEDDING_BATCH_SIZE]
+            with stage("embedding_batch", batch_index=index, batch_count=batches, batch_size=len(batch)):
+                vectors.append(self._encode_batch(batch))
+        return np.concatenate(vectors) if vectors else np.empty((0, 384), dtype=np.float32)
+
+    def _encode_batch(self, texts: list[str]) -> np.ndarray:
         encoded = self.tokenizer.encode_batch(texts)
         ids = np.array([e.ids for e in encoded], dtype=np.int64)
         mask = np.array([e.attention_mask for e in encoded], dtype=np.int64)
@@ -90,7 +102,10 @@ class SentenceEmbedder:
             return [1.0] * len(jobs)
 
         titles = [getattr(job, "title", "") or "" for job in jobs]
-        vectors = self.model.encode([profile, *titles])  # unit length, so the dot product is the cosine
+        inputs = [profile, *titles]
+        with stage("embedding", input_count=len(inputs), batch_size=EMBEDDING_BATCH_SIZE,
+                   batch_count=(len(inputs) + EMBEDDING_BATCH_SIZE - 1) // EMBEDDING_BATCH_SIZE):
+            vectors = self.model.encode(inputs)  # unit length, so the dot product is the cosine
         return (vectors[1:] @ vectors[0]).tolist()
 
     def filter_by_role(

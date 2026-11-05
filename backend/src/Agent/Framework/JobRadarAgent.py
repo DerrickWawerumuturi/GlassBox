@@ -13,6 +13,7 @@ from src.database.services.ingestion import JobIngestionService
 from src.matching.candidate import Candidate
 from src.matching.matcher import TIER_ORDER, match
 from src.matching.requirements import profile_job
+from src.api.cv_telemetry import stage
 
 
 def persist_search_jobs(ingestion, search_id, jobs):
@@ -60,7 +61,8 @@ class JobRadarAgent:
             search_query = dataclasses.replace(
                 search_query, location=None, country_code=prefs.country_code, city=prefs.city,
             )
-        outcome = self.search_engine.get_jobs(search_query, run_log=run_log)
+        with stage("search"):
+            outcome = self.search_engine.get_jobs(search_query, run_log=run_log)
         raw_jobs = outcome.jobs
 
         # The profiled shared pool rows already exist in jobs/job_profiles. Re-upserting
@@ -99,7 +101,8 @@ class JobRadarAgent:
         profiles = self.ingestion.stored_profiles(stored_ids)
         jobs, readable = parse_retrieved_jobs(raw_jobs, profiles)
 
-        ranked_jobs = self.score_jobs(query, jobs, prefs, profiles)
+        with stage("scoring", job_count=len(jobs)):
+            ranked_jobs = self.score_jobs(query, jobs, prefs, profiles)
         outcome.coverage["location_preferences"] = prefs.to_dict()
 
         market_intelligence = self.market_analyzer.analyze(
